@@ -8,6 +8,7 @@
 // (the themes' pictures, where the dashboard looks for them) and only the
 // icons the dashboard and the home use (from @mdi/js).
 import { build } from "esbuild";
+import { createHash } from "node:crypto";
 import { cpSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -53,7 +54,14 @@ await build({
     DEMO_ICONS: JSON.stringify(icons),
   },
 });
-for (const page of ["index.html", "app.html"]) cpSync(join(here, "..", "tools", "demo", page), join(out, page));
+// the pages ask for this build's frame and code by name + version: a web
+// host may tell the browser to keep files for weeks (HA's /local: 31 days)
+const v = createHash("sha256").update(readFileSync(join(out, "demo.js"))).digest("hex").slice(0, 10);
+for (const [page, from, to] of [["index.html", '"app.html"', `"app.html?v=${v}"`], ["app.html", '"demo.js"', `"demo.js?v=${v}"`]]) {
+  const text = readFileSync(join(here, "..", "tools", "demo", page), "utf8");
+  if (!text.includes(from)) throw new Error(`${page}: no ${from}`);
+  writeFileSync(join(out, page), text.replace(from, to));
+}
 cpSync(dataDir, join(out, "data"), { recursive: true });
 // the themes' pictures (the dashboard bundle's folders, as HA serves them)
 const bundle = join(here, "..", "custom_components", "room_tiles", "frontend");

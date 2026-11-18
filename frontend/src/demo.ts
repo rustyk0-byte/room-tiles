@@ -52,7 +52,8 @@ interface DemoData {
 }
 
 async function load(): Promise<DemoData> {
-  const get = async (name: string) => (await fetch(`data/${name}.json`)).json();
+  // (asked fresh each time: a web host may tell the browser to keep files for weeks)
+  const get = async (name: string) => (await fetch(`data/${name}.json`, { cache: "no-cache" })).json();
   const [feed, states, entities, devices, meta] = await Promise.all(
     ["feed", "states", "entities", "devices", "meta"].map(get),
   );
