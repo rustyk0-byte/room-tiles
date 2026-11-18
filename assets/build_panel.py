@@ -132,7 +132,8 @@ def panel_images(theme: str) -> list[tuple[str, Image.Image, int]]:
                 out.append((name, img if px is None else shrink(img, (px, px), snap=False), ui_format(name)))
         else:
             out.append((stem, img, ui_format(stem)))
-    # pictures only a theme has (the top bar's buttons: bar_*), as drawn
+    # pictures only a theme has (the top bar's buttons: bar_* - each fitted
+    # into the one box, theme_format.BAR_ART), else as drawn
     own = THEME_ART / theme / "ui"
     for src in sorted(own.glob("*.png")) if own.exists() else []:
         if (MASTERS / "ui" / src.name).exists():
@@ -142,7 +143,15 @@ def panel_images(theme: str) -> list[tuple[str, Image.Image, int]]:
         img = Image.open(src).convert("RGBA")
         if src.stem == "brand_bar":
             check_brand(theme, img)
+        if src.stem in theme_format.BAR_ART:
+            pair_src = own / f"{theme_format.BAR_PAIRS.get(src.stem, '')}.png"
+            pair = Image.open(pair_src) if src.stem in theme_format.BAR_PAIRS and pair_src.exists() else None
+            img = theme_format.fit_bar_art(img, theme_format.BAR_BOX_PANEL, pair)
         out.append((src.stem, img, ui_format(src.stem)))
+    # the top bars' gear (the theme's own, else the default) and plain grid
+    # (recoloured by the firmware: lit on 6x3), in the same box
+    for name, src in (("bar_gear", art(theme, "ui", "icon_settings.png")), ("bar_grid_plain", MASTERS / "ui" / "icon_grid_6x3.png")):
+        out.append((name, theme_format.fit_bar_art(Image.open(src), theme_format.BAR_BOX_PANEL), ui_format(name)))
     return out
 
 
@@ -414,7 +423,7 @@ def pack(kind: int, ident: str, entries: list[tuple[str, int, int, int, int, int
 # draws the 6x3 sizes (_s, _65), the map's markers (_mk, _30, the Map
 # button), the tile picker's icons (_m) or the wall panels' large clock (_l)
 ROUND_SKIP_ENDINGS = ("_s", "_s_off", "_m", "_mk", "_mk_off", "_30", "_65", "_l")
-ROUND_SKIP = {"bar_map"}
+ROUND_SKIP = {"bar_map", "bar_grid", "bar_grid_plain", "bar_help"}
 ROUND_KEEP = {"icon_settings_s"}  # (its settings button: board_strip.cpp)
 
 
@@ -544,7 +553,10 @@ def main() -> int:
     # add one without a firmware update - a pack without it leaves it empty
     # (always last, in a fixed order: a theme gaining one never moves a slot)
     reserved = [f"{name}_off" for stem in OFF_BRIGHTNESS for name in (stem, f"{stem}_s") if name in names]
-    names = [n for n in names if n not in reserved] + reserved
+    # and every top-bar picture a theme may draw (theme_format.BAR_ART): the
+    # same - a theme drawing its own grid or Help button needs no new firmware
+    bar = [n for n in theme_format.BAR_ART if n != "icon_settings"]
+    names = [n for n in names if n not in reserved and n not in bar] + bar + reserved
     langs = sorted(p.stem for p in I18N.glob("*.json"))
     for lang in langs:
         data = build_strings(lang)

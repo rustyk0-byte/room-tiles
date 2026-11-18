@@ -1729,12 +1729,12 @@ export class RoomTilesPanel extends LitElement {
             ${this._mapEdit
               ? // the same top-right buttons as every screen: Help, Settings
                 html`<button class="layout" title=${t("help.dialog")} @click=${() => (this._mapHelp = true)}>
-                    <ha-icon icon="mdi:help-circle-outline"></ha-icon>
+                    ${this._helpIcon()}
                   </button>
                   ${this._settingsButton()}`
               : // the tiles' top-right buttons: Help, Settings (the editors are in its menu)
                 html`<button class="layout" title=${t("help.dialog")} @click=${() => (this._mapHelp = true)}>
-                    <ha-icon icon="mdi:help-circle-outline"></ha-icon>
+                    ${this._helpIcon()}
                   </button>
                   ${this._settingsButton()}`}
             <button
@@ -2551,11 +2551,13 @@ export class RoomTilesPanel extends LitElement {
           ? nothing
           : // like the panels: more tiles (5x2 <-> 6x3, lit on 6x3), then the map
             html`<button
-                class="layout head-btn ${this._layout === "6x3" ? "on" : ""}"
+                class="layout head-btn ${this._layout === "6x3" ? "on" : ""} ${hasArt(this.theme, "bar_grid") ? "art" : ""}"
                 title=${this._layout === "6x3" ? t("panel.fewer_tiles") : t("panel.more_tiles")}
                 @click=${() => this._setLayout(this._layout === "6x3" ? "5x2" : "6x3")}
               >
-                <ha-icon icon="mdi:grid"></ha-icon>
+                ${hasArt(this.theme, "bar_grid")
+                  ? html`<img class="bar-art" alt="" src=${this._art("bar_grid")} />`
+                  : html`<ha-icon icon="mdi:grid"></ha-icon>`}
               </button>
               <button class="layout head-btn" title=${t("help.title.view")} @click=${() => this._openMap("tile")}>
                 ${hasArt(this.theme, "bar_map")
@@ -2586,7 +2588,7 @@ export class RoomTilesPanel extends LitElement {
               </button>`
             : nothing}
           <button class="layout" title=${t("help.dialog")} @click=${() => (this._help = this._editing ? "tile-edit" : "tiles")}>
-            <ha-icon icon="mdi:help-circle-outline"></ha-icon>
+            ${this._helpIcon()}
           </button>
           ${this._settingsButton()}
         </div>
@@ -2745,6 +2747,14 @@ export class RoomTilesPanel extends LitElement {
   // (the panel's dot: devices found to set up) - a change here must be made there too.
   /** Settings (the gear), on every screen: lit with a dot when its menu
    *  has one. */
+  /** The top bars' Help button's picture: the theme's own (bar_help), else
+   *  the icon. MIRRORED: firmware/components/room_tiles/board.cpp (the Help button) - a change here must be made there too. */
+  private _helpIcon(): TemplateResult {
+    return hasArt(this.theme, "bar_help")
+      ? html`<img class="bar-art" alt="" src=${this._art("bar_help")} />`
+      : html`<ha-icon icon="mdi:help-circle-outline"></ha-icon>`;
+  }
+
   private _settingsButton(): TemplateResult {
     const dot = this._settingsDot();
     return html`<button class="layout gear" title=${t("common.settings")} @click=${() => (this._menu = !this._menu)}>
@@ -3499,17 +3509,18 @@ export class RoomTilesPanel extends LitElement {
     .lights.on {
       color: var(--rt-light);
     }
+    /* a theme's own top-bar picture: one box for every button - the
+       builders fit each into it (assets/theme_format.py BAR_BOX_WEB, at 2x)
+       MIRRORED: assets/theme_format.py BAR_BOX_WEB - a change here must be made there too. */
     .lights .bar-art,
     .layout .bar-art {
       display: block;
-      width: 40px;
-      height: 31px;
-      margin: 0 -3px;
+      width: 24px;
+      height: 20px;
     }
-    .layout .gear-art {
-      width: 30px;
-      height: 30px;
-      margin: 0 2px;
+    /* its own grid picture can't be lit like the icon: on 6x3 its border is */
+    .head-btn.on.art {
+      border-color: var(--rt-light);
     }
     /* landscape + "full screen": cover HA's sidebar and header */
     :host([data-cover]) {

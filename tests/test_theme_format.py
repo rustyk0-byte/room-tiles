@@ -83,3 +83,25 @@ def test_a_bad_theme_json_is_refused(tmp_path, doc, says):
     (folder / "theme.json").write_text(json.dumps(doc))
     with pytest.raises(SystemExit, match=says):
         theme_format.read(folder)
+
+
+def test_top_bar_pictures_fit_one_box():
+    """docs/THEMES.md "Top bar": any size in, the box out - the drawing
+    trimmed, scaled to fit, centred; an on / off pair with one scale."""
+    from PIL import Image, ImageDraw
+
+    tf = theme_format
+    big = Image.new("RGBA", (300, 200), (0, 0, 0, 0))
+    ImageDraw.Draw(big).rectangle((100, 50, 199, 149), fill=(255, 0, 0, 255))  # a 100 x 100 square, off-centre
+    out = tf.fit_bar_art(big, tf.BAR_BOX_PANEL)
+    assert out.size == tf.BAR_BOX_PANEL
+    x0, y0, x1, y1 = out.getchannel("A").getbbox()
+    assert (y0, y1) == (0, tf.BAR_BOX_PANEL[1])  # (fills the box's height)
+    assert abs((x0 + x1) / 2 - tf.BAR_BOX_PANEL[0] / 2) <= 0.5  # (centred)
+    # the off picture drawn smaller on the same canvas: smaller after, too
+    off = Image.new("RGBA", (300, 200), (0, 0, 0, 0))
+    ImageDraw.Draw(off).rectangle((125, 75, 174, 124), fill=(80, 80, 80, 255))
+    fitted = tf.fit_bar_art(off, tf.BAR_BOX_PANEL, big)
+    solid = fitted.getchannel("A").point(lambda a: 255 if a > 128 else 0)  # (not the resize's soft edge)
+    fx0, fy0, fx1, fy1 = solid.getbbox()
+    assert abs((fy1 - fy0) - (y1 - y0) / 2) <= 1  # (half the size, as drawn)

@@ -176,6 +176,12 @@ class RoomTiles : public Component {
     this->release_ = release;
   }
   void choose_theme(const std::string &name);
+  /// The top bars' gear: the picture fitted to the bar's box (bar_gear), or -
+  /// a pack from before it - the settings icon's small size.
+  const lv_image_dsc_t *bar_gear() const {
+    const lv_image_dsc_t *g = this->image(IMG_BAR_GEAR);
+    return g != nullptr ? g : this->image(IMG_ICON_SETTINGS_S);
+  }
   const PanelModel &model() const { return this->model_; }
   StateHub &states() { return this->states_; }
   ActionSender &actions() { return this->actions_; }

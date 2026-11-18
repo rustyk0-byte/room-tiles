@@ -286,6 +286,16 @@ lv_obj_t *dropdown_title(lv_obj_t *parent, const std::string &text, const Fonts 
   return row;
 }
 
+void bar_art(lv_obj_t *glyph, const lv_image_dsc_t *art) {
+  if (glyph == nullptr || art == nullptr)
+    return;
+  lv_obj_add_flag(glyph, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_t *img = lv_image_create(lv_obj_get_parent(glyph));
+  lv_image_set_src(img, art);
+  lv_obj_center(img);
+  lv_obj_remove_flag(img, LV_OBJ_FLAG_CLICKABLE);
+}
+
 lv_obj_t *bar_button(lv_obj_t *parent, uint32_t bg, uint32_t border, int ext_click) {
   lv_obj_t *b = lv_obj_create(parent);
   lv_obj_remove_style_all(b);
@@ -416,7 +426,11 @@ void Board::build_bar_(const PanelModel &model, const AreaSpec *area) {
     this->hint_ = note("");  // (what to do: board_edit.cpp)
   } else {
     // More tiles: 5x2 <-> 6x3, lit on 6x3 (the dashboard's colours)
-    const lv_image_dsc_t *grid = this->rt_->image(IMG_ICON_GRID_6X3_S);
+    // MIRRORED: frontend/src/room-tiles-panel.ts (the grid button: bar_grid, lit) - a change here must be made there too.
+    const lv_image_dsc_t *own = this->rt_->image(IMG_BAR_GRID);  // (the theme's own picture)
+    const lv_image_dsc_t *grid = own != nullptr ? own : this->rt_->image(IMG_BAR_GRID_PLAIN);
+    if (grid == nullptr)
+      grid = this->rt_->image(IMG_ICON_GRID_6X3_S);  // (a pack from before the top bar's box)
     lv_obj_t *btn = bar_button(this->root_, btn_bg, btn_border, 4);
     lv_obj_set_pos(btn, x, btn_y);
     lv_obj_add_event_cb(btn, &Board::on_layout_, LV_EVENT_CLICKED, this);
@@ -424,9 +438,14 @@ void Board::build_bar_(const PanelModel &model, const AreaSpec *area) {
       lv_obj_t *img = lv_image_create(btn);
       lv_image_set_src(img, grid);
       lv_obj_center(img);
-      // (white art: lit in the light colour on 6x3, the text colour otherwise)
-      lv_obj_set_style_image_recolor(img, lv_color_hex(model.layout == "6x3" ? this->color_("light", 0xFFB300) : text), 0);
-      lv_obj_set_style_image_recolor_opa(img, LV_OPA_COVER, 0);
+      if (own == nullptr) {
+        // (white art: lit in the light colour on 6x3, the text colour otherwise)
+        lv_obj_set_style_image_recolor(img, lv_color_hex(model.layout == "6x3" ? this->color_("light", 0xFFB300) : text), 0);
+        lv_obj_set_style_image_recolor_opa(img, LV_OPA_COVER, 0);
+      } else if (model.layout == "6x3") {
+        // (the theme's colours: its border lit instead)
+        lv_obj_set_style_border_color(btn, lv_color_hex(this->color_("light", 0xFFB300)), 0);
+      }
     }
     x += BAR_BTN_W + 8;
 
@@ -497,7 +516,7 @@ void Board::build_bar_(const PanelModel &model, const AreaSpec *area) {
     this->paint_lights_();
   }
   // Help: the dashboard's page for the tiles (or for editing them)
-  glyph_btn(help_x, "\U000F0625", [](lv_event_t *e) {  // mdi:help-circle-outline
+  lv_obj_t *help = glyph_btn(help_x, "\U000F0625", [](lv_event_t *e) {  // mdi:help-circle-outline
     auto *self = static_cast<Board *>(lv_event_get_user_data(e));
     lv_async_call(
         [](void *p) {
@@ -506,9 +525,10 @@ void Board::build_bar_(const PanelModel &model, const AreaSpec *area) {
         },
         self);
   });
+  bar_art(help, this->rt_->image(IMG_BAR_HELP));  // (the theme's own picture, if it has one)
 
   // settings, far right
-  if (const lv_image_dsc_t *gear = this->rt_->image(IMG_ICON_SETTINGS_S)) {
+  if (const lv_image_dsc_t *gear = this->rt_->bar_gear()) {
     lv_obj_t *g = bar_button(this->root_, btn_bg, btn_border, 4);
     lv_obj_set_pos(g, gear_x, btn_y);
     lv_obj_add_event_cb(g, &Board::on_settings_, LV_EVENT_CLICKED, this);

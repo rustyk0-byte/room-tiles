@@ -144,7 +144,7 @@ void Board::build_strip_(const PanelModel &model, const AreaSpec *area) {
     this->strip_dots_.push_back(d);
   }
   // settings: the gear, bottom center (the theme's gear picture)
-  if (const lv_image_dsc_t *gear = this->rt_->image(IMG_ICON_SETTINGS_S)) {
+  if (const lv_image_dsc_t *gear = this->rt_->bar_gear()) {
     lv_obj_t *g = bar_button(this->root_, this->color_("button", 0x333333), this->color_("tileBorder", 0x4A4A4A), 10);
     lv_obj_set_pos(g, (ROUND - BAR_BTN_W) / 2, DOTS_Y + 22);
     lv_obj_add_event_cb(

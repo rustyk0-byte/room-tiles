@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const THEMES = join(dirname(fileURLToPath(import.meta.url)), "..", "assets", "themes");
 // buttons a theme may draw itself (its picture, else the button's glyph)
-const BUTTONS = ["bar_area_lights", "bar_map", "tile_map", "run_gift", "icon_settings"];
+const BUTTONS = ["bar_grid", "bar_area_lights", "bar_map", "bar_help", "tile_map", "run_gift", "icon_settings"];
 
 export function themeData() {
   const themes = [];

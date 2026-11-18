@@ -78,10 +78,46 @@ def name(theme: str, lang: str) -> str:
 # ---- the pictures (docs/THEMES.md "Pictures") ---------------------------------------
 
 MASTERS = ROOT / "assets" / "masters"
+# ---- the top bars' buttons (docs/THEMES.md "Top bar") -------------------------------
+# A theme may draw any of these buttons itself (ui/<name>.png, any size):
+# the builders fit each into ONE box - its drawn part (alpha) trimmed,
+# scaled to fit, centred - so every top-bar picture is the same size as the
+# others and as the buttons' icon symbols (panels: 28 px, ~23 seen, in 48 x
+# 40 buttons; the dashboard: 20 px, ~17 seen, in 40 x 36). A little roomier
+# than a symbol: a drawing reads smaller than a clean glyph.
+# MIRRORED: frontend/src/room-tiles-panel.ts .bar-art (BAR_BOX_WEB / 2 in CSS px) and
+# firmware/components/room_tiles/board.cpp (the bar buttons) - a change here must be made there too.
+BAR_ART = ("bar_grid", "bar_map", "bar_area_lights", "bar_area_lights_off", "bar_help", "icon_settings")
+BAR_BOX_PANEL = (32, 26)  # panel px
+BAR_BOX_WEB = (48, 40)  # px - shown at 24 x 20 CSS px (sharp on 2x screens)
+# a picture fitted with another's scale and trim: its on / off pair never jumps
+BAR_PAIRS = {"bar_area_lights_off": "bar_area_lights"}
+
+
+def fit_bar_art(img, box: tuple[int, int], pair=None):
+    """`img` fitted into `box` (docs/THEMES.md "Top bar"): its drawn part -
+    with `pair`'s, when given (the same trim and scale for both) - scaled to
+    fit, centred on a clear box. Premultiplied resizing (no dark fringes)."""
+    from PIL import Image
+
+    img = img.convert("RGBA")
+    bbox = img.getchannel("A").getbbox()
+    if pair is not None:
+        pb = pair.convert("RGBA").getchannel("A").getbbox()
+        if bbox and pb and pair.size == img.size:
+            bbox = (min(bbox[0], pb[0]), min(bbox[1], pb[1]), max(bbox[2], pb[2]), max(bbox[3], pb[3]))
+    if bbox:
+        img = img.crop(bbox)
+    k = min(box[0] / img.width, box[1] / img.height)
+    size = (max(1, round(img.width * k)), max(1, round(img.height * k)))
+    small = img.convert("RGBa").resize(size, Image.LANCZOS).convert("RGBA")
+    out = Image.new("RGBA", box, (0, 0, 0, 0))
+    out.paste(small, ((box[0] - size[0]) // 2, (box[1] - size[1]) // 2))
+    return out
+
+
 # pictures only themes have (no default art): their sizes
 OWN_SIZES = {
-    "bar_area_lights": (44, 34),
-    "bar_map": (44, 34),
     "tile_map": (76, 58),
     "tile_map_s": (52, 40),
     "run_gift": (60, 60),
@@ -108,7 +144,8 @@ def expected_sizes() -> dict[tuple[str, str], tuple[int, int] | None]:
                 out[(sub, f"{f.stem}_off")] = size  # (any icon may have an off picture)
     for name, size in OWN_SIZES.items():
         out[("ui", name)] = size
-    out[("ui", "bar_area_lights_off")] = OWN_SIZES["bar_area_lights"]
+    for name in BAR_ART:  # (any size: fitted into the top bar's box)
+        out[("ui", name)] = None
     for name in CLOCK_FREE:
         out[("ui", name)] = None
         out[("ui", f"{name}_l")] = None

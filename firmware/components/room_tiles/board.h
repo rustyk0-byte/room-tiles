@@ -67,6 +67,10 @@ lv_obj_t *dropdown_title(lv_obj_t *parent, const std::string &text, const Fonts 
 /// Put the icon in it, centered.
 static constexpr int BAR_BTN_W = 48, BAR_BTN_H = 40;
 lv_obj_t *bar_button(lv_obj_t *parent, uint32_t bg, uint32_t border, int ext_click);
+/// A bar button's icon glyph replaced by a theme's own picture (none: the
+/// glyph stays) - the picture already fitted to the top bar's box
+/// (assets/theme_format.py BAR_BOX_PANEL).
+void bar_art(lv_obj_t *glyph, const lv_image_dsc_t *art);
 
 /// The settings button's dot (something waits on the dashboard: a device
 /// found to set up) - the dashboard's .gear-dot: yellow, top right.

@@ -7,7 +7,8 @@ Writes OUT_DIR/<theme>/...:
   appliances/<name>.webp  sprite sheets / stills, frames at 2x their CSS size
   ui/<name>.png           switch tracks, knobs, icons (copied)
 A theme's own pictures (themes/<theme>/{appliances,ui}/, same names and sizes)
-replace the masters; the rest come from masters/. themes/<theme>/ui/<icon>_off.png
+replace the masters - the top bar's (theme_format.BAR_ART) any size, each
+fitted into one box (theme_format.fit_bar_art); the rest come from masters/. themes/<theme>/ui/<icon>_off.png
 = the icon's picture while its entity is off (frontend/src/theme.ts OFF_ART).
 """
 
@@ -81,6 +82,11 @@ def build_ui(theme: str, out: Path) -> None:
         shutil.copy2(art(theme, "ui", master.name), out / master.name)
     for own in sorted((THEME_ART / theme / "ui").glob("*.png")):
         shutil.copy2(own, out / own.name)  # (and what only the theme has: "off" pictures, bar_*)
+    # the top bar's pictures: each fitted into the one box (theme_format.BAR_ART)
+    originals = {name: Image.open(out / f"{name}.png").copy() for name in theme_format.BAR_ART if (out / f"{name}.png").exists()}
+    for name, img in originals.items():
+        pair = originals.get(theme_format.BAR_PAIRS.get(name, ""))
+        theme_format.fit_bar_art(img, theme_format.BAR_BOX_WEB, pair).save(out / f"{name}.png", optimize=True)
     print(f"{out}: {len(list(out.glob('*.png')))} images")
 
 

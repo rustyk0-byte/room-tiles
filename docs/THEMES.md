@@ -104,7 +104,7 @@ only.
 |---|---|---|
 | `icon_light`, `icon_switch`, `icon_fan`, `icon_blind`, `icon_garage`, `icon_key`, `icon_ac`, `icon_dishwasher`, `icon_laundry`, `icon_robot_vacuum`, `icon_matic`, `icon_pool`, `icon_spa`, `icon_scene`, `icon_script` | 60×60 | tiles, map markers, lists |
 | `<icon>_off` | 60×60 | the same icon while its device is off (optional) |
-| `icon_settings` | 72×72 | the gear |
+| `icon_settings` | any (see [Top bar](#top-bar)) | the gear |
 | `icon_grid_6x3` | 36×36 | the "more tiles" button |
 
 ### Buttons a theme may draw - ui/
@@ -113,11 +113,35 @@ Without one, the button shows its plain symbol.
 
 | Name | Size | |
 |---|---|---|
-| `bar_area_lights` (+ `_off`) | 44×34 | the top bar's lights button |
-| `bar_map` | 44×34 | the top bar's Map button |
+| `bar_grid` | any (see [Top bar](#top-bar)) | the top bar's "more tiles" button |
+| `bar_map` | any | the top bar's Map button |
+| `bar_area_lights` (+ `_off`) | any | the top bar's lights button |
+| `bar_help` | any | the top bars' Help button |
 | `tile_map`, `tile_map_s` | 76×58, 52×40 | the Map tile, on big and small tiles |
 | `run_gift`, `run_gift_s` | 60×60, 41×41 | the scene / script button, on big and small tiles |
 | `brand_bar` | 48×48 | the Room Tiles icon in the top bar |
+
+### Top bar
+
+The top bars' buttons - `bar_grid`, `bar_map`, `bar_area_lights` (and its
+`_off`), `bar_help` and the gear `icon_settings` - all come out the **same
+size**, on the dashboard and on the panels, and the same size as the plain
+symbols beside them. Draw them at **any size**: the build trims the empty
+edges around what you drew, scales it to fit one box and centers it. Draw
+with a little room around the picture if you want it to look smaller.
+
+| | The box | Its button | The plain symbols |
+|---|---|---|---|
+| Panels | 32×26 | 48×40 | 28 px |
+| Dashboard | 24×20 (drawn at 48×40, for sharp screens) | 40×36 | 20 px |
+
+- Keep the picture about as wide as tall, up to 4:3 - a long, flat picture
+  comes out small.
+- `bar_area_lights_off` is fitted together with `bar_area_lights` (the same
+  trim and scale), so the button doesn't change size when the lights do -
+  draw both on the same canvas.
+- `bar_grid` keeps its colors: on the bigger 6x3 grid, the button's border
+  lights up instead (the plain symbol itself turns the light color).
 
 ### Controls - ui/
 

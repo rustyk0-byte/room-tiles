@@ -534,12 +534,14 @@ void MapView::build_bar_() {
     lv_obj_set_style_text_font(g, this->fonts_->glyph, 0);
     lv_obj_set_style_text_color(g, lv_color_hex(text), 0);
     lv_obj_center(g);
+    return g;
   };
-  tool(2, "\U000F0625", [](lv_event_t *e) {  // mdi:help-circle-outline
+  lv_obj_t *help = tool(2, "\U000F0625", [](lv_event_t *e) {  // mdi:help-circle-outline
     auto *self = static_cast<MapView *>(lv_event_get_user_data(e));
     self->rt_->board().open_help(self->queue_mode_ ? "queue" : "view");
   });
-  if (const lv_image_dsc_t *gear = this->rt_->image(IMG_ICON_SETTINGS_S)) {
+  bar_art(help, this->rt_->image(IMG_BAR_HELP));  // (the theme's own picture, if it has one)
+  if (const lv_image_dsc_t *gear = this->rt_->bar_gear()) {
     lv_obj_t *b = bar_button(this->bar_, btn_bg, btn_border, 4);
     lv_obj_align(b, LV_ALIGN_TOP_RIGHT, -12 - (BAR_BTN_W + 8), btn_y);
     lv_obj_add_event_cb(
