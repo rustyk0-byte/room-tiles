@@ -57,8 +57,8 @@ the model is added to "Confirmed models" in a release.
 ## ESP32 panels (Room Tiles firmware)
 
 Room Tiles' own firmware runs on the Elecrow CrowPanel Advanced ESP32-P4
-(all 1024x600). Pick the firmware by the size and the version printed on
-the board ("V1.2" etc.).
+(all 1024x600) and on Elecrow's 2.1" round ESP32-S3 panel. Pick the
+firmware by the size and the version printed on the board ("V1.2" etc.).
 
 | Panel | Board version | Status |
 |---|---|---|
@@ -68,6 +68,7 @@ the board ("V1.2" etc.).
 | CrowPanel Advanced 9" | V1.0, V1.1, V1.2 | Beta: built like the 10.1", not tried yet |
 | CrowPanel Advanced 10.1" | V1.1 | Beta: built like V1.2, not tried yet |
 | CrowPanel Advanced 10.1" | V1.2 | Verified |
+| CrowPanel 2.1" round (ESP32-S3, 480x480, rotary knob) | - | Beta: installed and tried; a room's tiles in one strip, no map or vacuum view |
 
 The 5" ESP32-P4 board isn't supported: its screen is 800x480 on another kind
 of display connection (the 7", 9" and 10.1" share 1024x600 and the board).

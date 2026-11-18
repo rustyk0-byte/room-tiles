@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Room Tiles for Home Assistant</title>
+    <meta
+      name="description"
+      content="Big, friendly tiles for every room in your home - on ESP32 touch panels and on every phone, tablet and computer. Free and open source, for Home Assistant."
+    />
+    <meta property="og:title" content="Room Tiles for Home Assistant" />
+    <meta property="og:description" content="Every room, one tap away - on touch panels and on every phone, tablet and computer." />
+    <meta property="og:image" content="img/og.png" />
+    <link rel="icon" href="icon.png" />
+    <!--
+      The landing page (docs/TODO.md "Landing page + browser demo"), at the
+      root of the GitHub Pages site: demo/ (the browser demo), install/ (the
+      firmware install page). Pictures in img/ - a missing one just leaves
+      its card without a picture (figures hide themselves).
+    -->
+    <style>
+      :root {
+        --page: #f4f5f7;
+        --card: #ffffff;
+        --text: #1c1f24;
+        --dim: #5d6470;
+        --line: #d9dde3;
+        --accent: #2f7fd6;
+        --on-accent: #ffffff;
+        --shot: #101215;
+        --amber: #f5a623;
+        --blue: #4b9ef3;
+        --green: #5ea65e;
+        --purple: #9575cd;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --page: #121417;
+          --card: #1d2025;
+          --text: #eceef1;
+          --dim: #9aa1ab;
+          --line: #30353c;
+          --accent: #4b9ef3;
+          --on-accent: #ffffff;
+          --shot: #0b0c0e;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+        font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      a {
+        color: var(--accent);
+      }
+      .wrap {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      /* ---- top bar ---- */
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: color-mix(in srgb, var(--page) 88%, transparent);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--line);
+      }
+      header .wrap {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        height: 60px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--text);
+        text-decoration: none;
+      }
+      .brand img {
+        width: 32px;
+        height: 32px;
+      }
+      nav {
+        margin-left: auto;
+        display: flex;
+        gap: 18px;
+      }
+      nav a {
+        color: var(--dim);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+      nav a:hover {
+        color: var(--text);
+      }
+
+      /* ---- buttons ---- */
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 22px;
+        border-radius: 12px;
+        font-weight: 700;
+        text-decoration: none;
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--text);
+      }
+      .button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--on-accent);
+      }
+      .button:hover {
+        filter: brightness(1.08);
+      }
+
+      /* ---- the opening ---- */
+      .hero {
+        padding: 64px 0 40px;
+        display: grid;
+        grid-template-columns: 1fr 1.15fr;
+        gap: 48px;
+        align-items: center;
+      }
+      .hero h1 {
+        font-size: clamp(2.3rem, 5vw, 3.6rem);
+        line-height: 1.08;
+        margin: 0 0 18px;
+        letter-spacing: -0.02em;
+      }
+      .hero h1 .tiles {
+        display: inline-flex;
+        gap: 6px;
+        vertical-align: middle;
+        margin-left: 6px;
+      }
+      .hero h1 .tiles i {
+        width: 0.42em;
+        height: 0.42em;
+        border-radius: 0.1em;
+        border: 0.08em solid;
+      }
+      .hero p.lead {
+        font-size: 1.2rem;
+        color: var(--dim);
+        margin: 0 0 28px;
+        max-width: 34em;
+      }
+      .hero .small {
+        margin-top: 18px;
+        font-size: 0.9rem;
+        color: var(--dim);
+      }
+
+      /* a picture: a framed screen; hidden until it loads */
+      figure {
+        margin: 0;
+      }
+      figure img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 14px;
+        background: var(--shot);
+        border: 1px solid var(--line);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+      }
+      figure.missing {
+        display: none;
+      }
+      figcaption {
+        margin-top: 10px;
+        font-size: 0.85rem;
+        color: var(--dim);
+        text-align: center;
+      }
+      /* the opening's picture missing: four big tiles instead */
+      .hero-art {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        aspect-ratio: 1024 / 600;
+      }
+      .hero-art i {
+        border-radius: 22px;
+        border: 14px solid;
+      }
+      .hero figure:not(.missing) + .hero-art {
+        display: none;
+      }
+
+      /* ---- sections ---- */
+      section {
+        padding: 56px 0;
+      }
+      section + section {
+        border-top: 1px solid var(--line);
+      }
+      h2 {
+        font-size: clamp(1.7rem, 3.4vw, 2.3rem);
+        line-height: 1.15;
+        margin: 0 0 12px;
+        letter-spacing: -0.01em;
+      }
+      .sub {
+        color: var(--dim);
+        font-size: 1.1rem;
+        margin: 0 0 32px;
+        max-width: 42em;
+      }
+      .features {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 22px;
+      }
+      .feature {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .feature figure {
+        margin: -8px -8px 6px;
+      }
+      .feature figure img {
+        box-shadow: none;
+        border-radius: 10px;
+      }
+      .feature h3 {
+        margin: 0;
+        font-size: 1.15rem;
+      }
+      .feature p {
+        margin: 0;
+        color: var(--dim);
+        font-size: 0.97rem;
+      }
+      .dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        border: 3px solid;
+        display: inline-block;
+        margin-right: 8px;
+        vertical-align: -1px;
+      }
+
+      /* the panels: words beside a big picture */
+      .split {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 44px;
+        align-items: center;
+      }
+      .split ul {
+        margin: 0 0 26px;
+        padding-left: 1.2em;
+      }
+      .split li {
+        margin: 8px 0;
+      }
+      .split li b {
+        color: var(--text);
+      }
+      .split li {
+        color: var(--dim);
+      }
+
+      .facts {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 22px;
+      }
+      .fact h3 {
+        margin: 0 0 6px;
+        font-size: 1.1rem;
+      }
+      .fact p {
+        margin: 0;
+        color: var(--dim);
+      }
+
+      footer {
+        border-top: 1px solid var(--line);
+        padding: 36px 0 48px;
+        color: var(--dim);
+        font-size: 0.92rem;
+      }
+      footer .wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 28px;
+        align-items: center;
+      }
+      footer .support {
+        margin-left: auto;
+      }
+
+      .amber { color: var(--amber); border-color: var(--amber); }
+      .blue { color: var(--blue); border-color: var(--blue); }
+      .green { color: var(--green); border-color: var(--green); }
+      .purple { color: var(--purple); border-color: var(--purple); }
+
+      @media (max-width: 900px) {
+        .hero,
+        .split {
+          grid-template-columns: 1fr;
+          gap: 32px;
+        }
+        .hero {
+          padding-top: 40px;
+        }
+        .features,
+        .facts {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 600px) {
+        .features,
+        .facts {
+          grid-template-columns: 1fr;
+        }
+        nav a.wide {
+          display: none;
+        }
+        footer .support {
+          margin-left: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <a class="brand" href="index.html"><img src="icon.png" alt="" />Room Tiles</a>
+        <nav>
+          <a href="demo/index.html">Demo</a>
+          <a class="wide" href="#panels">Touch panels</a>
+          <a href="https://github.com/rustyk0-byte/room-tiles#install">Install</a>
+          <a class="wide" href="https://github.com/rustyk0-byte/room-tiles">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap hero">
+        <div>
+          <h1>
+            Every room,<br />one tap away<span class="tiles" aria-hidden="true"
+              ><i class="amber"></i><i class="blue"></i><i class="green"></i><i class="purple"></i
+            ></span>
+          </h1>
+          <p class="lead">
+            Room Tiles turns Home Assistant into big, friendly tiles - room by room - on touch panels around your home and
+            on every phone, tablet and computer.
+          </p>
+          <div class="buttons">
+            <a class="button primary" href="demo/index.html">Try it in your browser</a>
+            <a class="button" href="https://github.com/rustyk0-byte/room-tiles#install">Get Room Tiles</a>
+          </div>
+          <p class="small">Free and open source. For Home Assistant 2026.11 and newer.</p>
+        </div>
+        <figure>
+          <img src="img/panel.jpg" alt="A Room Tiles touch panel on its desk stand, showing a room's tiles" loading="eager" onerror="this.parentNode.classList.add('missing')" />
+        </figure>
+        <div class="hero-art" aria-hidden="true">
+          <i class="amber"></i><i class="blue"></i><i class="green"></i><i class="purple"></i>
+        </div>
+      </div>
+
+      <section>
+        <div class="wrap">
+          <h2>Made for the way a home is used</h2>
+          <p class="sub">
+            What's on and off, open or locked, running or done - at a glance, from across the room. Change it with one
+            tap.
+          </p>
+          <div class="features">
+            <div class="feature">
+              <figure><img src="img/tiles.png" alt="A room's tiles: lights, a fan, blinds, a thermostat and a lock" loading="lazy" onerror="this.parentNode.classList.add('missing')" /></figure>
+              <h3><span class="dot amber"></span>A board for every room</h3>
+              <p>Lights, fans, blinds, locks, thermostats and switches - large tiles you can read from across the room.</p>
+            </div>
+            <div class="feature">
+              <figure><img src="img/map.png" alt="A floor plan with a marker for each device" loading="lazy" onerror="this.parentNode.classList.add('missing')" /></figure>
+              <h3><span class="dot blue"></span>Your home as a map</h3>
+              <p>Every floor, every room, and a marker for each device right where it is. Zoom in for more detail.</p>
+            </div>
+            <div class="feature">
+              <figure><img src="img/laundry.png" alt="A laundry tile: the dryer done, the washer running with minutes left" loading="lazy" onerror="this.parentNode.classList.add('missing')" /></figure>
+              <h3><span class="dot green"></span>Appliances that tell you</h3>
+              <p>Your washer, dryer and dishwasher: running, how long is left, and when it's done.</p>
+            </div>
+            <div class="feature">
+              <figure><img src="img/vacuum.png" alt="A robot vacuum cleaning rooms from a queue on the map" loading="lazy" onerror="this.parentNode.classList.add('missing')" /></figure>
+              <h3><span class="dot purple"></span>Clean room by room</h3>
+              <p>Tap the rooms on the map you want your robot vacuum to clean next, in the order you want.</p>
+            </div>
+            <div class="feature">
+              <figure><img src="img/themes.png" alt="The same room in the Dark, Light and Christmas themes" loading="lazy" onerror="this.parentNode.classList.add('missing')" /></figure>
+              <h3><span class="dot amber"></span>Themes</h3>
+              <p>Dark, Light, and a festive Christmas theme - pick one per panel, or for your phone.</p>
+            </div>
+            <div class="feature">
+              <figure><img src="img/phone.png" alt="Room Tiles on a phone" loading="lazy" onerror="this.parentNode.classList.add('missing')" /></figure>
+              <h3><span class="dot blue"></span>Ready in minutes</h3>
+              <p>Room Tiles finds your rooms and devices in Home Assistant and fills each room's tiles for you. Change any of it later.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="panels">
+        <div class="wrap split">
+          <div>
+            <h2>Touch panels made for it</h2>
+            <p class="sub">Put a panel in the rooms you use most - on the wall or on a desk.</p>
+            <ul>
+              <li><b>Elecrow ESP32-P4 panels</b>, 7", 9" and 10.1", and a 2.1" round one with a turning knob.</li>
+              <li><b>Install from your browser</b> - plug the panel into your computer and press Install. No coding.</li>
+              <li><b>Updates itself</b> when you update Room Tiles, while nobody's using it.</li>
+              <li><b>Desk stands</b> you can 3D-print, for the 7" and 10.1".</li>
+            </ul>
+            <div class="buttons">
+              <a class="button primary" href="install/index.html">Install the panel firmware</a>
+              <a class="button" href="https://github.com/rustyk0-byte/room-tiles/blob/main/docs/SUPPORTED.md">Supported panels</a>
+            </div>
+          </div>
+          <figure>
+            <img src="img/panels.jpg" alt="Room Tiles touch panels" loading="lazy" onerror="this.parentNode.classList.add('missing')" />
+          </figure>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2>Yours, in your home</h2>
+          <div class="facts">
+            <div class="fact">
+              <h3>Runs on your Home Assistant</h3>
+              <p>No account and no cloud of its own: your panels talk to your Home Assistant, at home.</p>
+            </div>
+            <div class="fact">
+              <h3>Free and open source</h3>
+              <p>Apache 2.0. Read the code, suggest a change, or add your appliance's brand.</p>
+            </div>
+            <div class="fact">
+              <h3>Your language</h3>
+              <p>English, German, Spanish, French, Italian, Dutch and Portuguese - each panel in its own.</p>
+            </div>
+          </div>
+          <div class="buttons" style="margin-top: 36px">
+            <a class="button primary" href="demo/index.html">Try it in your browser</a>
+            <a class="button" href="https://github.com/rustyk0-byte/room-tiles#install">Get Room Tiles</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <span>Room Tiles · <a href="https://github.com/rustyk0-byte/room-tiles/blob/main/LICENSE">Apache 2.0</a></span>
+        <a href="https://github.com/rustyk0-byte/room-tiles">GitHub</a>
+        <a href="https://github.com/rustyk0-byte/room-tiles/issues">Send feedback</a>
+        <span class="support"
+          >Help cover its costs: <a href="https://github.com/sponsors/rustyk0-byte">GitHub Sponsors</a> ·
+          <a href="https://ko-fi.com/roomtiles">Ko-fi</a></span
+        >
+      </div>
+    </footer>
+  </body>
+</html>
