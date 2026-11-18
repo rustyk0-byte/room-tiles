@@ -113,6 +113,10 @@
       .no-serial .note.warn {
         display: block;
       }
+      .note.heads-up {
+        border-color: var(--accent);
+        margin: 0 0 12px;
+      }
       a {
         color: var(--accent);
       }
@@ -137,9 +141,19 @@
       <ol>
         <li>Plug the panel into this computer with a USB-C cable that carries data.</li>
         <li>Press <b>Install</b> on your panel above, pick its port, and wait until it's done.</li>
+        <li>
+          The page may then offer to connect the panel to Wi-Fi - you can do it here, or on the panel (below). On the
+          round panel it first says the USB port has changed: select the port again, or just close the page.
+        </li>
       </ol>
 
       <h2>3. Connect it</h2>
+      <div class="note heads-up">
+        <b>Did this board run ESPHome before</b> (your own firmware, or Elecrow's)? In Home Assistant, delete its old
+        device first: <b>Settings › Devices &amp; services › ESPHome</b> › the old device › ⋮ › <b>Delete</b>, then unplug
+        the panel and plug it back in. Otherwise Home Assistant offers <b>Reconfigure</b> instead of <b>Add</b>, and the
+        panel stays on "Connecting to Home Assistant…".
+      </div>
       <ol>
         <li>The panel asks for its language: tap yours.</li>
         <li>
@@ -148,11 +162,12 @@
         </li>
         <li>
           In Home Assistant (with the Room Tiles integration set up), go to <b>Settings › Devices &amp; services</b>.
-          The panel is under <b>Discovered</b> with the name it shows, like <b>Room Tiles Panel a1b2c3</b>: select <b>Add</b>.
+          The panel is under <b>Discovered</b> with the name it shows, like <b>Room Tiles Panel a1b2c3</b>: select <b>Add</b>
+          (never Reconfigure).
         </li>
-        <li>A minute later the panel asks which area to show.</li>
+        <li>A minute later the panel has its look and wording - and asks which area to show if its device has none.</li>
       </ol>
-      <p>More help, and changing Wi-Fi later: <a href="https://github.com/rustyk0-byte/room-tiles#wall-panels">Wall panels</a>.</p>
+      <p>More help, and changing Wi-Fi later: <a href="https://github.com/rustyk0-byte/room-tiles#touch-panels">Touch panels</a>.</p>
     </main>
     <script>
       if (!("serial" in navigator)) document.body.classList.add("no-serial");

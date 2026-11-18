@@ -182,7 +182,9 @@ wall or stand it on a desk; a 3D-printable desk stand will be shared here.
    asks, and let it finish (a few minutes). It erases what the panel ran
    before.
 4. If the page then offers to connect the panel to Wi-Fi, you can do it
-   right there (else the panel helps you - see below).
+   right there (else the panel helps you - see below). On the round panel
+   the page first says the USB port has changed: select the port again to
+   continue, or just close the page.
 
 Then unplug it, and power it where it will live.
 
@@ -223,10 +225,19 @@ network, such as `room-tiles-a1b2c3`.
 Once it's on your Wi-Fi, the panel says **Add this panel in Home
 Assistant**, with its name, such as **Room Tiles Panel a1b2c3**:
 
+> **Did this board run ESPHome before (your own firmware, or Elecrow's)?**
+> Delete its old device in Home Assistant first: Settings › Devices &
+> services › **ESPHome** › the old device › ⋮ › **Delete**. Then unplug the
+> panel and plug it back in. Otherwise Home Assistant recognizes the board
+> and offers **Reconfigure** for the old device instead of **Add** - and
+> Room Tiles can't finish setting it up (the panel stays on "Connecting to
+> Home Assistant…"). If that already happened: delete the device, unplug
+> the panel, plug it back in, and choose **Add**.
+
 1. Make sure the Room Tiles integration is installed and set up (above).
 2. In Home Assistant, go to Settings › **Devices & services**. The panel
    shows up under **Discovered** with that name.
-3. Select **Add** and confirm.
+3. Select **Add** (never Reconfigure) and confirm.
 
 A minute later the panel has its look and wording. If its device has no
 area in Home Assistant, the panel asks which area to show.
