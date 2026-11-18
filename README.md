@@ -171,10 +171,23 @@ very welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
 ESP32-P4 touch panels showing the same boards and maps are part of this
 project (boards: [docs/SUPPORTED.md](docs/SUPPORTED.md)). Mount one on a
 wall or stand it on a desk; a 3D-printable desk stand will be shared here.
-Installing the firmware will be documented here before the first release.
+### Install the firmware
 
-> **The panel's Wi-Fi chip gets updated too.** These Elecrow boards have a
-> separate Wi-Fi chip (an ESP32-C6) with its own firmware, and it has to
+1. Plug the panel into your computer with a USB-C cable (a data cable,
+   not a charge-only one).
+2. In **Chrome or Edge** on that computer, open the
+   [install page](https://rustyk0-byte.github.io/room-tiles/).
+3. Pick your panel - its size, and the board version printed on its back
+   ("V1.2") - and press **Install**. Choose the panel's port when the browser
+   asks, and let it finish (a few minutes). It erases what the panel ran
+   before.
+4. If the page then offers to connect the panel to Wi-Fi, you can do it
+   right there (else the panel helps you - see below).
+
+Then unplug it, and power it where it will live.
+
+> **The panel's Wi-Fi chip gets updated too.** The CrowPanel Advanced
+> boards (not the round one) have a separate Wi-Fi chip (an ESP32-C6) with its own firmware, and it has to
 > match the panel's firmware. Room Tiles' panel firmware carries the
 > matching Wi-Fi chip firmware and installs it when the chip has an older
 > version: on a new panel's first start, and after a panel update that
