@@ -7,6 +7,7 @@ import { LitElement, css, html, type PropertyValues } from "lit";
 
 const ROW_U = 32; // roller row height, design px (3 rows visible)
 const SETTLE_SCROLL_MS = 140; // scroll considered finished after this quiet time
+const DRAG_START_PX = 4; // a mouse moved this far with its button down: a drag, not a click
 
 export class RtSwitch extends LitElement {
   static properties = {
@@ -210,13 +211,41 @@ export class RtRoller extends LitElement {
     this._userUntil = Date.now() + 1500;
   }
 
-  private _onDown(): void {
+  // a mouse drag (a browser doesn't scroll a list dragged with a mouse -
+  // touch and the wheel roll it by themselves): the list follows the mouse
+  private _drag?: { id: number; y: number; top: number; moved: boolean };
+
+  private _onDown(e?: Event): void {
     this._onUser();
-    if (!this.disabled) this._touching = true;
+    if (this.disabled) return;
+    this._touching = true;
+    const p = e as PointerEvent | undefined;
+    const list = this._list;
+    if (p?.pointerType === "mouse" && p.button === 0 && list)
+      this._drag = { id: p.pointerId, y: p.clientY, top: list.scrollTop, moved: false };
+  }
+
+  private _onMove(e: PointerEvent): void {
+    const d = this._drag;
+    const list = this._list;
+    if (!d || e.pointerId !== d.id || !list) return;
+    const dy = e.clientY - d.y;
+    if (!d.moved && Math.abs(dy) < DRAG_START_PX) return; // (a click picks its row)
+    if (!d.moved) {
+      d.moved = true;
+      list.setPointerCapture(e.pointerId); // (outside the roller too; no row's click after)
+      list.style.scrollSnapType = "none"; // (snaps once let go: _settled)
+    }
+    list.scrollTop = d.top - dy;
+    this._userUntil = Date.now() + 1500;
   }
 
   /** Let go: it settles once the scrolling (momentum) goes quiet. */
   private _onUp(): void {
+    if (this._drag) {
+      if (this._drag.moved && this._list) this._list.style.scrollSnapType = "";
+      this._drag = undefined;
+    }
     if (!this._touching) return;
     this._touching = false;
     this._userUntil = Date.now() + 1500;
@@ -252,6 +281,7 @@ export class RtRoller extends LitElement {
       aria-activedescendant="o${this._center}"
       @scroll=${this._onScroll}
       @pointerdown=${this._onDown}
+      @pointermove=${this._onMove}
       @pointerup=${this._onUp}
       @pointercancel=${(e: PointerEvent) => {
         // a touch that turned into the list's own scrolling is cancelled as a
