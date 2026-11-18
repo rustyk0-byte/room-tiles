@@ -249,7 +249,8 @@ area in Home Assistant, the panel asks which area to show.
 Tap the gear on the panel:
 
 - **Screen brightness**, and **Go idle after** - how long untouched before
-  it goes idle (1 minute on a new panel).
+  it goes idle (1 minute on a new panel; **Never** keeps it bright - an
+  automatic update then waits for 10 minutes untouched, see Updates).
 - **When idle** - the screen goes off, or shows a clock (digital, analog or
   the theme's), at its own **Brightness** (a new panel: the digital clock,
   dimmed). **Animations keep tiles visible**
@@ -277,14 +278,24 @@ again.
 
 Panels update themselves when you update Room Tiles - this is the
 dashboard's **Update panels automatically** (gear › **Panels**), on unless
-you turn it off. Each panel waits until nobody's using it (its screen off,
-its clock showing, or untouched for 10 minutes), installs the new version
-and restarts.
+you turn it off. Each panel waits until nobody's using it:
+- it goes idle (its screen off, or its clock or dimmed tiles showing) - the
+  update starts then;
+- set to never go idle (**Go idle after: Never**), it waits for 10 minutes
+  with no touch (and, on the round panel, no turn of the knob) - each use
+  starts the 10 minutes over.
 
-Turned off, a panel waits until you press **Install** - on the Panels page,
-or on its card under Settings › **Updates** (**Room Tiles firmware**, with
-the Room Tiles version it brings, like 0.1.1). (A panel too old to work with
-your Room Tiles at all updates right away.)
+Then it shows "Downloading the update…" and "Installing the update…",
+restarts (a minute or two) and comes back to its board. Once it has
+started, a touch doesn't stop it. A panel that's dark when its update
+starts stays dark.
+
+To update a panel now, while it's in use, press **Install** - on the
+Panels page, or on its card under Settings › **Updates** - it starts right
+away. With automatic updates turned off, a panel waits for that
+**Install**. The card is **Room Tiles firmware**, with the Room Tiles
+version it brings, like 0.1.1. (A panel too old to work with your Room
+Tiles at all updates right away.)
 
 An update can bring a newer Wi-Fi chip firmware too (see the note under
 ESP32 panels): after restarting, the panel shows "Updating the Wi-Fi chip…"
