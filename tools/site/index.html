@@ -194,16 +194,19 @@
         color: var(--dim);
         text-align: center;
       }
-      /* the opening's picture missing: four big tiles instead */
+      /* the opening's picture missing: the logo's four tiles instead - square,
+         as in the logo (icon.png) */
       .hero-art {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 18px;
-        aspect-ratio: 1024 / 600;
+        gap: 9%;
+        width: min(100%, 380px);
+        aspect-ratio: 1;
+        justify-self: center;
       }
       .hero-art i {
-        border-radius: 22px;
-        border: 14px solid;
+        border-radius: 18%;
+        border: 15px solid;
       }
       .hero figure:not(.missing) + .hero-art {
         display: none;
@@ -384,7 +387,8 @@
           <p class="small">Free and open source. For Home Assistant 2026.11 and newer.</p>
         </div>
         <figure>
-          <img src="img/panel.jpg" alt="A Room Tiles touch panel on its desk stand, showing a room's tiles" loading="eager" onerror="this.parentNode.classList.add('missing')" />
+          <img src="img/panel.jpg" alt="A Room Tiles touch panel on its desk stand, showing a room's tiles" loading="eager"
+            onerror="if (!this.dataset.next) { this.dataset.next = 1; this.alt = 'A room on Room Tiles'; this.src = 'img/hero.png'; } else this.parentNode.classList.add('missing')" />
         </figure>
         <div class="hero-art" aria-hidden="true">
           <i class="amber"></i><i class="blue"></i><i class="green"></i><i class="purple"></i>
