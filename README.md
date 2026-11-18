@@ -10,6 +10,7 @@ tiles: lights, fans, blinds, locks, thermostats, and live tiles for your
 washer, dryer, dishwasher, pool / spa and robot vacuum. A map of your home
 shows the same things where they are.
 
+- See it and try it: [rustyk0-byte.github.io/room-tiles](https://rustyk0-byte.github.io/room-tiles/) - a demo in your browser, and Room Tiles in real homes
 - Supported brands and models: [docs/SUPPORTED.md](docs/SUPPORTED.md)
 - For contributors: [docs/DESIGN.md](docs/DESIGN.md) · [docs/UI.md](docs/UI.md)
 
@@ -181,7 +182,7 @@ the dashboard.
 1. Plug the panel into your computer with a USB-C cable (a data cable,
    not a charge-only one).
 2. In **Chrome or Edge** on that computer, open the
-   [install page](https://rustyk0-byte.github.io/room-tiles/).
+   [install page](https://rustyk0-byte.github.io/room-tiles/install/).
 3. Pick your panel - its size, and the board version printed on its back
    ("V1.2") - and press **Install**. Choose the panel's port when the browser
    asks, and let it finish (a few minutes). It erases what the panel ran

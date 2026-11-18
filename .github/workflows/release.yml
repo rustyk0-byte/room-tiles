@@ -2,13 +2,13 @@ name: Release
 
 # A published release: every board's panel firmware and the dashboard built
 # (firmware.yml, frontend.yml), then attached to the release:
-# - room_tiles.zip - what HACS installs (hacs.json zip_release): the
-#   integration with its dashboard and every board's update image, so one
-#   HACS install / update brings the panels' firmware with it
+# - room_tiles.zip - what the Marketplace installs (hacs.json zip_release):
+#   the integration with its dashboard and every board's update image, so
+#   one install / update brings the panels' firmware with it
 #   (tools/make_release_zip.py; manifest.json's version = the tag);
 # - each board's factory image (the first USB install, by hand).
-# Then the install page on GitHub Pages - once the repo is public (Pages for
-# a private repo is a paid plan; Settings > Pages > Source "GitHub Actions").
+# Then the GitHub Pages site (site.yml): the landing page, the demo, the
+# gallery and the install page (Settings > Pages > Source "GitHub Actions").
 on:
   release:
     types: [published]
@@ -47,26 +47,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ github.event.release.tag_name }}" room_tiles.zip images/*.factory.bin --repo "${{ github.repository }}" --clobber
 
-  install-page:
-    if: ${{ !github.event.repository.private }}
+  # the GitHub Pages site - the landing page, the demo, the gallery and the
+  # install page with this release's factory images (site.yml)
+  site:
     needs: firmware
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/site.yml
     permissions:
+      contents: read
       pages: write
       id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: room-tiles-*
-          path: images
-          merge-multiple: true
-      - run: python3 tools/make_install_site.py images site
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-      - id: deploy
-        uses: actions/deploy-pages@v4

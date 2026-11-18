@@ -1,0 +1,67 @@
+name: Site
+
+# The GitHub Pages site (docs/TODO.md "Landing page + browser demo";
+# tools/make_site.py):
+#   /            the landing page (tools/site/)
+#   /demo/       the browser demo - its made-up home from the real
+#                integration (tools/demo/make_demo.py)
+#   /gallery/    Room Tiles in the wild (tools/site/gallery/)
+#   /install/    the firmware install page, with each board's factory image
+# - a published release (release.yml calls it): from the release, with the
+#   firmware its own run just built - the demo matches what people install;
+# - by hand (Actions > Site > Run workflow, from main): the site as it is on
+#   main - a new gallery photo, a fix to the page - with the latest release's
+#   firmware.
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  site:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      # the factory images: this release's (its run's firmware), or the latest release's
+      - if: github.event_name == 'release'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: room-tiles-*
+          path: images
+          merge-multiple: true
+      - if: github.event_name != 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download --repo "${{ github.repository }}" --pattern "room-tiles-*.factory.bin" --dir images
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements_test.txt
+      - name: The demo home (the real integration in HA's test harness)
+        run: |
+          pip install --quiet -r requirements_test.txt pillow
+          DEMO_OUT=demo-data python -m pytest -q tools/demo/make_demo.py -p no:cacheprovider
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: The site
+        run: |
+          (cd frontend && npm install --no-audit --no-fund)
+          python assets/build_web.py custom_components/room_tiles/frontend
+          python tools/make_site.py site --demo-data demo-data --images images
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
