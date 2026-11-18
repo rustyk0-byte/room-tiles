@@ -138,6 +138,28 @@ APPLIANCES = [
 ]
 
 
+# The generated Main Floor map, changed a little: these two rooms trade
+# places (the Dining Room gets the bay window), and stairs up from the
+# Living Room - a link to the Upstairs map, in the room's upper part (clear
+# of its name and its lights marker).
+SWAP_ROOMS = ("dining_room", "garage")
+STAIRS = ("main_floor", "living_room", "upstairs", 146.0)
+
+
+def _map_changes(entry: MockConfigEntry) -> None:
+    from custom_components.room_tiles.model import Link
+
+    data = entry.runtime_data.data
+    plan = next(m for m in data.maps if m.id == STAIRS[0])
+    a, b = (next(z for z in plan.zones if z.area == area) for area in SWAP_ROOMS)
+    a.id, b.id, a.area, b.area, a.name, b.name = b.id, a.id, b.area, a.area, b.name, a.name
+    ma, mb = (next(mk for mk in data.markers if mk.map == plan.id and mk.entity == f"light.room_tiles_{area}_area_lights")
+              for area in SWAP_ROOMS)
+    ma.x, ma.y, mb.x, mb.y = mb.x, mb.y, ma.x, ma.y
+    room = next(z for z in plan.zones if z.area == STAIRS[1])
+    plan.links.append(Link(to=STAIRS[2], at=(room.label[0], STAIRS[3])))
+
+
 @pytest.fixture(autouse=True)
 def _custom(enable_custom_integrations):
     yield
@@ -197,6 +219,7 @@ async def test_make_demo(hass: HomeAssistant, hass_ws_client) -> None:
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     await _appliances(hass, entry)
+    _map_changes(entry)
 
     ws = await hass_ws_client(hass)
     await ws.send_json({"id": 1, "type": "room_tiles/subscribe"})
