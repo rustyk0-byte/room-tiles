@@ -49,11 +49,10 @@ Upload firmware), one image per board in the folder.
 **Left, by phase:**
 - **A + B. CI** (`.github/workflows/firmware.yml`, written 2026-11-15; the
   one-board build runs green, the all-boards / release run not tried yet).
-  Only when asked (Actions minutes cost): run by hand, the device files
-  named (or "all") for a chip kind - each fails above 80% of a slot (`tools/check_firmware_size.py`) - a pull
-  request too, but only on the public repo (free there); "all" or a release,
-  every
-  board's update + factory image (a release: attached to it), for
+  Run by hand (free on the public repo; a build takes minutes): the device
+  files named (or "all") for a chip kind - each fails above 80% of a slot
+  (`tools/check_firmware_size.py`) - and on a pull request; "all" or a
+  release, every board's update + factory image (a release: attached to it), for
   engineering-sample chips (v1.x) and production ones (v3.x) from the same
   device file (`esphome -s engineering_sample false`; a production 10.1"
   build compiles). The chip's revision is never the user's pick (it isn't
@@ -179,18 +178,14 @@ Upload firmware), one image per board in the folder.
   cycle"), and "Send feedback" in the settings menu (bug / idea / question;
   appliance, pool and vacuum problems handed to their Report a problem;
   issue forms with labels - **written 2026-11-18**, feedback.ts, DESIGN.md
-  "Privacy"). Before going public: create the labels the forms use
-  (problem, model-report, unknown-state; GitHub's defaults cover bug,
-  enhancement, question).
+  "Privacy"). The labels the forms use exist (problem, model-report,
+  unknown-state, and GitHub's bug, enhancement, question).
 - **Reports: what's left** (after panel facts in panel bugs, the
   dashboard's recent errors in dashboard bugs, and HA's Download
   diagnostics - 2026-11-18):
   - **Report to test** (maintainer tool): turn a model report's or a
     problem report's issue into a CI test that replays its cycle through
     the preset (step 3 of clearing a beta flag below).
-  - **GitHub labels:** create problem, model-report, unknown-state on the
-    repo (the issue forms apply them; missing ones are skipped) - needs the
-    owner's OK.
   - **Setup's beta notes** (found devices) point to Report how it went once
     the device is set up.
   - **Unknown vacuum states:** "Also tell Room Tiles" for a vacuum state
@@ -271,8 +266,11 @@ Upload firmware), one image per board in the folder.
 - **The name:** check "Room Tiles" is free (USPTO search, app stores,
   GitHub) before going public - renaming after release breaks every install;
   file the trademark (intent to use, class 9) shortly before going public.
-- **Going public:** a fresh repo, HACS, the web flasher, CI per board. On
-  the public repo, run `tools/github/protect-main.sh <owner>/<repo>`: main
+- **Going public - the repo is public since 2026-11-18** (a fresh one: one
+  clean first commit; the history before it stays private). Done: the main
+  branch rule (`tools/github/protect-main.sh`), the report labels. Left:
+  HACS (a pre-release first), the web flasher on GitHub Pages, CI per
+  board. `tools/github/protect-main.sh <owner>/<repo>`: main
   changes only through pull requests the code owner approved; outside
   contributors' workflows wait for approval (both need a public repo).
 
