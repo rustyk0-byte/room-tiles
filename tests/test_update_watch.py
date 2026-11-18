@@ -27,3 +27,26 @@ def test_code_changes_count_dashboard_files_dont(tmp_path):
     # a new file too
     (tmp_path / "sensor.py").write_text("a = 1\n")
     assert fingerprint(tmp_path) != before
+
+
+async def test_the_installers_restart_repair_stands_in_for_ours(hass) -> None:
+    """The Marketplace's (HA 2026.11) or HACS's own "restart required" repair
+    for Room Tiles: Room Tiles doesn't raise a second one."""
+    from homeassistant.helpers import issue_registry as ir
+
+    from custom_components.room_tiles.const import DOMAIN
+    from custom_components.room_tiles.update_watch import installer_asks_restart
+
+    assert not installer_asks_restart(hass)
+    ir.async_create_issue(hass, "marketplace", "restart_required_1462932720_v0.1.0b1", is_fixable=True,
+                          issue_domain=DOMAIN, severity=ir.IssueSeverity.WARNING, translation_key="restart_required")
+    assert installer_asks_restart(hass)
+    ir.async_delete_issue(hass, "marketplace", "restart_required_1462932720_v0.1.0b1")
+    ir.async_create_issue(hass, "hacs", "restart_required_123_v1", is_fixable=True,
+                          issue_domain=DOMAIN, severity=ir.IssueSeverity.WARNING, translation_key="restart_required")
+    assert installer_asks_restart(hass)
+    # another integration's restart: not ours
+    ir.async_delete_issue(hass, "hacs", "restart_required_123_v1")
+    ir.async_create_issue(hass, "marketplace", "restart_required_9_v2", is_fixable=True,
+                          issue_domain="other_thing", severity=ir.IssueSeverity.WARNING, translation_key="restart_required")
+    assert not installer_asks_restart(hass)

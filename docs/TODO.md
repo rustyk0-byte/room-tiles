@@ -266,6 +266,18 @@ Upload firmware), one image per board in the folder.
 - **The name:** check "Room Tiles" is free (USPTO search, app stores,
   GitHub) before going public - renaming after release breaks every install;
   file the trademark (intent to use, class 9) shortly before going public.
+- **Marketplace install - tried 2026-11-18 with 0.1.0b1 (works):** "Add
+  from link", Install, restart: the zip's integration + dashboard ran (not a
+  developer build), and within 3 minutes of the restart all four test panels
+  had installed the zip's firmware and their Wi-Fi chips were on 2.12.13.
+  Found on the way: with only a pre-release out, the Marketplace installs
+  the `main` branch (404: no zip there); after the release was marked
+  stable, it still used `main` until "Refresh information" on the repo's
+  page (a repo object made before the release keeps its old ref);
+  `hide_default_branch` is read from hacs.json but not acted on (2026.11.2
+  source); Room Tiles' own restart repair now steps aside for the
+  Marketplace's (`restart_required_<repo>_<version>`), as it did for
+  HACS's. Next: the UPDATE path (a 0.1.0b2 through the update entity).
 - **Before inviting anyone: the Marketplace's main Install button must
   work.** With only a pre-release out, it installed from the `main` branch,
   which has no zip (404 - 0.1.0b1 test, 2026-11-18). `hacs.json`

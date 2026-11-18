@@ -1,4 +1,4 @@
-"""Restart needed? After an update (HACS or by hand) the new files are on
+"""Restart needed? After an update (the Marketplace, or by hand) the new files are on
 disk, but HA keeps running the code it loaded at startup until it restarts.
 The dashboard's own files are served straight from disk, so they don't
 count - only the integration's code and data files do.
@@ -7,7 +7,8 @@ The fingerprint of those files is taken once, when HA first imports this
 module (an integration reload doesn't re-import it, so it can't hide an
 update). Every few minutes it's compared with the files on disk; a change
 sets `restart_needed` in the dashboard feed (its Restart bar) and raises a
-fixable repair whose fix restarts HA - unless HACS already raised its own
+fixable repair whose fix restarts HA - unless the Marketplace (HA 2026.11's
+successor to HACS; HACS itself on an older setup) already raised its own
 restart repair for Room Tiles (one message, not two).
 """
 
@@ -28,7 +29,9 @@ DIR = Path(__file__).parent
 SKIP_DIRS = {"frontend", "__pycache__", "brand", "panel_packs", "firmware_images"}  # served from disk / not code (packs: reloaded live, __init__.py)
 CHECK_EVERY = timedelta(minutes=2)
 ISSUE_RESTART = "restart_required"
-HACS = "hacs"
+# whose own "restart required" repair stands in for ours (the Marketplace's:
+# "restart_required_<repo>_<version>", issue_domain room_tiles - HACS's alike)
+INSTALLERS = frozenset({"marketplace", "hacs"})
 
 
 def fingerprint(root: Path = DIR) -> tuple[tuple[str, int, int], ...]:
@@ -51,10 +54,11 @@ def fingerprint(root: Path = DIR) -> tuple[tuple[str, int, int], ...]:
 LOADED = fingerprint()  # at import = what this HA run is running
 
 
-def hacs_asks_restart(hass: HomeAssistant) -> bool:
-    """HACS's own "restart required" repair for Room Tiles is up."""
+def installer_asks_restart(hass: HomeAssistant) -> bool:
+    """The Marketplace's (or HACS's) own "restart required" repair for Room
+    Tiles is up."""
     for (domain, issue_id), issue in ir.async_get(hass).issues.items():
-        if domain == HACS and issue_id.startswith("restart_required") and issue.issue_domain == DOMAIN and issue.active:
+        if domain in INSTALLERS and issue_id.startswith("restart_required") and issue.issue_domain == DOMAIN and issue.active:
             return True
     return False
 
@@ -71,8 +75,8 @@ def async_start(hass: HomeAssistant, store: Any) -> Any:
                 return
             store.restart_needed = True
             store.async_notify(("restart_needed",))
-        # (again each time: HACS's own repair may come or go)
-        if hacs_asks_restart(hass):
+        # (again each time: the installer's own repair may come or go)
+        if installer_asks_restart(hass):
             ir.async_delete_issue(hass, DOMAIN, ISSUE_RESTART)
         else:
             ir.async_create_issue(
