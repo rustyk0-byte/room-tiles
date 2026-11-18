@@ -116,7 +116,9 @@ nav a:hover {
 
 /* ---- the opening ---- */
 .hero {
-  padding: 64px 0 40px;
+  /* (top and bottom only: the sides are .wrap's - the page's margins) */
+  padding-top: 64px;
+  padding-bottom: 40px;
   display: grid;
   grid-template-columns: 1fr 1.15fr;
   gap: 48px;
@@ -128,17 +130,20 @@ nav a:hover {
   margin: 0 0 18px;
   letter-spacing: -0.02em;
 }
+/* the logo's four squares, 2 x 2 as in the icon (amber, blue / green, purple) */
 .hero h1 .tiles {
-  display: inline-flex;
-  gap: 6px;
-  vertical-align: middle;
-  margin-left: 6px;
+  display: inline-grid;
+  grid-template-columns: repeat(2, 0.3em);
+  gap: 0.06em;
+  vertical-align: -0.04em;
+  margin-left: 0.18em;
 }
 .hero h1 .tiles i {
-  width: 0.42em;
-  height: 0.42em;
-  border-radius: 0.1em;
-  border: 0.08em solid;
+  width: 0.3em;
+  height: 0.3em;
+  box-sizing: border-box;
+  border-radius: 0.08em;
+  border: 0.06em solid;
 }
 .hero p.lead {
   font-size: 1.2rem;
