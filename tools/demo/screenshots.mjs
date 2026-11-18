@@ -47,12 +47,21 @@ async function open({ area = "living_room", theme = "dark", viewport = DESKTOP, 
   return { page, ctx };
 }
 
+const failed = [];
+
+/** One picture - a failure is reported, and the rest still taken. */
 async function shot(name, setup, take = (page) => page.screenshot({ path: join(out, name) })) {
   const { page, ctx } = await open(setup);
-  if (setup.then) await setup.then(page);
-  await take(page);
+  try {
+    if (setup.then) await setup.then(page);
+    await take(page);
+    console.log(name);
+  } catch (e) {
+    failed.push(name);
+    console.error(`${name}: ${e.message.split("\n")[0]}`);
+    await page.screenshot({ path: join(out, `failed-${name}`) }).catch(() => {});
+  }
   await ctx.close();
-  console.log(name);
 }
 
 const openMap = async (page) => {
@@ -70,7 +79,10 @@ await shot("map.png", {
   area: "living_room",
   then: async (page) => {
     await openMap(page);
-    await page.locator("room-tiles-panel button.floor", { hasText: "Devices" }).click();
+    // (the visible one - the bar keeps hidden copies to measure; opened from
+    // a room, the map may be zoomed into the Devices layer already)
+    const devices = page.locator("room-tiles-panel button.floor:visible", { hasText: "Devices" }).first();
+    if ((await devices.getAttribute("aria-pressed")) !== "true") await devices.click();
     await page.waitForTimeout(1500);
   },
 });
@@ -95,19 +107,24 @@ for (const theme of themes) await shot(`theme-${theme}.png`, { area: "kitchen", 
 // Pictures made of pictures (a page of them, photographed): the themes in a
 // row; the link preview (1200 x 630) - the logo, the words, a board.
 async function compose(name, size, html) {
-  const ctx = await browser.newContext({ viewport: size, deviceScaleFactor: 1 });
-  const page = await ctx.newPage();
-  await page.setContent(html);
-  await page.evaluate(() => Promise.all([...document.images].map((i) => i.decode())));
-  await page.screenshot({ path: join(out, name) });
-  await ctx.close();
-  console.log(name);
+  try {
+    const ctx = await browser.newContext({ viewport: size, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    await page.setContent(html());
+    await page.evaluate(() => Promise.all([...document.images].map((i) => i.decode())));
+    await page.screenshot({ path: join(out, name) });
+    await ctx.close();
+    console.log(name);
+  } catch (e) {
+    failed.push(name);
+    console.error(`${name}: ${e.message.split("\n")[0]}`);
+  }
 }
 const data = (f) => `data:image/png;base64,${readFileSync(join(out, f)).toString("base64")}`;
 await compose(
   "themes.png",
   { width: 2048 * 3 + 80, height: 1200 + 40 },
-  `<body style="margin:0;background:#0b0c0e;display:flex;gap:20px;padding:20px">
+  () => `<body style="margin:0;background:#0b0c0e;display:flex;gap:20px;padding:20px">
     ${themes.map((th) => `<img src="${data(`theme-${th}.png`)}" style="width:2048px;height:1200px;border-radius:24px">`).join("")}
   </body>`,
 );
@@ -115,7 +132,7 @@ const icon = readFileSync(new URL("../../custom_components/room_tiles/brand/icon
 await compose(
   "og.png",
   { width: 1200, height: 630 },
-  `<body style="margin:0;width:1200px;height:630px;background:#121417;color:#eceef1;font-family:Roboto,sans-serif;display:flex;align-items:center;gap:40px;padding:0 0 0 60px;box-sizing:border-box;overflow:hidden">
+  () => `<body style="margin:0;width:1200px;height:630px;background:#121417;color:#eceef1;font-family:Roboto,sans-serif;display:flex;align-items:center;gap:40px;padding:0 0 0 60px;box-sizing:border-box;overflow:hidden">
     <div style="flex:0 0 430px">
       <img src="data:image/png;base64,${icon}" style="width:110px;height:110px">
       <div style="font-size:64px;font-weight:700;margin:18px 0 10px">Room Tiles</div>
@@ -126,3 +143,7 @@ await compose(
 );
 await browser.close();
 writeFileSync(join(out, "README.txt"), "Taken by tools/demo/screenshots.mjs from the browser demo.\n");
+if (failed.length) {
+  console.error(`not taken: ${failed.join(", ")}`);
+  process.exit(1);
+}

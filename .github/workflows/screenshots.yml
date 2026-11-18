@@ -44,6 +44,7 @@ jobs:
           sleep 2
           node tools/demo/screenshots.mjs http://localhost:8000/demo/ shots
       - uses: actions/upload-artifact@v4
+        if: always()  # (the pictures taken, also when one failed)
         with:
           name: screenshots
           path: shots/
