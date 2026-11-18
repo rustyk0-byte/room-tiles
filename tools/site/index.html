@@ -10,7 +10,8 @@
     />
     <meta property="og:title" content="Room Tiles for Home Assistant" />
     <meta property="og:description" content="Every room, one tap away - on touch panels and on every phone, tablet and computer." />
-    <meta property="og:image" content="img/og.png" />
+    <meta property="og:image" content="https://rustyk0-byte.github.io/room-tiles/img/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="icon.png" />
     <!--
       The landing page (docs/TODO.md "Landing page + browser demo"), at the
@@ -251,6 +252,22 @@
       .feature figure img {
         box-shadow: none;
         border-radius: 10px;
+        aspect-ratio: 4 / 3;
+        object-fit: contain;
+      }
+      /* the themes: three screens in a row - two columns wide */
+      .feature.wide {
+        grid-column: span 2;
+      }
+      .feature.wide figure img {
+        aspect-ratio: auto;
+      }
+      /* a phone's screen (tall): its own height, in the middle */
+      .split figure img.tall {
+        width: auto;
+        max-width: 100%;
+        max-height: 620px;
+        margin: 0 auto;
       }
       .feature h3 {
         margin: 0;
@@ -297,7 +314,7 @@
 
       .facts {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 22px;
       }
       .fact h3 {
@@ -348,6 +365,9 @@
         .features,
         .facts {
           grid-template-columns: 1fr;
+        }
+        .feature.wide {
+          grid-column: auto;
         }
         nav a.wide {
           display: none;
@@ -426,17 +446,12 @@
               <h3><span class="dot purple"></span>Clean room by room</h3>
               <p>Tap the rooms on the map you want your robot vacuum to clean next, in the order you want.</p>
             </div>
-            <div class="feature">
+            <div class="feature wide">
               <figure><img src="img/themes.png" alt="The same room in the Dark, Light and Christmas themes" loading="lazy" onerror="this.parentNode.classList.add('missing')" /></figure>
               <h3><span class="dot amber"></span>Themes</h3>
               <p>Dark, Light, and a festive Christmas theme - pick one per panel, or for your phone.</p>
               <p><b class="soon">Coming soon:</b> make your own theme, or add new ones others share - the
                 <a href="https://github.com/rustyk0-byte/room-tiles/blob/main/docs/THEMES.md">theme format</a> is open.</p>
-            </div>
-            <div class="feature">
-              <figure><img src="img/phone.png" alt="Room Tiles on a phone" loading="lazy" onerror="this.parentNode.classList.add('missing')" /></figure>
-              <h3><span class="dot blue"></span>Ready in minutes</h3>
-              <p>Room Tiles finds your rooms and devices in Home Assistant and fills each room's tiles for you. Change any of it later.</p>
             </div>
           </div>
         </div>
@@ -460,7 +475,8 @@
             </div>
           </div>
           <figure>
-            <img src="img/panels.jpg" alt="Room Tiles touch panels" loading="lazy" onerror="this.parentNode.classList.add('missing')" />
+            <img src="img/panels.jpg" alt="Room Tiles touch panels" loading="lazy"
+              onerror="if (!this.dataset.next) { this.dataset.next = 1; this.alt = 'Room Tiles on a phone'; this.classList.add('tall'); this.src = 'img/phone.png'; } else this.parentNode.classList.add('missing')" />
           </figure>
         </div>
       </section>
@@ -469,6 +485,10 @@
         <div class="wrap">
           <h2>Yours, in your home</h2>
           <div class="facts">
+            <div class="fact">
+              <h3>Ready in minutes</h3>
+              <p>Room Tiles finds your rooms and devices in Home Assistant and fills each room's tiles for you. Change any of it later.</p>
+            </div>
             <div class="fact">
               <h3>Runs on your Home Assistant</h3>
               <p>No account and no cloud of its own: your panels talk to your Home Assistant, at home.</p>
