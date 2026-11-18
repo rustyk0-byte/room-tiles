@@ -48,7 +48,7 @@ interface DemoData {
   states: Record<string, HassEntity>;
   entities: HomeAssistant["entities"];
   devices: HomeAssistant["devices"];
-  meta: { made: string };
+  meta: { made: string; start?: string };
 }
 
 async function load(): Promise<DemoData> {
@@ -152,6 +152,14 @@ function apply(s: HassEntity, domain: string, service: string, data: Attrs): Has
 async function main(): Promise<void> {
   const data = await load();
   moveTimes(data.states, data.meta.made);
+  // the demo opens in its room every time (a visit before picked another) -
+  // or the one in the address (app.html?room=laundry: the screenshots)
+  const room = new URLSearchParams(location.search).get("room") ?? data.meta.start;
+  try {
+    if (room) localStorage.setItem("room-tiles:area", room);
+  } catch {
+    /* private mode etc.: the first room */
+  }
   let states = data.states;
   const el = document.createElement("room-tiles-panel") as HTMLElement & { hass?: HomeAssistant; narrow?: boolean };
   /** "Not saved": a Room Tiles edit - the demo page's bar says so for a

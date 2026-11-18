@@ -32,7 +32,6 @@ async function open({ area = "living_room", theme = "dark", viewport = DESKTOP, 
   });
   await ctx.addInitScript(
     ([a, th, lay]) => {
-      localStorage.setItem("room-tiles:area", a);
       localStorage.setItem("room-tiles:theme", th);
       localStorage.setItem("room-tiles:layouts", JSON.stringify({ [a]: lay }));
     },
@@ -40,7 +39,7 @@ async function open({ area = "living_room", theme = "dark", viewport = DESKTOP, 
   );
   const page = await ctx.newPage();
   page.on("pageerror", (e) => console.warn(`page error: ${e.message}`));
-  await page.goto(base + "app.html");
+  await page.goto(`${base}app.html?room=${area}`);
   await page.locator("room-tiles-panel .tile").first().waitFor();
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(1200); // (pictures, the first animation frames)

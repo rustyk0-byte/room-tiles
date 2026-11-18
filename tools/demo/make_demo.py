@@ -11,8 +11,9 @@ writes <folder> (default tools/demo/out/):
 - states.json    every entity's state and attributes (hass.states)
 - entities.json  the entity registry's display entries (hass.entities)
 - devices.json   the devices (hass.devices)
-- meta.json      when it was made: the demo page moves every time in the
-                 states (a finish time...) by how long ago that was
+- meta.json      when it was made (the demo page moves every time in the
+                 states - a finish time... - by how long ago that was) and
+                 the room the demo opens in
 
 Nothing here is a real home: names, rooms and devices are made up.
 """
@@ -37,6 +38,8 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.room_tiles.const import DOMAIN
 
 OUT = Path(os.environ.get("DEMO_OUT") or Path(__file__).parent / "out")
+
+START_ROOM = "living_room"  # (the demo opens here, every time)
 
 COLOR = {"supported_color_modes": ["hs", "color_temp"], "color_mode": "hs"}
 DIM = {"supported_color_modes": ["brightness"], "color_mode": "brightness"}
@@ -296,7 +299,7 @@ async def test_make_demo(hass: HomeAssistant, hass_ws_client) -> None:
     full = (await ws.receive_json())["event"]
     assert full["type"] == "full"
     _write("feed.json", full)
-    _write("meta.json", {"made": dt_util.utcnow().isoformat(timespec="seconds")})
+    _write("meta.json", {"made": dt_util.utcnow().isoformat(timespec="seconds"), "start": START_ROOM})
     _write("states.json", {s.entity_id: {"entity_id": s.entity_id, "state": s.state, "attributes": dict(s.attributes)} for s in hass.states.async_all()})
     _write("entities.json", {
         e.entity_id: {"entity_id": e.entity_id, "area_id": e.area_id, "device_id": e.device_id, "platform": e.platform,
