@@ -1,0 +1,36 @@
+name: Sponsor label
+
+# A new issue from someone who sponsors the maintainer on GitHub Sponsors
+# gets the "sponsor" label - their reports and ideas are looked at first
+# (README "Support"). Runs once per new issue.
+#
+# GitHub's own token only sees PUBLIC sponsorships. To also label private
+# sponsors, add a repository secret SPONSORS_TOKEN: a token of the
+# maintainer's account that can read its sponsors (classic: read:user).
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Label a sponsor's issue
+        env:
+          LOOKUP_TOKEN: ${{ secrets.SPONSORS_TOKEN || github.token }}
+          LABEL_TOKEN: ${{ github.token }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+          OWNER: ${{ github.repository_owner }}
+          NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          sponsor=$(GH_TOKEN="$LOOKUP_TOKEN" gh api graphql \
+            -f query='query($owner:String!,$author:String!){ user(login:$owner){ isSponsoredBy(accountLogin:$author) } }' \
+            -f owner="$OWNER" -f author="$AUTHOR" -q .data.user.isSponsoredBy) || sponsor=false
+          echo "Sponsor: $sponsor"
+          if [ "$sponsor" = "true" ]; then
+            GH_TOKEN="$LABEL_TOKEN" gh issue edit "$NUMBER" --repo "$REPO" --add-label sponsor
+          fi
