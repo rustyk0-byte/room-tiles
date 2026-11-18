@@ -182,6 +182,25 @@ async function main(): Promise<void> {
     locale: { language: navigator.language?.split("-")[0] || "en", time_format: "language", time_zone: "local" },
     config: { time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone },
     async callService(domain, service, svcData, target) {
+      if (domain === "room_tiles" && service === "area_lights") {
+        // the area's lights button: any on -> all off, else all on (as the
+        // integration does)
+        const lights = (data.feed as any).data?.area_lights?.[String(svcData?.area)] ?? [];
+        const anyOn = lights.some((id: string) => states[id]?.state === "on");
+        return hass.callService("light", anyOn ? "turn_off" : "turn_on", { entity_id: lights });
+      }
+      if (domain === "room_tiles" && service === "clear_appliance") {
+        // a tap on a finished unit empties it
+        const entity = Object.keys(states).find((id) => states[id].attributes?.appliance === svcData?.appliance);
+        if (!entity) return {};
+        const s = states[entity];
+        const units = (s.attributes.units ?? []).map((u: Attrs) =>
+          u.id === svcData?.unit ? { ...u, phase: "idle", running: false, status: "", status_word: "", time_left: "", minutes: null } : u,
+        );
+        const busy = units.some((u: Attrs) => u.phase !== "idle");
+        set({ ...states, [entity]: { ...s, state: busy ? s.state : "idle", attributes: { ...s.attributes, units } } });
+        return {};
+      }
       if (domain === "room_tiles") {
         unsaved();
         return {};
@@ -193,11 +212,11 @@ async function main(): Promise<void> {
           const s = next[one] && apply(next[one], d, service, svcData ?? {});
           if (s) next[one] = s;
         }
-        // a group: on when any member is
-        if (members(id).length && next[id]) {
-          const anyOn = members(id).some((m) => next[m]?.state === "on");
-          next[id] = { ...next[id], state: anyOn ? "on" : "off" };
-        }
+      }
+      // every light group (Room Tiles' area lights): on when any member is
+      for (const [gid, g] of Object.entries(next)) {
+        const m = gid.startsWith("light.") ? g.attributes?.entity_id : undefined;
+        if (Array.isArray(m) && m.length) next[gid] = { ...g, state: m.some((x: string) => next[x]?.state === "on") ? "on" : "off" };
       }
       set(next);
       return {};
