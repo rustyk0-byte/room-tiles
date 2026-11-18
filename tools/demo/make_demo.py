@@ -11,6 +11,8 @@ writes <folder> (default tools/demo/out/):
 - states.json    every entity's state and attributes (hass.states)
 - entities.json  the entity registry's display entries (hass.entities)
 - devices.json   the devices (hass.devices)
+- meta.json      when it was made: the demo page moves every time in the
+                 states (a finish time...) by how long ago that was
 
 Nothing here is a real home: names, rooms and devices are made up.
 """
@@ -21,12 +23,15 @@ import json
 import os
 from pathlib import Path
 
+from datetime import timedelta
+
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import floor_registry as fr
+from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.room_tiles.const import DOMAIN
@@ -94,6 +99,45 @@ HOME: dict[str, dict[str, list[tuple[str, str, dict]]]] = {
 }
 
 
+# The appliances: their own devices (a brand's confirmed model: no beta
+# note) and entities, (area, device, maker, model, [(entity, state, attrs)]);
+# "<finish>" = a finish time FINISH_MIN from now.
+FINISH_MIN = 38
+APPLIANCE_DEVICES = [
+    ("Laundry", "Washer", "LG", "F3P2CYUBE (DEVICE_WASHER)", [
+        ("sensor.washer_current_state", "running", {"friendly_name": "Washer Current status"}),
+        ("sensor.washer_finish", "<finish>", {"friendly_name": "Washer Remaining time", "device_class": "timestamp"}),
+    ]),
+    ("Laundry", "Dryer", "LG", "RV13D4ASJW (DEVICE_DRYER)", [
+        ("sensor.dryer_current_state", "running", {"friendly_name": "Dryer Current status"}),
+        ("sensor.dryer_finish", "unknown", {"friendly_name": "Dryer Remaining time", "device_class": "timestamp"}),
+    ]),
+    ("Kitchen", "Dishwasher", "GE Appliances", "Dishwasher", [
+        ("sensor.dishwasher_cycle_state", "Main Wash", {"friendly_name": "Dishwasher Cycle state"}),
+        ("sensor.dishwasher_time_remaining", "52", {"friendly_name": "Dishwasher Time remaining", "unit_of_measurement": "min",
+                                                     "device_class": "duration"}),
+    ]),
+]
+# what setup would make of them (Room Tiles' set_appliance) - and the area
+# each tile goes in
+APPLIANCES = [
+    ("Laundry", {
+        "id": "laundry", "name": "Laundry",
+        "units": [
+            {"id": "washer", "label": "Washer", "appliance": "washer", "preset": "lg_thinq_washer",
+             "status": "sensor.washer_current_state", "time": "sensor.washer_finish", "finished": "waiting", "clear": ["unit:dryer"]},
+            {"id": "dryer", "label": "Dryer", "appliance": "dryer", "preset": "lg_thinq_dryer",
+             "status": "sensor.dryer_current_state", "time": "sensor.dryer_finish"},
+        ],
+    }),
+    ("Kitchen", {
+        "id": "dishwasher", "name": "Dishwasher",
+        "units": [{"id": "dishwasher", "label": "Dishwasher", "appliance": "dishwasher", "preset": "ge_home_dishwasher",
+                   "status": "sensor.dishwasher_cycle_state", "time": "sensor.dishwasher_time_remaining"}],
+    }),
+]
+
+
 @pytest.fixture(autouse=True)
 def _custom(enable_custom_integrations):
     yield
@@ -115,6 +159,27 @@ def _build(hass: HomeAssistant) -> None:
                 devs.async_update_device(dev.id, area_id=area.id)
                 ents.async_get_or_create(domain, "demo", object_id, suggested_object_id=object_id, config_entry=src, device_id=dev.id)
                 hass.states.async_set(entity_id, state, attrs)
+    finish = (dt_util.utcnow() + timedelta(minutes=FINISH_MIN)).isoformat(timespec="seconds")
+    by_name = {a.name: a for a in areas.async_list_areas()}
+    for area_name, name, maker, model, things in APPLIANCE_DEVICES:
+        dev = devs.async_get_or_create(
+            config_entry_id=src.entry_id, identifiers={("demo", name.lower())}, name=name, manufacturer=maker, model=model
+        )
+        devs.async_update_device(dev.id, area_id=by_name[area_name].id)
+        for entity_id, state, attrs in things:
+            domain, object_id = entity_id.split(".", 1)
+            ents.async_get_or_create(domain, "demo", object_id, suggested_object_id=object_id, config_entry=src, device_id=dev.id)
+            hass.states.async_set(entity_id, finish if state == "<finish>" else state, attrs)
+
+
+async def _appliances(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+    """Set the appliances up as setup would, then finish the dryer's cycle
+    (its tile: done)."""
+    for _area, appliance in APPLIANCES:
+        await hass.services.async_call(DOMAIN, "set_appliance", {"appliance": appliance}, blocking=True)
+        await hass.async_block_till_done()  # (its tile goes in the area by itself)
+    hass.states.async_set("sensor.dryer_current_state", "end", {"friendly_name": "Dryer Current status"})
+    await hass.async_block_till_done()
 
 
 def _write(name: str, doc) -> None:
@@ -131,6 +196,7 @@ async def test_make_demo(hass: HomeAssistant, hass_ws_client) -> None:
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
+    await _appliances(hass, entry)
 
     ws = await hass_ws_client(hass)
     await ws.send_json({"id": 1, "type": "room_tiles/subscribe"})
@@ -138,6 +204,7 @@ async def test_make_demo(hass: HomeAssistant, hass_ws_client) -> None:
     full = (await ws.receive_json())["event"]
     assert full["type"] == "full"
     _write("feed.json", full)
+    _write("meta.json", {"made": dt_util.utcnow().isoformat(timespec="seconds")})
     _write("states.json", {s.entity_id: {"entity_id": s.entity_id, "state": s.state, "attributes": dict(s.attributes)} for s in hass.states.async_all()})
     _write("entities.json", {
         e.entity_id: {"entity_id": e.entity_id, "area_id": e.area_id, "device_id": e.device_id, "platform": e.platform,
