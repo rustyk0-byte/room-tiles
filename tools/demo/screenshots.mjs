@@ -74,15 +74,17 @@ const openMap = async (page) => {
 await shot("hero.png", { area: "living_room", viewport: PANEL });
 // a room's tiles
 await shot("tiles.png", { area: "living_room" });
-// the map: zoomed into the Devices layer
+// the map: the whole floor, then its Devices layer (2x, about the middle)
 await shot("map.png", {
   area: "living_room",
   then: async (page) => {
     await openMap(page);
-    // (the visible one - the bar keeps hidden copies to measure; opened from
-    // a room, the map may be zoomed into the Devices layer already)
-    const devices = page.locator("room-tiles-panel button.floor:visible", { hasText: "Devices" }).first();
-    if ((await devices.getAttribute("aria-pressed")) !== "true") await devices.click();
+    // (opened from a room, the map shows that room: back to the whole map)
+    const whole = page.locator("room-tiles-panel button.layout.back:visible").first();
+    if (await whole.count()) await whole.click();
+    await page.waitForTimeout(1200);
+    // (the visible one - the bar keeps hidden copies to measure)
+    await page.locator("room-tiles-panel button.floor:visible", { hasText: "Devices" }).first().click();
     await page.waitForTimeout(1500);
   },
 });
@@ -98,11 +100,11 @@ await shot("vacuum.png", {
     await page.waitForTimeout(1500);
   },
 });
-// a phone
-await shot("phone.png", { area: "kitchen", viewport: { width: 390, height: 844 }, phone: true });
+// a phone, sideways
+await shot("phone.png", { area: "living_room", viewport: { width: 844, height: 390 }, phone: true });
 // the themes: the same room in each, side by side
 const themes = ["dark", "light", "christmas"];
-for (const theme of themes) await shot(`theme-${theme}.png`, { area: "kitchen", theme, viewport: PANEL });
+for (const theme of themes) await shot(`theme-${theme}.png`, { area: "living_room", theme, viewport: PANEL });
 
 // Pictures made of pictures (a page of them, photographed): the themes in a
 // row; the link preview (1200 x 630) - the logo, the words, a board.
