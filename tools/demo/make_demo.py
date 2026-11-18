@@ -124,10 +124,11 @@ APPLIANCES = [
     ("Laundry", {
         "id": "laundry", "name": "Laundry",
         "units": [
-            {"id": "washer", "label": "Washer", "appliance": "washer", "preset": "lg_thinq_washer",
-             "status": "sensor.washer_current_state", "time": "sensor.washer_finish", "finished": "waiting", "clear": ["unit:dryer"]},
+            # (the dryer on top, as setup pairs them: appliance_detect._pair_laundry)
             {"id": "dryer", "label": "Dryer", "appliance": "dryer", "preset": "lg_thinq_dryer",
              "status": "sensor.dryer_current_state", "time": "sensor.dryer_finish", "finished": "waiting"},
+            {"id": "washer", "label": "Washer", "appliance": "washer", "preset": "lg_thinq_washer",
+             "status": "sensor.washer_current_state", "time": "sensor.washer_finish", "finished": "waiting", "clear": ["unit:dryer"]},
         ],
     }),
     ("Kitchen", {
