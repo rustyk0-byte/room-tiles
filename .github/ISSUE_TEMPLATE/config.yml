@@ -1,1 +1,5 @@
 blank_issues_enabled: true
+contact_links:
+  - name: Show off your Room Tiles
+    url: https://github.com/rustyk0-byte/room-tiles/discussions/new?category=show-and-tell
+    about: Share a photo of your panels or screens - a few go on the Room Tiles gallery page.
