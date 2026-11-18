@@ -8,12 +8,15 @@ Step 4 "Installing and updating panels", phase E).
   its own name and key, so it's never sent anywhere; those are updated with
   ESPHome.
 - **What an image says about itself:** its tag
-  `RT-IMAGE:<board>:generic:<PANEL_SCHEMA>;` (the firmware's room_tiles
-  codegen writes it) - so a panel only ever gets an image for its own board,
-  and only one that speaks this Room Tiles' panel format - and the ESP app description every ESP-IDF
+  `RT-IMAGE:<board>:generic:<PANEL_SCHEMA>:<release>;` (the firmware's
+  room_tiles codegen writes it; <release> only in a release's builds) - so a
+  panel only ever gets an image for its own board, and only one that speaks
+  this Room Tiles' panel format - and the ESP app description every ESP-IDF
   image starts with: build time and the ELF's SHA-256. Its first 8 bytes,
   hex, are the build's id; a panel reports the same for itself
   (room_tiles.cpp setup).
+- **The version HA shows:** a release's build shows its release ("0.1.0");
+  any other build its build time and id ("2026-11-18 09:54 (88d578)").
 - **Install:** the panel's update entity (update.py) asks - or Room Tiles
   itself (`auto_installs`): "Update panels automatically", and always for
   a panel too old for this Room Tiles (PANEL_SCHEMA); the panel's next
@@ -46,7 +49,8 @@ def set_time_zone(tz: tzinfo | None) -> None:
     _time_zone = tz
 UPLOAD_DIR_NAME = "room_tiles_firmware"  # (in HA's config folder)
 
-IMAGE_TAG = re.compile(rb"RT-IMAGE:([A-Za-z0-9.\-]+):(generic|own):(\d+);")
+IMAGE_TAG = re.compile(rb"RT-IMAGE:([A-Za-z0-9.\-]+):(generic|own):(\d+)(?::([0-9A-Za-z.\-]*))?;")
+RELEASE = re.compile(r"\d+\.\d+\.\d+([.-]?[0-9A-Za-z.]+)?")  # (firmware __init__.py _release)
 ESP_IMAGE_MAGIC = 0xE9
 # esp_app_desc_t: right after the image header (24 bytes) and the first
 # segment's header (8 bytes)
@@ -73,6 +77,7 @@ class Image:
     built: datetime | None
     generic: bool
     schema: int  # the panel format it speaks (panels.py PANEL_SCHEMA)
+    release: str = ""  # a release's build: its version ("0.1.0")
 
     @property
     def built_ts(self) -> float | None:
@@ -80,14 +85,21 @@ class Image:
 
     @property
     def label(self) -> str:
-        """What HA shows as the version: when it was built - in HA's time
-        zone (a build stamped with its builder's, e.g. CI's UTC, is
-        converted; one without a zone shows as it is) - and its id."""
-        built = self.built
-        if built is not None and built.tzinfo is not None:
-            built = built.astimezone(_time_zone)
-        when = built.strftime("%Y-%m-%d %H:%M") if built else "build"
-        return f"{when} ({self.build[:6]})"
+        """What HA shows as the version (build_label)."""
+        return build_label(self.release, self.built, self.build)
+
+
+def build_label(release: str, built: datetime | None, build: str) -> str:
+    """A build as HA shows its version: a release's by its version
+    ("0.1.0"); any other by when it was built - in HA's time zone (a build
+    stamped with its builder's, e.g. CI's UTC, is converted; one without a
+    zone shows as it is) - and its id."""
+    if release:
+        return release
+    if built is not None and built.tzinfo is not None:
+        built = built.astimezone(_time_zone)
+    when = built.strftime("%Y-%m-%d %H:%M") if built else "build"
+    return f"{when} ({build[:6]})"
 
 
 def _cstr(data: bytes, start: int, size: int) -> str:
@@ -143,7 +155,15 @@ def parse_image(data: bytes, path: Path) -> Image | None:
         built=built,
         generic=tag.group(2) == b"generic",
         schema=int(tag.group(3)),
+        release=_release(tag.group(4)),
     )
+
+
+def _release(raw: bytes | str | None) -> str:
+    """A release version as written in a tag or a panel's report - "" for
+    none or anything else."""
+    text = raw.decode("ascii", "replace") if isinstance(raw, bytes) else raw or ""
+    return text if RELEASE.fullmatch(text) else ""
 
 
 def scan_images(dirs: list[Path], schema: int) -> dict[str, Image]:
@@ -250,13 +270,20 @@ def images_fingerprint(dirs: list[Path]) -> tuple[tuple[str, int, int], ...]:
 @dataclass(frozen=True)
 class PanelFirmware:
     """What a panel says it runs (each payload request: board, build,
-    generic, and its build time - unix seconds; None from firmware that
-    doesn't say)."""
+    generic, its build time - unix seconds; None from firmware that
+    doesn't say - and a release's build its version)."""
 
     board: str
     build: str
     generic: bool
     built: int | None = None
+    release: str = ""
+
+    @property
+    def label(self) -> str:
+        """What HA shows as the version it runs (build_label)."""
+        when = datetime.fromtimestamp(self.built, timezone.utc) if self.built is not None else None
+        return build_label(self.release, when, self.build)
 
 
 def reported(query: dict[str, str]) -> PanelFirmware | None:
@@ -271,6 +298,7 @@ def reported(query: dict[str, str]) -> PanelFirmware | None:
         build=build,
         generic=query.get("generic") == "1",
         built=int(built) if built.isdigit() and int(built) > 0 else None,
+        release=_release(query.get("release")),
     )
 
 

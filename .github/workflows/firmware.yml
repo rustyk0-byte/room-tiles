@@ -41,6 +41,10 @@ concurrency:
 env:
   # the ESPHome the firmware is built and tested with
   ESPHOME_VERSION: "2026.10.2"
+  # a release's builds carry its version (HA shows "0.1.0" for them);
+  # every other build shows its build time and id
+  # (firmware/components/room_tiles/__init__.py _release)
+  ROOM_TILES_RELEASE: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
 
 jobs:
   devices:
@@ -121,7 +125,7 @@ jobs:
       - name: Name the images by board
         run: |
           out=build/.esphome/build/room-tiles/build
-          tag=$(grep -ao 'RT-IMAGE:[A-Za-z0-9.-]*:generic:[0-9]*;' "$out/firmware.ota.bin" | head -1)
+          tag=$(grep -ao 'RT-IMAGE:[A-Za-z0-9.-]*:generic:[0-9]*[:;]' "$out/firmware.ota.bin" | head -1)
           [ -n "$tag" ] || { echo "No generic image tag in the build"; exit 1; }
           board=$(echo "$tag" | cut -d: -f2)
           mkdir -p images

@@ -166,11 +166,13 @@ class RoomTiles : public Component {
   int wifi_button() const { return this->wifi_button_; }
   std::string wifi_button_text() const;
   void wifi_button_tap();
-  /// This image's tag, board and kind (codegen: room_tiles' board / generic).
-  void set_image(const char *tag, const char *board, bool generic) {
+  /// This image's tag, board, kind and release (codegen: room_tiles' board /
+  /// generic; the release's version - "" for any other build).
+  void set_image(const char *tag, const char *board, bool generic, const char *release) {
     this->image_tag_ = tag;
     this->board_id_ = board;
     this->generic_ = generic;
+    this->release_ = release;
   }
   void choose_theme(const std::string &name);
   const PanelModel &model() const { return this->model_; }
@@ -306,6 +308,7 @@ class RoomTiles : public Component {
   // this firmware: its board, generic or hand-built, and its build (the
   // first 8 bytes of its ELF's SHA-256, hex) - sent with each payload request
   const char *image_tag_{""};
+  const char *release_{""};  // (a release's build: its version, "0.1.0")
   const char *board_id_{""};
   bool generic_{false};
   std::string build_;

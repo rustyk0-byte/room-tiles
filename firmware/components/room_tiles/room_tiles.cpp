@@ -1269,7 +1269,8 @@ void RoomTiles::start_job_(Job job) {
     this->job_url_ += "&pack=strings";
   else if (job == JOB_PAYLOAD)  // (what it runs: for updates)
     this->job_url_ += std::string("&board=") + this->board_id_ + "&build=" + this->build_ + "&generic=" + (this->generic_ ? "1" : "0") +
-                      "&built=" + std::to_string((long long) App.get_build_time());
+                      "&built=" + std::to_string((long long) App.get_build_time()) +
+                      (*this->release_ ? std::string("&release=") + this->release_ : std::string());
   else if (job == JOB_FIRMWARE)
     this->job_url_ += "&build=" + this->want_build_;
   this->job_revision_ = this->revision_;

@@ -282,7 +282,8 @@ its clock showing, or untouched for 10 minutes), installs the new version
 and restarts.
 
 Turned off, a panel waits until you press **Install** - on the Panels page,
-or on its card under Settings › **Updates**. (A panel too old to work with
+or on its card under Settings › **Updates** (**Room Tiles firmware**, with
+the Room Tiles version it brings, like 0.1.1). (A panel too old to work with
 your Room Tiles at all updates right away.)
 
 An update can bring a newer Wi-Fi chip firmware too (see the note under

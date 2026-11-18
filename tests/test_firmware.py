@@ -26,7 +26,8 @@ ELF = bytes(range(32))
 
 
 def _image(
-    board="elecrow-p4-7in-v1.2-es", kind="generic", date="Nov 14 2026", time="07:33:16", elf=ELF, schema=SCHEMA
+    board="elecrow-p4-7in-v1.2-es", kind="generic", date="Nov 14 2026", time="07:33:16", elf=ELF, schema=SCHEMA,
+    release=None,
 ) -> bytes:
     """An ESP-IDF app image as far as Room Tiles reads it: the image header,
     the app description (time, date, ELF SHA-256) and the board's tag."""
@@ -38,7 +39,7 @@ def _image(
     data[t + 16 : t + 16 + len(date)] = date.encode()
     e = t + 16 + 16 + 32
     data[e : e + 32] = elf
-    tag = f"RT-IMAGE:{board}:{kind}:{schema};".encode()
+    tag = (f"RT-IMAGE:{board}:{kind}:{schema};" if release is None else f"RT-IMAGE:{board}:{kind}:{schema}:{release};").encode()
     data[0x200 : 0x200 + len(tag)] = tag
     return bytes(data)
 
@@ -52,6 +53,28 @@ def test_an_image_says_its_board_and_build(tmp_path):
     assert img.built == datetime(2026, 11, 14, 7, 33, 16)
     assert img.sha256 == hashlib.sha256(f.read_bytes()).hexdigest() and img.size == 0x400
     assert img.label == "2026-11-14 07:33 (000102)"
+
+
+def test_only_a_releases_build_shows_its_version(tmp_path):
+    (tmp_path / "r.bin").write_bytes(_image(release="0.1.0"))
+    (tmp_path / "ci.bin").write_bytes(_image(release=""))  # (a build outside a release: the tag's field empty)
+    (tmp_path / "bad.bin").write_bytes(_image(release="soon"))
+    assert read_image(tmp_path / "r.bin").release == "0.1.0" and read_image(tmp_path / "r.bin").label == "0.1.0"
+    assert read_image(tmp_path / "ci.bin").label == "2026-11-14 07:33 (000102)"
+    assert read_image(tmp_path / "bad.bin").label == "2026-11-14 07:33 (000102)"
+    # what a panel runs: its release - else its build time and id
+    t = int(datetime(2026, 11, 18, 17, 3, tzinfo=timezone.utc).timestamp())
+    assert reported({"board": "b", "build": "61" * 8, "built": str(t), "release": "0.1.1"}).label == "0.1.1"
+    import custom_components.room_tiles.firmware as fw
+    from zoneinfo import ZoneInfo
+
+    try:
+        fw.set_time_zone(ZoneInfo("America/New_York"))  # (17:03 UTC: 12:03 there)
+        assert reported({"board": "b", "build": "61" * 8, "built": str(t)}).label == "2026-11-18 12:03 (616161)"
+        assert reported({"board": "b", "build": "61" * 8, "built": str(t), "release": "x;y"}).label == "2026-11-18 12:03 (616161)"
+    finally:
+        fw.set_time_zone(None)
+    assert reported({"board": "b", "build": "61" * 8}).label == "build (616161)"
 
 
 def test_an_esphome_build_says_when_it_was_built(tmp_path):
@@ -178,3 +201,16 @@ def test_an_upload_is_checked_and_kept_as_its_boards_image(tmp_path):
     assert store_image(folder, _image(kind="own"), SCHEMA) == "hand_built"
     assert store_image(folder, _image(schema=SCHEMA + 1), SCHEMA) == "other_version"
     assert sorted(f.name for f in folder.iterdir()) == [file_name(kept.board)]  # (nothing left behind)
+
+
+def test_the_version_a_panel_runs(tmp_path):
+    from custom_components.room_tiles.update import running_label
+
+    (tmp_path / "r.bin").write_bytes(_image(release="0.1.1"))
+    img = read_image(tmp_path / "r.bin")
+    # the release's own build, from firmware that doesn't report a release: the image says
+    assert running_label(PanelFirmware(img.board, img.build, True), img) == "0.1.1"
+    # another build: what the panel says about itself
+    assert running_label(PanelFirmware(img.board, "ff" * 8, True, release="0.1.0"), img) == "0.1.0"
+    assert running_label(PanelFirmware(img.board, "ff" * 8, True), img) == "build (ffffff)"
+    assert running_label(None, img) is None

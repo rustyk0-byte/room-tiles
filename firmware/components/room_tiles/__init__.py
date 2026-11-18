@@ -3,6 +3,7 @@
 the integration's `sensor.room_tiles_panel_link` (homeassistant text sensors
 in room_tiles.yaml call set_revision / set_base_url)."""
 
+import os
 from pathlib import Path
 import re
 
@@ -28,6 +29,16 @@ RoomTiles = room_tiles_ns.class_("RoomTiles", cg.Component)
 StatusTrigger = room_tiles_ns.class_("StatusTrigger", automation.Trigger.template())
 AssetsTrigger = room_tiles_ns.class_("AssetsTrigger", automation.Trigger.template())
 ScreenTrigger = room_tiles_ns.class_("ScreenTrigger", automation.Trigger.template(cg.bool_))
+
+def _release() -> str:
+    """A release build's version - release.yml's firmware builds set
+    ROOM_TILES_RELEASE to the release's tag ("v0.1.0" -> "0.1.0"); every
+    other build (by hand, CI on its own) has none, and Room Tiles shows its
+    build time and id instead (custom_components/room_tiles/firmware.py)."""
+    tag = os.environ.get("ROOM_TILES_RELEASE", "").strip()
+    version = tag[1:] if tag.startswith("v") else tag
+    return version if re.fullmatch(r"\d+\.\d+\.\d+([.-]?[0-9A-Za-z.]+)?", version) else ""
+
 
 def _panel_schema() -> int:
     """signing.h PANEL_SCHEMA (the one place it's written on this side)."""
@@ -70,11 +81,11 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     # the image's tag: Room Tiles reads it from a firmware file to know its
-    # board and panel format (custom_components/room_tiles/firmware.py
+    # board, panel format and release (custom_components/room_tiles/firmware.py
     # IMAGE_TAG) - an image for another format is never offered
-    board, generic = config[CONF_BOARD], config[CONF_GENERIC]
-    tag = f"RT-IMAGE:{board}:{'generic' if generic else 'own'}:{_panel_schema()};"
-    cg.add(var.set_image(tag, board, generic))
+    board, generic, release = config[CONF_BOARD], config[CONF_GENERIC], _release()
+    tag = f"RT-IMAGE:{board}:{'generic' if generic else 'own'}:{_panel_schema()}:{release};"
+    cg.add(var.set_image(tag, board, generic, release))
     cg.add(var.set_shape(config[CONF_LAYOUT] == "strip", config[CONF_MAP]))
     for key in (CONF_ON_STATUS, CONF_ON_ASSETS):
         for conf in config.get(key, []):

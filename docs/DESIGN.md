@@ -771,9 +771,13 @@ show and use what the integration holds; nothing about a house is compiled in.
   (`elecrow-p4-<size>-v<PCB>[-es]`, from the board file), whether it's
   generic (`identity/generic.yaml`) and the panel format it speaks
   (`PANEL_SCHEMA`) in a tag Room Tiles reads from the image file
-  (`RT-IMAGE:<board>:generic:<n>;`), with ESPHome's build time and the ELF
-  SHA-256 (its first 8 bytes = the build's id). Each payload request reports
-  the panel's board, build, kind and build time. Images:
+  (`RT-IMAGE:<board>:generic:<n>:<release>;` - <release> only in a
+  release's builds: release.yml's firmware builds set ROOM_TILES_RELEASE to
+  the tag), with ESPHome's build time and the ELF SHA-256 (its first 8 bytes
+  = the build's id). Each payload request reports the panel's board, build,
+  kind, build time and release. HA shows a release's build by its version
+  ("0.1.0"), any other build by its build time and id
+  ("2026-11-18 09:54 (88d578)"); an update is there when the builds differ. Images:
   `firmware_images/` (a release's) and `<config>/room_tiles_firmware/`
   (uploads from the dashboard's Panels page; in a developer build also
   ESPHome "OTA format" files dropped in). The folder keeps one image per

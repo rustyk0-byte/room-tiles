@@ -29,6 +29,15 @@ from .const import DOMAIN
 from .panels import find_panels
 
 
+def running_label(running: Any, image: Any) -> str | None:
+    """The version a panel runs: the image's label when it runs that very
+    build (the image knows its release; older firmware doesn't say), else
+    what the panel reports."""
+    if running is None:
+        return None
+    return image.label if image is not None and image.build == running.build else running.label
+
+
 def firmware_rows(hass: HomeAssistant, store: Any) -> dict[str, Any]:
     """The dashboard's Panels page (the feed's "panel_firmware"): each panel -
     its name, area, board, what it runs, the newest image for its board,
@@ -56,9 +65,7 @@ def firmware_rows(hass: HomeAssistant, store: Any) -> dict[str, Any]:
                 "name": dev.name,
                 "area": area.name if area else None,
                 "board": running.board if running else None,
-                "running": (image.label if image is not None and image.build == running.build else f"build ({running.build[:6]})")
-                if running is not None
-                else None,
+                "running": running_label(running, image),
                 "latest": image.label if image is not None else None,
                 "entity_id": ents.async_get_entity_id("update", DOMAIN, f"{dev.device_id}_firmware"),
                 "status": status,
@@ -143,17 +150,18 @@ class PanelFirmwareUpdate(UpdateEntity):
     @property
     def installed_version(self) -> str | None:
         running = self._running
-        if running is None:
-            return None
-        image = self._store.fw_images.get(running.board)
-        if image is not None and image.build == running.build:
-            return image.label
-        return f"build ({running.build[:6]})"
+        return running_label(running, self._store.fw_images.get(running.board) if running is not None else None)
 
     @property
     def latest_version(self) -> str | None:
         image = self._image
         return image.label if image is not None else self.installed_version
+
+    def version_is_newer(self, latest_version: str, installed_version: str) -> bool:
+        """An update is there when the image isn't the build the panel runs
+        (the versions are labels: a release, or a build time and id)."""
+        image, running = self._image, self._running
+        return image is not None and running is not None and image.build != running.build
 
     @property
     def release_summary(self) -> str | None:
