@@ -16,12 +16,31 @@ first (assets/build_web.py: tools/build-frontend.sh does it).
 from __future__ import annotations
 
 import argparse
+import hashlib
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def version_pictures(page: Path) -> None:
+    """Each picture the page names (img/x.png - also in its fallbacks) asked
+    for by name + version (its contents' hash): a changed picture is a new
+    address. A web host may tell browsers to keep files - and "not found" -
+    for weeks (Home Assistant's /local: 31 days)."""
+    folder = page.parent
+
+    def stamp(m: re.Match) -> str:
+        f = folder / m.group(1)
+        if not f.is_file():
+            return m.group(0)  # (not there: the page's fallback takes over)
+        return f"{m.group(1)}?v={hashlib.sha256(f.read_bytes()).hexdigest()[:10]}"
+
+    text = page.read_text(encoding="utf-8")
+    page.write_text(re.sub(r"(img/[A-Za-z0-9_.-]+\.(?:png|jpg|webp))(?=[\"'])", stamp, text), encoding="utf-8")
 
 
 def main() -> int:
@@ -36,6 +55,7 @@ def main() -> int:
     shutil.copytree(ROOT / "tools" / "site", out)
     shutil.copy2(ROOT / "custom_components" / "room_tiles" / "brand" / "icon.png", out / "icon.png")
     (out / ".nojekyll").write_text("")
+    version_pictures(out / "index.html")
     subprocess.run(["node", "build-demo.mjs", str(a.demo_data.resolve()), str((out / "demo").resolve())], cwd=ROOT / "frontend", check=True)
     if a.images:
         subprocess.run([sys.executable, str(ROOT / "tools" / "make_install_site.py"), str(a.images), str(out / "install")], check=True)
