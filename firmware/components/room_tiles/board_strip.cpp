@@ -78,6 +78,8 @@ void Board::on_strip_scroll_end_(lv_event_t *e) {
   const int want = (p / 2) * (TILE_W + STRIP_GAP) + (p % 2) * self->strip_step_();
   if (std::abs(lv_obj_get_scroll_x(self->strip_cont_) - want) > 1)
     self->strip_go_(p, true);  // (its own scroll end then finds it there)
+  else
+    self->rt_->set_strip_point(self->area_, p);  // (settled: this room opens here next time)
 }
 
 void Board::build_strip_(const PanelModel &model, const AreaSpec *area) {
@@ -153,7 +155,7 @@ void Board::build_strip_(const PanelModel &model, const AreaSpec *area) {
     lv_obj_center(img);
   }
   lv_obj_update_layout(cont);
-  this->strip_go_(0, false);
+  this->strip_go_(this->rt_->strip_point(area->id), false);  // (where this room was left)
   ESP_LOGD(TAG, "Strip: %d tiles", n);
 }
 
@@ -357,7 +359,9 @@ void Board::open_strip_settings_() {
             auto *self = static_cast<Board *>(lv_event_get_user_data(e));
             const int k = (int) (intptr_t) lv_obj_get_user_data(lv_event_get_current_target_obj(e));
             self->rt_->set_idle(k, self->rt_->idle_anim_keep(), self->rt_->idle_seconds(), true);
-            lv_async_call([](void *p) { static_cast<Board *>(p)->open_strip_settings_(); }, self);  // (redrawn)
+            // (drawn again - at the same place: never back to the top)
+            self->strip_settings_y_ = lv_obj_get_scroll_y(lv_obj_get_parent(lv_event_get_current_target_obj(e)));
+            lv_async_call([](void *p) { static_cast<Board *>(p)->open_strip_settings_(); }, self);
           },
           LV_EVENT_CLICKED, this);
       lv_obj_t *l = lv_label_create(b);
@@ -527,6 +531,37 @@ void Board::open_strip_settings_() {
       y += 60;
     }
   }
+  // done: Close, at the end of the list (a tap beside the column does too;
+  // the wall panels' menu has its X)
+  {
+    y += 8;
+    lv_obj_t *b = lv_obj_create(list);
+    lv_obj_remove_style_all(b);
+    lv_obj_set_size(b, 300, 56);
+    lv_obj_set_pos(b, 0, y);
+    lv_obj_set_style_radius(b, 10, 0);
+    lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(b, lv_color_hex(accent), 0);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_SCROLL_CHAIN_VER);
+    lv_obj_add_event_cb(
+        b,
+        [](lv_event_t *e) {
+          lv_async_call([](void *p) { static_cast<Board *>(p)->close_dialog_(); }, lv_event_get_user_data(e));
+        },
+        LV_EVENT_CLICKED, this);
+    lv_obj_t *l = lv_label_create(b);
+    lv_label_set_text(l, this->rt_->t("common.close").c_str());
+    lv_obj_set_style_text_font(l, this->fonts_.name, 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(on_accent), 0);
+    lv_obj_center(l);
+  }
+  // drawn again after a change: back where it was
+  if (this->strip_settings_y_ > 0) {
+    lv_obj_update_layout(list);
+    lv_obj_scroll_to_y(list, this->strip_settings_y_, LV_ANIM_OFF);
+  }
+  this->strip_settings_y_ = -1;
 }
 
 }  // namespace esphome::room_tiles

@@ -126,6 +126,7 @@ class Board {
   lv_obj_t *strip_cont_{nullptr};
   std::vector<lv_obj_t *> strip_dots_;
   int strip_shown_{-1};  // (the snap point the dots show: 2 x tile, odd = a split)
+  int strip_settings_y_{-1};  // (the settings page drawn again: where it was scrolled to)
   void build_strip_(const PanelModel &model, const AreaSpec *area);
   int strip_step_() const;
   int strip_points_() const;

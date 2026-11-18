@@ -136,6 +136,9 @@ void RoomTiles::setup() {
   this->wifi_chip_pref_ = global_preferences->make_preference<uint32_t>(0x52545743u /* "RTWC" */);
   if (!this->wifi_chip_pref_.load(&this->wifi_chip_tried_))
     this->wifi_chip_tried_ = 0;
+  this->strip_points_pref_ = global_preferences->make_preference<StripPoints>(0x52545350u /* "RTSP" */);
+  if (!this->strip_points_pref_.load(&this->strip_points_))
+    this->strip_points_ = StripPoints{};
   this->clock24_pref_ = global_preferences->make_preference<uint8_t>(0x5254434Bu /* "RTCK" */);
   if (!this->clock24_pref_.load(&this->clock24_) || this->clock24_ > 2)
     this->clock24_ = 0;
@@ -364,6 +367,38 @@ bool RoomTiles::hours12() const {
   if (this->clock24_ != 0)
     return this->clock24_ == 1;
   return this->t("clock.hours12") != "0";  // (the language's way; English's until there's wording)
+}
+
+int RoomTiles::strip_point(const std::string &area) const {
+  const uint32_t h = fnv1_hash(area);
+  for (int i = 0; i < STRIP_ROOMS; i++)
+    if (this->strip_points_.room[i] == h && h != 0)
+      return this->strip_points_.point[i];
+  return 0;
+}
+
+void RoomTiles::set_strip_point(const std::string &area, int point) {
+  if (area.empty())
+    return;
+  const uint32_t h = fnv1_hash(area);
+  const uint8_t p = (uint8_t) std::clamp(point, 0, 255);
+  int at = STRIP_ROOMS - 1;  // (not there: the oldest makes room)
+  for (int i = 0; i < STRIP_ROOMS; i++) {
+    if (this->strip_points_.room[i] == h) {
+      if (i == 0 && this->strip_points_.point[0] == p)
+        return;  // (no change: nothing written)
+      at = i;
+      break;
+    }
+  }
+  // this room first (the most recent), the others moved down
+  for (int i = at; i > 0; i--) {
+    this->strip_points_.room[i] = this->strip_points_.room[i - 1];
+    this->strip_points_.point[i] = this->strip_points_.point[i - 1];
+  }
+  this->strip_points_.room[0] = h;
+  this->strip_points_.point[0] = p;
+  this->strip_points_pref_.save(&this->strip_points_);  // (written to flash with the next batch)
 }
 
 void RoomTiles::set_hours24(bool on) {

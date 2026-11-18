@@ -122,6 +122,11 @@ class RoomTiles : public Component {
   /// Kept on the panel.
   bool hours12() const;
   void set_hours24(bool on);
+  /// The round panel's strip: where it was in each room (its snap point),
+  /// kept on the panel - a room opens where it was left (after a restart, a
+  /// room switch, a new payload). 0 for a room it hasn't been in.
+  int strip_point(const std::string &area) const;
+  void set_strip_point(const std::string &area, int point);
   /// An update is being written (a pack, the firmware): the screen stays on
   /// (no sleep) until it's done.
   /// `wake`: the screen comes on for it (an automatic update while it's
@@ -367,6 +372,14 @@ class RoomTiles : public Component {
   uint32_t wifi_chip_tried_{0};  // (the carried Wi-Fi chip version last tried: its hash - never again)
   ESPPreferenceObject wifi_chip_pref_;
   uint8_t clock24_{0};  // 0 = the language's way, 1 = 12-hour, 2 = 24-hour
+  // the round panel's strip, per room: its own record, the rooms last used
+  // first (a room id's hash -> its snap point; the oldest goes when full)
+  static constexpr int STRIP_ROOMS = 24;
+  struct StripPoints {
+    uint32_t room[STRIP_ROOMS];
+    uint8_t point[STRIP_ROOMS];
+  } strip_points_{};
+  ESPPreferenceObject strip_points_pref_;
   ESPPreferenceObject clock24_pref_;
   uint8_t preview_pct_{0};  // (a brightness slider moving: shown as it goes; 0 = none)
   bool dimmed_{false};      // (idle: the backlight at the idle brightness - idle_loop_)

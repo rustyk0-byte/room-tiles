@@ -310,7 +310,11 @@ for Improv); a board that ran ESPHome before is recognized by HA, which
 offers Reconfigure on the old device - the panel then never connects (HA's
 ESPHome update entity trips on the old dashboard config) until the old
 device is deleted and the panel is Added fresh (both now in the README and
-the install page). Next: try every screen on the hardware (strip, knob,
+the install page). Tried after it (2026-11-18): a theme change ran out of
+memory (the download buffer doubled to read the end - fixed for every
+panel; the round panel's own theme packs added); its settings jumped back
+to the top after a change and had no Close; the strip forgot each room's
+place (all fixed, not yet on the panel). Next: try every screen on the hardware (strip, knob,
 settings, color picker, idle clock), then an update.
 
 A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
@@ -319,7 +323,8 @@ A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
 - **The design:** the area's 10 tiles (its 5x2 layout) in one horizontal
   strip at today's 5x2 tile size (198 x 254: fits the circle - no new art,
   icon or font sizes; the same theme packs); one tile centered or two halves
-  split down the middle, page dots. Touch first; the knob: a turn = half a
+  split down the middle, page dots; each room opens where it was left (kept
+  on the panel, across restarts). Touch first; the knob: a turn = half a
   step, a press = tap the centered tile. Keeps themes, area switching (tap
   the area's name), settings, the color picker (round layout),
   "Connecting to Home Assistant…", When idle (starts on the digital clock
