@@ -277,14 +277,17 @@ Upload firmware), one image per board in the folder.
   `hide_default_branch` is read from hacs.json but not acted on (2026.11.2
   source); Room Tiles' own restart repair now steps aside for the
   Marketplace's (`restart_required_<repo>_<version>`), as it did for
-  HACS's. Next: the UPDATE path (a 0.1.0b2 through the update entity).
+  HACS's. Next: the UPDATE path (the next stable release through the
+  update entity).
 - **Before inviting anyone: the Marketplace's main Install button must
   work.** With only a pre-release out, it installed from the `main` branch,
   which has no zip (404 - 0.1.0b1 test, 2026-11-18). `hacs.json`
-  `hide_default_branch` is set (HACS's option - check the Marketplace reads
-  it), and a stable release must be out before anyone is invited; betas
-  stay opt-in (the Pre-release switch). Retest: a fresh "Add from link" +
-  Install with nothing chosen.
+  `hide_default_branch` is set (HACS's option - the Marketplace doesn't act
+  on it), and a stable release must be out before anyone is invited.
+  **Releases are stable only - no GitHub pre-releases** (2026-11-18: the
+  Marketplace only offers them behind a per-repo switch, a barrier for
+  people trying it); "early" shows in the 0.x version instead. Retest: a
+  fresh "Add from link" + Install with nothing chosen.
 - **Going public - the repo is public since 2026-11-18** (a fresh one: one
   clean first commit; the history before it stays private). Done: the main
   branch rule (`tools/github/protect-main.sh`), the report labels. Left:

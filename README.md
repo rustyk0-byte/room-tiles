@@ -27,9 +27,7 @@ shows the same things where they are.
 2. Install **Room Tiles**, then restart Home Assistant.
 
 Updates show under Settings › **Updates**, like Home Assistant's own; the
-touch panels' firmware comes with them. To try pre-releases, turn on the
-**Pre-release** switch on Room Tiles' device under Settings › Devices &
-services › Marketplace (it's disabled at first: enable it there).
+touch panels' firmware comes with them.
 
 (Or download `room_tiles.zip` from a release, unzip it into
 `config/custom_components/room_tiles`, and restart.)
