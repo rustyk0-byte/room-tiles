@@ -170,7 +170,8 @@ very welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ESP32 touch panels running Room Tiles' own firmware, showing the same
 boards and maps, are part of this project (boards: [docs/SUPPORTED.md](docs/SUPPORTED.md)). Mount one on a
-wall or stand it on a desk; a 3D-printable desk stand will be shared here.
+wall or stand it on a desk: 3D-printable desk stands for the 7" and 10.1"
+are in [hardware/desk-stand](hardware/desk-stand/README.md).
 A tablet or any other screen with a web browser doesn't need this: it runs
 the dashboard.
 ### Install the firmware

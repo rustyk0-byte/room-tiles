@@ -126,10 +126,10 @@ Upload firmware), one image per board in the folder.
 
 ## 2. Before the public release
 
-- **Desk stand**: the 3D-printable desk frame for the Elecrow panels (print
-  files + a short how-to) goes in the repo; the README already says it will
-  be shared. Panels may stand on a desk or hang on a wall - docs say
-  "ESP32 panels" (a tablet is a touch panel too), never assume a wall.
+- **Desk stand - done 2026-11-18** (`hardware/desk-stand/`: the 7" and
+  10.1" frame, cover and stand, STLs + OpenSCAD sources). Panels may stand
+  on a desk or hang on a wall - docs say "ESP32 panels" (a tablet is a
+  touch panel too), never assume a wall.
 - **Full localization with a string table** (a release gate). No
   user-facing text hard-coded anywhere - dashboard, panel firmware,
   notifications, Repairs, config flow, help pages: every string comes from
