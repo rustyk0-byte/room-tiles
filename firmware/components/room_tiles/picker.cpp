@@ -191,6 +191,7 @@ void ColorPicker::build_() {
     lv_obj_set_width(title, 280);
     lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 46);
+    // MIRRORED: board_strip.cpp open_strip_settings_ (its X, the same place) - a change here must be made there too.
     lv_obj_t *x = bar_button(this->scrim_, rt->color("button", 0x333333), rt->color("tileBorder", 0x4A4A4A), 10);
     lv_obj_align(x, LV_ALIGN_BOTTOM_MID, 0, -24);
     lv_obj_add_event_cb(x, &ColorPicker::on_close_, LV_EVENT_CLICKED, this);

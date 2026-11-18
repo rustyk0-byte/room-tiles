@@ -531,30 +531,25 @@ void Board::open_strip_settings_() {
       y += 60;
     }
   }
-  // done: Close, at the end of the list (a tap beside the column does too;
-  // the wall panels' menu has its X)
+  // done: the X at the bottom, where the color picker has its own
+  // (MIRRORED: picker.cpp build_ round - a change here must be made there
+  // too); the list ends above it, as the picker's column does
+  lv_obj_set_height(list, 300);
+  lv_obj_align(list, LV_ALIGN_CENTER, 0, 6);
   {
-    y += 8;
-    lv_obj_t *b = lv_obj_create(list);
-    lv_obj_remove_style_all(b);
-    lv_obj_set_size(b, 300, 56);
-    lv_obj_set_pos(b, 0, y);
-    lv_obj_set_style_radius(b, 10, 0);
-    lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
-    lv_obj_set_style_bg_color(b, lv_color_hex(accent), 0);
-    lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_flag(b, LV_OBJ_FLAG_SCROLL_CHAIN_VER);
+    lv_obj_t *x = bar_button(this->scrim_, this->color_("button", 0x333333), this->color_("tileBorder", 0x4A4A4A), 10);
+    lv_obj_align(x, LV_ALIGN_BOTTOM_MID, 0, -24);
     lv_obj_add_event_cb(
-        b,
+        x,
         [](lv_event_t *e) {
           lv_async_call([](void *p) { static_cast<Board *>(p)->close_dialog_(); }, lv_event_get_user_data(e));
         },
         LV_EVENT_CLICKED, this);
-    lv_obj_t *l = lv_label_create(b);
-    lv_label_set_text(l, this->rt_->t("common.close").c_str());
-    lv_obj_set_style_text_font(l, this->fonts_.name, 0);
-    lv_obj_set_style_text_color(l, lv_color_hex(on_accent), 0);
-    lv_obj_center(l);
+    lv_obj_t *g = lv_label_create(x);
+    lv_label_set_text(g, "\U000F0156");  // mdi:close
+    lv_obj_set_style_text_font(g, this->fonts_.glyph, 0);
+    lv_obj_set_style_text_color(g, lv_color_hex(text), 0);
+    lv_obj_center(g);
   }
   // drawn again after a change: back where it was
   if (this->strip_settings_y_ > 0) {

@@ -313,8 +313,12 @@ device is deleted and the panel is Added fresh (both now in the README and
 the install page). Tried after it (2026-11-18): a theme change ran out of
 memory (the download buffer doubled to read the end - fixed for every
 panel; the round panel's own theme packs added); its settings jumped back
-to the top after a change and had no Close; the strip forgot each room's
-place (all fixed, not yet on the panel). Next: try every screen on the hardware (strip, knob,
+to the top after a change and had no close (now the color picker's X,
+same place); the strip forgot each room's place; the picture broke up
+while a theme was saved (the wording pack was still mapped from flash, so
+each erase stopped the screen's refill - now nothing of flash stays mapped
+while a theme or a firmware is written) (all fixed; the X and the save fix
+not yet on the panel). Next: try every screen on the hardware (strip, knob,
 settings, color picker, idle clock), then an update.
 
 A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,

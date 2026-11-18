@@ -1153,6 +1153,12 @@ void RoomTiles::loop() {
       } else if (this->job_ == JOB_FIRMWARE) {
         // a checked image: into the other slot (the board is down already)
         this->say_("panel.update_installing", "Installing the update…");
+        // nothing of flash mapped while it's written (see the theme's save
+        // below): the pictures go (back after a failed write:
+        // finish_firmware_), the wording's parsed copy stays
+        this->assets_.release(PACK_THEME);
+        this->assets_.unmap(PACK_STRINGS);
+        this->assets_changed_();
         this->write_started_ms_ = millis();
         // (an automatic one while the screen was dark: it stays dark - and
         // comes back dark: quiet_pref_)
@@ -1168,6 +1174,11 @@ void RoomTiles::loop() {
           // bar) with the board taken down
           this->take_board_down_();
           this->assets_.release(kind);
+          // (the wording's mapping too - its parsed copy stays: with nothing
+          // of flash mapped, a firmware run from PSRAM keeps its cache, and
+          // so the round panel's screen keeps its picture, while flash is
+          // erased; any mapping left and each erase stops the screen's refill)
+          this->assets_.unmap(PACK_STRINGS);
           this->assets_changed_();
           this->say_("panel.theme_saving", "Saving the theme…");
         } else {
@@ -1697,6 +1708,10 @@ void RoomTiles::finish_firmware_() {
            this->job_error_.empty() ? "-" : this->job_error_.c_str(), this->http_status_);
   this->failed_build_ = this->want_build_;
   this->failed_at_ = millis();
+  if (this->assets_.pack_id(PACK_THEME).empty()) {  // (let go for the write: back)
+    this->assets_.load(PACK_THEME, false);
+    this->assets_changed_();
+  }
   this->show_summary_();
   this->maybe_show_board_();
 }
