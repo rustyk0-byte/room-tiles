@@ -1,0 +1,696 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Room Tiles",
+        "description": "Choose the areas to show in Room Tiles. You can change this later.",
+        "data": {
+          "areas": "Areas",
+          "auto_add_areas": "Include new areas automatically"
+        },
+        "data_description": {
+          "auto_add_areas": "Areas you add to Home Assistant later show up in Room Tiles too."
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Room Tiles is already set up."
+    },
+    "create_entry": {
+      "default": "Room Tiles has been set up for {areas} areas, with a board of tiles for each and a starter map for each floor.\n\n**[Open Room Tiles]({url})** any time from the sidebar.",
+      "found": "Room Tiles has been set up for {areas} areas, with a board of tiles for each and a starter map for each floor.\n\nRoom Tiles found compatible appliances, but you must **[complete appliance setup]({url}?open=appliances)** before they are shown.\n\nOpen Room Tiles any time from the sidebar."
+    }
+  },
+  "services": {
+    "export_data": {
+      "name": "Export data",
+      "description": "Writes the whole Room Tiles setup (areas, tiles, catalog, maps, markers) to a JSON file in your config folder.",
+      "fields": {
+        "file": {
+          "name": "File",
+          "description": "File name, relative to the config folder."
+        }
+      }
+    },
+    "import_data": {
+      "name": "Import data",
+      "description": "Replaces the whole Room Tiles setup with a JSON file from your config folder. The current setup is saved to room_tiles_backups/ first; a file that isn't valid changes nothing.",
+      "fields": {
+        "file": {
+          "name": "File",
+          "description": "File name, relative to the config folder."
+        }
+      }
+    },
+    "set_tile": {
+      "name": "Set tile",
+      "description": "Puts a tile in an area's grid. With only an entity, its kind and name come from the catalog; with no entity and no kind the slot is cleared; kind 'map' needs no entity.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "Room Tiles area id (e.g. kitchen)."
+        },
+        "layout": {
+          "name": "Layout",
+          "description": "Tile grid: 5x2 (10 tiles) or 6x3 (18 tiles)."
+        },
+        "slot": {
+          "name": "Slot",
+          "description": "Tile position, counted from 0, row by row."
+        },
+        "entity": {
+          "name": "Entity",
+          "description": "The entity the tile controls."
+        },
+        "kind": {
+          "name": "Kind",
+          "description": "Tile type. Leave empty to use the catalog's."
+        },
+        "name": {
+          "name": "Name",
+          "description": "This tile's own short name (at most 15 characters). Leave empty to use the entity's short name."
+        }
+      }
+    },
+    "clear_tile": {
+      "name": "Clear tile",
+      "description": "Empties one slot of an area's grid.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "Room Tiles area id (e.g. kitchen)."
+        },
+        "layout": {
+          "name": "Layout",
+          "description": "Tile grid: 5x2 (10 tiles) or 6x3 (18 tiles)."
+        },
+        "slot": {
+          "name": "Slot",
+          "description": "Tile position, counted from 0, row by row."
+        }
+      }
+    },
+    "move_tile": {
+      "name": "Move tile",
+      "description": "Swaps two slots of an area's grid (moving onto an empty slot is a move).",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "Room Tiles area id (e.g. kitchen)."
+        },
+        "layout": {
+          "name": "Layout",
+          "description": "Tile grid: 5x2 (10 tiles) or 6x3 (18 tiles)."
+        },
+        "from_slot": {
+          "name": "From slot",
+          "description": "Slot to move."
+        },
+        "to_slot": {
+          "name": "To slot",
+          "description": "Where it goes."
+        }
+      }
+    },
+    "auto_board": {
+      "name": "Auto configure boards",
+      "description": "Replaces boards with their automatic tiles; new appliances, vacuums and pools are then added to them by themselves.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "Room Tiles area id (e.g. kitchen). Leave empty for every area."
+        },
+        "layout": {
+          "name": "Layout",
+          "description": "Tile grid: 5x2 (10 tiles) or 6x3 (18 tiles). Leave empty for both."
+        }
+      }
+    },
+    "add_marker": {
+      "name": "Add marker",
+      "description": "Places an entity's icon on a map. Responds with the new marker's id.",
+      "fields": {
+        "map": {
+          "name": "Map",
+          "description": "Map id (e.g. house)."
+        },
+        "entity": {
+          "name": "Entity",
+          "description": "The entity to place."
+        },
+        "x": {
+          "name": "X",
+          "description": "X position in the map's units."
+        },
+        "y": {
+          "name": "Y",
+          "description": "Y position in the map's units."
+        },
+        "show_name": {
+          "name": "Show name",
+          "description": "Show the entity's name above its icon."
+        },
+        "layer": {
+          "name": "Layer",
+          "description": "The map layer (e.g. house, rooms). Default: the map's first layer."
+        }
+      }
+    },
+    "update_marker": {
+      "name": "Update marker",
+      "description": "Moves a marker or changes its options.",
+      "fields": {
+        "marker": {
+          "name": "Marker",
+          "description": "Marker id."
+        },
+        "map": {
+          "name": "Map",
+          "description": "Move it to another map."
+        },
+        "x": {
+          "name": "X",
+          "description": "X position in the map's units."
+        },
+        "y": {
+          "name": "Y",
+          "description": "Y position in the map's units."
+        },
+        "show_name": {
+          "name": "Show name",
+          "description": "Show the entity's name above its icon."
+        },
+        "layer": {
+          "name": "Layer",
+          "description": "The map layer (e.g. house, rooms). Default: the map's first layer."
+        }
+      }
+    },
+    "remove_marker": {
+      "name": "Remove marker",
+      "description": "Removes a marker from its map.",
+      "fields": {
+        "marker": {
+          "name": "Marker",
+          "description": "Marker id."
+        }
+      }
+    },
+    "reset_short_names": {
+      "name": "Reset short names",
+      "description": "Catalog entities' short names back to the ones Room Tiles suggests from their full names, as setting up does. Every entity's, or just the ones given. Returns how many changed.",
+      "fields": {
+        "entities": {
+          "name": "Entities",
+          "description": "Only these entities (leave empty for every one in the catalog)."
+        }
+      }
+    },
+    "set_short_name": {
+      "name": "Set short name",
+      "description": "Sets the short name (at most 15 characters) an area or entity shows on tiles and the map. Pickers and dialogs keep the full name.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "The area to rename (give an area or an entity)."
+        },
+        "entity": {
+          "name": "Entity",
+          "description": "The entity to rename (give an area or an entity)."
+        },
+        "short_name": {
+          "name": "Short name",
+          "description": "At most 15 characters."
+        }
+      }
+    },
+    "suggest_short_name": {
+      "name": "Suggest short name",
+      "description": "A short name suggested from an area's or entity's full name, by Room Tiles' shortening rules. Nothing is changed.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "The area (give an area or an entity)."
+        },
+        "entity": {
+          "name": "Entity",
+          "description": "The entity (give an area or an entity)."
+        }
+      }
+    },
+    "set_area_lights": {
+      "name": "Set area lights",
+      "description": "Chooses what an area's lights button switches: every light in the Home Assistant area except the excluded ones (default), or one entity such as a light group.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "The area."
+        },
+        "entity": {
+          "name": "Use this entity",
+          "description": "Optional: switch just this entity (e.g. a light group). Leave empty for all the area's lights."
+        },
+        "exclude": {
+          "name": "Exclude",
+          "description": "Lights in the area the button should leave alone (e.g. a display's backlight). Replaces the current list."
+        }
+      }
+    },
+    "area_lights": {
+      "name": "Area lights",
+      "description": "Switches an area's lights as its lights button does. Toggle: if any is on, all go off; otherwise all go on.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "The area."
+        },
+        "action": {
+          "name": "Action",
+          "description": "toggle, turn_on or turn_off."
+        }
+      }
+    },
+    "catalog_add": {
+      "name": "Add to catalog",
+      "description": "Offers an entity in the Room Tiles tile picker. Its tile type is worked out from Home Assistant unless given; its short name is suggested from its full name unless given (and flagged for review if it had to be shortened).",
+      "fields": {
+        "entity": {
+          "name": "Entity",
+          "description": "The entity to offer."
+        },
+        "kind": {
+          "name": "Kind",
+          "description": "Tile type. Leave empty to work it out."
+        },
+        "short_name": {
+          "name": "Short name",
+          "description": "At most 15 characters. Leave empty for a suggestion."
+        }
+      }
+    },
+    "catalog_remove": {
+      "name": "Remove from catalog",
+      "description": "Takes an entity out of the Room Tiles tile picker. Tiles already using it stay.",
+      "fields": {
+        "entity": {
+          "name": "Entity",
+          "description": "The entity to remove."
+        }
+      }
+    },
+    "set_area": {
+      "name": "Set area",
+      "description": "Shows or hides a Room Tiles area, or moves it in the area order.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "The area."
+        },
+        "hidden": {
+          "name": "Hidden",
+          "description": "Hide the area in Room Tiles (its tiles are kept)."
+        },
+        "position": {
+          "name": "Position",
+          "description": "Where it goes in the order (0 = first)."
+        }
+      }
+    },
+    "set_settings": {
+      "name": "Set settings",
+      "description": "Changes Room Tiles' own settings.",
+      "fields": {
+        "auto_add_areas": {
+          "name": "Include new areas automatically",
+          "description": "Areas added to Home Assistant later appear in Room Tiles right away (otherwise they arrive hidden)."
+        },
+        "auto_update_panels": {
+          "name": "Update panels automatically",
+          "description": "Wall panels install a newer Room Tiles firmware on their own, when nobody is using them."
+        }
+      }
+    },
+    "set_markers": {
+      "name": "Set markers",
+      "description": "Replaces all markers of one map in a single step (used by the map editor's Save). Each marker: entity, x, y, layer, show_name, and its id to keep it.",
+      "fields": {
+        "map": {
+          "name": "Map",
+          "description": "Map id."
+        },
+        "markers": {
+          "name": "Markers",
+          "description": "The map's complete marker list."
+        }
+      }
+    },
+    "set_map": {
+      "name": "Set map",
+      "description": "Replaces a map's drawing in one step (used by the map editor's Save). Fields not given are kept. Markers on a removed layer move to the first layer.",
+      "fields": {
+        "map": {
+          "name": "Map",
+          "description": "Map id."
+        },
+        "name": {
+          "name": "Name",
+          "description": "The map's name in the map selector."
+        },
+        "bounds": {
+          "name": "Bounds",
+          "description": "[x0, y0, x1, y1]: the area the whole-map view shows, in map units."
+        },
+        "ha_floor": {
+          "name": "Floor",
+          "description": "The HA floor this map shows, if any."
+        },
+        "wall_width": {
+          "name": "Wall thickness",
+          "description": "Wall thickness in map units."
+        },
+        "walls": {
+          "name": "Walls",
+          "description": "Wall segments [x1, y1, x2, y2]."
+        },
+        "windows": {
+          "name": "Windows",
+          "description": "Window segments [x1, y1, x2, y2]."
+        },
+        "openings": {
+          "name": "Openings",
+          "description": "Doorways / open boundaries [x1, y1, x2, y2] (dashed)."
+        },
+        "shapes": {
+          "name": "Shapes",
+          "description": "Filled areas, each with a style (floor, water, grass, deck or paving) and its points."
+        },
+        "zones": {
+          "name": "Rooms",
+          "description": "Rooms / spaces, each with id, name, points, area, label and outdoor."
+        },
+        "links": {
+          "name": "Links",
+          "description": "Jumps to another map, each with to (map id), at (point) and label."
+        },
+        "layers": {
+          "name": "Layers",
+          "description": "Marker layers, each with id, name and min_zoom."
+        }
+      }
+    },
+    "add_map": {
+      "name": "Add map",
+      "description": "Adds a new, empty map (a floor, a yard...). Returns its id.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "The new map's name."
+        },
+        "ha_floor": {
+          "name": "Floor",
+          "description": "The HA floor it shows, if any."
+        }
+      }
+    },
+    "remove_map": {
+      "name": "Remove map",
+      "description": "Deletes a map with its markers (and links to it). The last map can't be removed.",
+      "fields": {
+        "map": {
+          "name": "Map",
+          "description": "Map id."
+        }
+      }
+    },
+    "order_maps": {
+      "name": "Order maps",
+      "description": "Sets the order of the map selector.",
+      "fields": {
+        "order": {
+          "name": "Order",
+          "description": "Every map id, in the new order."
+        }
+      }
+    },
+    "set_appliance": {
+      "name": "Set appliance",
+      "description": "Adds or replaces an appliance profile - the sensor an appliance tile reads.",
+      "fields": {
+        "appliance": {
+          "name": "Appliance",
+          "description": "The profile: id, name and one or two units (label, type, preset, status entity, time and door entities, what clears done)."
+        }
+      }
+    },
+    "remove_appliance": {
+      "name": "Remove appliance",
+      "description": "Removes an appliance profile and its sensor.",
+      "fields": {
+        "appliance": {
+          "name": "Appliance",
+          "description": "The appliance id."
+        }
+      }
+    },
+    "clear_appliance": {
+      "name": "Clear appliance",
+      "description": "Marks a finished appliance as emptied (what a tap on its tile does).",
+      "fields": {
+        "appliance": {
+          "name": "Appliance",
+          "description": "The appliance id."
+        },
+        "unit": {
+          "name": "Unit",
+          "description": "Only this unit (default: all)."
+        }
+      }
+    },
+    "combine_appliances": {
+      "name": "Combine appliances",
+      "description": "Puts two single appliances on one tile (the first on top); the second's tiles and markers move to the combined one.",
+      "fields": {
+        "appliance": {
+          "name": "Appliance",
+          "description": "The appliance on top."
+        },
+        "with": {
+          "name": "With",
+          "description": "The appliance joining it."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Name of the combined appliance (default: Laundry, Dishwashers, or both names)."
+        }
+      }
+    },
+    "split_appliance": {
+      "name": "Split appliance",
+      "description": "Gives one unit of a two-unit appliance its own tile.",
+      "fields": {
+        "appliance": {
+          "name": "Appliance",
+          "description": "The two-unit appliance."
+        },
+        "unit": {
+          "name": "Unit",
+          "description": "The unit that gets its own tile."
+        }
+      }
+    },
+    "set_pool": {
+      "name": "Set pool / spa",
+      "description": "Adds or replaces a pool / spa system - the sensors its Pool, Spa and Pool / Spa tiles read.",
+      "fields": {
+        "pool": {
+          "name": "Pool / spa",
+          "description": "The system: id, name, equipment layout (shared, separate, pool, spa) and each body's entities."
+        }
+      }
+    },
+    "remove_pool": {
+      "name": "Remove pool / spa",
+      "description": "Removes a pool / spa system and its sensors.",
+      "fields": {
+        "pool": {
+          "name": "Pool / spa",
+          "description": "The system id."
+        }
+      }
+    },
+    "pool_set_target": {
+      "name": "Set pool / spa target",
+      "description": "Sets a body's heater set point.",
+      "fields": {
+        "entity": {
+          "name": "Entity",
+          "description": "A Room Tiles pool / spa sensor (the combined one acts on the active body)."
+        },
+        "temperature": {
+          "name": "Temperature",
+          "description": "The set point."
+        }
+      }
+    },
+    "pool_set_heater": {
+      "name": "Pool / spa heater on / off",
+      "description": "Turns a body's heater on (heat) or off.",
+      "fields": {
+        "entity": {
+          "name": "Entity",
+          "description": "A Room Tiles pool / spa sensor (the combined one acts on the active body)."
+        },
+        "heater": {
+          "name": "Heater",
+          "description": "On or off."
+        }
+      }
+    },
+    "pool_set_on": {
+      "name": "Pool / spa on / off",
+      "description": "Turns a body on or off: on a shared system the spa on is spa mode; otherwise that body's pump.",
+      "fields": {
+        "entity": {
+          "name": "Entity",
+          "description": "A Room Tiles pool / spa sensor."
+        },
+        "on": {
+          "name": "On",
+          "description": "On or off."
+        },
+        "with_heater": {
+          "name": "With its heater",
+          "description": "Its heater follows: on with it, off when it goes off. Default: the spa's own setting (on unless turned off in its settings)."
+        }
+      }
+    },
+    "set_robot": {
+      "name": "Set robot vacuum",
+      "description": "Adds or replaces a robot vacuum profile - the sensor its vacuum tile reads.",
+      "fields": {
+        "robot": {
+          "name": "Robot vacuum",
+          "description": "The profile: id, name, its vacuum entity and (Matter) its operational error sensor."
+        }
+      }
+    },
+    "remove_robot": {
+      "name": "Remove robot vacuum",
+      "description": "Removes a robot vacuum profile and its sensor.",
+      "fields": {
+        "robot": {
+          "name": "Robot vacuum",
+          "description": "The profile id."
+        }
+      }
+    },
+    "ignore_device": {
+      "name": "Ignore device",
+      "description": "Ignores a found appliance, pool / spa or vacuum - or takes a set-up one out of Room Tiles - so it waits under Ignored on the Appliances page.",
+      "fields": {
+        "kind": {
+          "name": "Kind",
+          "description": "appliance, pool or robot."
+        },
+        "device": {
+          "name": "Device",
+          "description": "The found (or set-up) device as the Appliances page lists it."
+        },
+        "set_up_id": {
+          "name": "Set up id",
+          "description": "When it's set up: its id - it's removed from Room Tiles."
+        }
+      }
+    },
+    "set_area_light_entity": {
+      "name": "Area lights entity",
+      "description": "Whether Room Tiles makes its \"Lights\" light for an area (e.g. Kitchen Lights) (all the area's lights together, like the lights button). Off removes it, with its tiles and markers.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "The area."
+        },
+        "enabled": {
+          "name": "Make it",
+          "description": "On: the area's lights button (and Room Tiles' light for it) - made once the area has a light. Off: none for this area."
+        }
+      }
+    },
+    "accept_short_names": {
+      "name": "Accept short names",
+      "description": "Confirms the short names waiting for review (areas' and entities') as they are. Ones too wide for a tile stay waiting (the response lists them).",
+      "fields": {
+        "entities": {
+          "name": "Entities",
+          "description": "Optional: only these. Leave empty for all of them."
+        }
+      }
+    },
+    "vacuum_queue": {
+      "name": "Vacuum room queue",
+      "description": "A robot vacuum's room queue: add, remove or move a room (an area), clear the queue, start, pause, skip to the next room, or stop and clear.",
+      "fields": {
+        "robot": {
+          "name": "Robot vacuum",
+          "description": "The robot vacuum's Room Tiles id."
+        },
+        "action": {
+          "name": "Action",
+          "description": "add, remove, move, clear, start, pause, skip or stop."
+        },
+        "area": {
+          "name": "Area",
+          "description": "The area to add, remove or move."
+        },
+        "index": {
+          "name": "Position",
+          "description": "Where to move it in the queue (0 = next)."
+        },
+        "start": {
+          "name": "Start cleaning",
+          "description": "With add: start the queue if the vacuum is idle (never resumes a paused one)."
+        }
+      }
+    }
+  },
+  "issues": {
+    "restart_required": {
+      "title": "Restart Home Assistant to finish updating Room Tiles",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Restart Home Assistant",
+            "description": "Room Tiles was updated. Restart Home Assistant now to finish the update?"
+          }
+        }
+      }
+    },
+    "missing_entities": {
+      "title": "Room Tiles uses {count} entities that no longer exist",
+      "description": "These are used in Room Tiles but no longer exist in Home Assistant. Replace or remove them in Room Tiles, or restore them.\n\n{entities}"
+    },
+    "area_lights_override_removed": {
+      "title": "Room Tiles area lights changed",
+      "description": "The entity these areas' lights button used was deleted, so it now switches all their lights: {areas}. You can pick another in Room Tiles."
+    },
+    "appliance_question": {
+      "title": "{name} reported a state Room Tiles doesn't know",
+      "description": "In Room Tiles, open Appliances and say what it means.\n\n{states}"
+    },
+    "panel_needs_firmware": {
+      "title": "Update {name}'s firmware",
+      "description": "{name}'s firmware is older than this version of Room Tiles, so it only shows an update notice. It updates itself in a few minutes; if it doesn't, install the firmware again with a USB cable."
+    },
+    "panel_needs_integration": {
+      "title": "Update Room Tiles for {name}",
+      "description": "{name} has newer Room Tiles firmware than this version of Room Tiles, so it only shows an update notice. Update Room Tiles in Home Assistant."
+    }
+  },
+  "entity": {
+    "update": {
+      "firmware": {
+        "name": "Room Tiles firmware"
+      }
+    }
+  }
+}

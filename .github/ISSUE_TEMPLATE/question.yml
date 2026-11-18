@@ -1,0 +1,12 @@
+# Room Tiles fills this in (report.py issue: this form, its "report" field).
+name: "Question"
+description: "Ask how something in Room Tiles works."
+labels: ["question"]
+body:
+  - type: textarea
+    id: report
+    attributes:
+      label: "Your question"
+      description: "You can also send it from Room Tiles: the settings menu, Send feedback."
+    validations:
+      required: true

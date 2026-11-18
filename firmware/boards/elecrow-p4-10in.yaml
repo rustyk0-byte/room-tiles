@@ -1,0 +1,142 @@
+# Elecrow CrowPanel Advanced 9" and 10.1" ESP32-P4 - include AFTER elecrow-p4.yaml.
+# Same board as the 7" except the backlight's POWER is switched separately
+# (GPIO29; without it the screen stays dark) and the touch controller ships
+# with a stiffer config than the 7" (see Tune Touch below).
+
+# The screen (EK79007) shimmered on large gray areas (a dialog's dimmed
+# background, even #2A2A2A): its VCOM buffer is OFF by default (RB0h PWR_EN,
+# datasheet EK79007AD2 rev 1.7 p.24) and neither ESPHome's model nor
+# Elecrow's demo turns it on - an unbuffered VCOM sags with what's drawn.
+# Turning it on fixed the shimmer (confirmed on a 10.1" V1.2, 2026-11-14).
+# Appended to the model's init sequence (ESPHome adds these after its own;
+# !extend: added to the display elecrow-p4.yaml defines).
+display:
+  - id: !extend rt_display
+    init_sequence:
+      - [0xB0, 0x80]  # PWR_EN = 1: the VCOM buffer on
+
+switch:
+  - platform: gpio
+    id: lcd_backlight_power
+    internal: true
+    pin: GPIO29
+    restore_mode: ALWAYS_ON
+
+# GT911 touch tuning. Elecrow's 10.1" factory config needs touch level 95 /
+# leave 65 and holds every new touch back 3 frames (filter 0xC8 = 200) -
+# presses feel hard / long. The 7" boards run
+# 80 / 50 / filter 15 (no first-touch frames). "Tune Touch" writes 80 / 50 /
+# filter 0x08 (keeps normal filter 8, drops the 3 first-touch frames);
+# "Restore Factory Touch" writes 95 / 65 / 200 back. Everything else in the
+# config is copied unchanged (same config version, so the chip accepts it).
+# This is a write to the GT911's own config flash, skipped when the values
+# already match. A new panel is tuned by itself at startup (once - after that
+# the values match); "Restore Factory Touch" turns that off (remembered), and
+# "Tune Touch" turns it back on.
+globals:
+  - id: rt_touch_auto_tune
+    type: bool
+    restore_value: true
+    initial_value: "true"
+
+esphome:
+  # (a LIST: packages add lists together, but merge single entries key by
+  # key - one board's on_boot would replace the panel's)
+  on_boot:
+    # after everything is set up (the touch controller answers by then)
+    - priority: -200
+      then:
+        - delay: 2s
+        - if:
+            condition:
+              lambda: return id(rt_touch_auto_tune);
+            then:
+              - script.execute:
+                  id: gt911_write_config
+                  touch_lvl: 80
+                  leave_lvl: 50
+                  filter_val: 8
+
+script:
+  - id: gt911_write_config
+    mode: single
+    parameters:
+      touch_lvl: int
+      leave_lvl: int
+      filter_val: int
+    then:
+      - lambda: |-
+          auto *bus = id(bus_touch);
+          const uint8_t addr = 0x5D;
+          uint8_t cfg[185];
+          for (size_t off = 0; off < sizeof(cfg); off += 32) {
+            const uint16_t reg = 0x8047 + off;
+            const uint8_t r[2] = {(uint8_t) (reg >> 8), (uint8_t) (reg & 0xFF)};
+            size_t n = std::min<size_t>(32, sizeof(cfg) - off);
+            if (bus->write_readv(addr, r, 2, cfg + off, n) != esphome::i2c::ERROR_OK) {
+              ESP_LOGE("touchcfg", "read failed - nothing written");
+              return;
+            }
+          }
+          uint8_t sum = 0;
+          for (size_t i = 0; i < 184; i++) sum += cfg[i];
+          if ((uint8_t) (~sum + 1) != cfg[184]) {
+            ESP_LOGE("touchcfg", "current config checksum bad - nothing written");
+            return;
+          }
+          // offsets from 0x8047: 0x8050 filter = 9, 0x8053 touch = 12, 0x8054 leave = 13
+          if (cfg[9] == filter_val && cfg[12] == touch_lvl && cfg[13] == leave_lvl) {
+            ESP_LOGI("touchcfg", "already touch %d leave %d filter %d - nothing written",
+                     touch_lvl, leave_lvl, filter_val);
+            return;
+          }
+          ESP_LOGW("touchcfg", "writing touch %u->%d leave %u->%d filter %u->%d",
+                   cfg[12], touch_lvl, cfg[13], leave_lvl, cfg[9], filter_val);
+          cfg[9] = (uint8_t) filter_val;
+          cfg[12] = (uint8_t) touch_lvl;
+          cfg[13] = (uint8_t) leave_lvl;
+          sum = 0;
+          for (size_t i = 0; i < 184; i++) sum += cfg[i];
+          cfg[184] = (uint8_t) (~sum + 1);
+          for (size_t off = 0; off < sizeof(cfg); off += 32) {
+            const uint16_t reg = 0x8047 + off;
+            size_t n = std::min<size_t>(32, sizeof(cfg) - off);
+            uint8_t buf[34];
+            buf[0] = (uint8_t) (reg >> 8);
+            buf[1] = (uint8_t) (reg & 0xFF);
+            memcpy(buf + 2, cfg + off, n);
+            if (bus->write_readv(addr, buf, n + 2, nullptr, 0) != esphome::i2c::ERROR_OK) {
+              ESP_LOGE("touchcfg", "write failed at 0x%04X - config NOT committed", reg);
+              return;
+            }
+          }
+          // Config_Fresh: the chip checks, applies and saves the new config.
+          const uint8_t fresh[3] = {0x81, 0x00, 0x01};
+          if (bus->write_readv(addr, fresh, 3, nullptr, 0) != esphome::i2c::ERROR_OK)
+            ESP_LOGE("touchcfg", "config_fresh write failed");
+          else
+            ESP_LOGW("touchcfg", "config written + committed");
+
+button:
+  - platform: template
+    name: "Tune Touch"
+    icon: mdi:gesture-tap
+    entity_category: config
+    on_press:
+      - lambda: id(rt_touch_auto_tune) = true;
+      - script.execute:
+          id: gt911_write_config
+          touch_lvl: 80
+          leave_lvl: 50
+          filter_val: 8
+  - platform: template
+    name: "Restore Factory Touch"
+    icon: mdi:restore
+    entity_category: config
+    on_press:
+      - lambda: id(rt_touch_auto_tune) = false;  # (the next boot leaves it be)
+      - script.execute:
+          id: gt911_write_config
+          touch_lvl: 95
+          leave_lvl: 65
+          filter_val: 200

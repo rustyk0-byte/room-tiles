@@ -1,0 +1,696 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Room Tiles",
+        "description": "Wähle die Bereiche, die Room Tiles zeigen soll. Das lässt sich später ändern.",
+        "data": {
+          "areas": "Bereiche",
+          "auto_add_areas": "Neue Bereiche automatisch aufnehmen"
+        },
+        "data_description": {
+          "auto_add_areas": "Bereiche, die du später in Home Assistant anlegst, erscheinen auch in Room Tiles."
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Room Tiles ist schon eingerichtet."
+    },
+    "create_entry": {
+      "default": "Room Tiles ist für {areas} Bereiche eingerichtet, mit einer Kachelseite für jeden und einer Startkarte für jede Etage.\n\n**[Room Tiles öffnen]({url})** jederzeit über die Seitenleiste.",
+      "found": "Room Tiles ist für {areas} Bereiche eingerichtet, mit einer Kachelseite für jeden und einer Startkarte für jede Etage.\n\nRoom Tiles hat passende Geräte gefunden; sie erscheinen, sobald du die **[Geräteeinrichtung abschließt]({url}?open=appliances)**.\n\nRoom Tiles jederzeit über die Seitenleiste öffnen."
+    }
+  },
+  "issues": {
+    "restart_required": {
+      "title": "Home Assistant neu starten, um das Room Tiles-Update abzuschließen",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Home Assistant neu starten",
+            "description": "Room Tiles wurde aktualisiert. Home Assistant jetzt neu starten, um das Update abzuschließen?"
+          }
+        }
+      }
+    },
+    "missing_entities": {
+      "title": "Room Tiles verwendet {count} Entitäten, die es nicht mehr gibt",
+      "description": "Diese werden in Room Tiles verwendet, existieren aber nicht mehr in Home Assistant. Ersetze oder entferne sie in Room Tiles, oder stelle sie wieder her.\n\n{entities}"
+    },
+    "area_lights_override_removed": {
+      "title": "Room Tiles: Bereichslichter geändert",
+      "description": "Die Entität, die der Lichtknopf dieser Bereiche verwendet hat, wurde gelöscht. Er schaltet jetzt alle ihre Lichter: {areas}. Du kannst in Room Tiles eine andere wählen."
+    },
+    "appliance_question": {
+      "title": "{name} meldet einen Zustand, den Room Tiles nicht kennt",
+      "description": "Öffne in Room Tiles die Geräte und sag, was er bedeutet.\n\n{states}"
+    },
+    "panel_needs_firmware": {
+      "title": "Firmware von {name} aktualisieren",
+      "description": "Die Firmware von {name} ist älter als diese Version von Room Tiles, darum zeigt es nur einen Update-Hinweis. Es aktualisiert sich in ein paar Minuten selbst; wenn nicht, installiere die Firmware noch einmal per USB-Kabel."
+    },
+    "panel_needs_integration": {
+      "title": "Room Tiles für {name} aktualisieren",
+      "description": "{name} hat neuere Room Tiles-Firmware als diese Version von Room Tiles, darum zeigt es nur einen Update-Hinweis. Aktualisiere Room Tiles in Home Assistant."
+    }
+  },
+  "entity": {
+    "update": {
+      "firmware": {
+        "name": "Room Tiles-Firmware"
+      }
+    }
+  },
+  "services": {
+    "export_data": {
+      "name": "Daten exportieren",
+      "description": "Schreibt die gesamte Room-Tiles-Einrichtung (Bereiche, Kacheln, Katalog, Karten, Markierungen) in eine JSON-Datei in deinem Konfigurationsordner.",
+      "fields": {
+        "file": {
+          "name": "Datei",
+          "description": "Dateiname, relativ zum Konfigurationsordner."
+        }
+      }
+    },
+    "import_data": {
+      "name": "Daten importieren",
+      "description": "Ersetzt die gesamte Room-Tiles-Einrichtung durch eine JSON-Datei aus deinem Konfigurationsordner. Die aktuelle Einrichtung wird vorher in room_tiles_backups/ gesichert; eine ungültige Datei ändert nichts.",
+      "fields": {
+        "file": {
+          "name": "Datei",
+          "description": "Dateiname, relativ zum Konfigurationsordner."
+        }
+      }
+    },
+    "set_tile": {
+      "name": "Kachel setzen",
+      "description": "Setzt eine Kachel in das Raster eines Bereichs. Nur mit einer Entität kommen Typ und Name aus dem Katalog; ohne Entität und ohne Typ wird der Platz geleert; der Typ 'map' braucht keine Entität.",
+      "fields": {
+        "area": {
+          "name": "Bereich",
+          "description": "Room-Tiles-Bereichs-ID (z. B. kitchen)."
+        },
+        "layout": {
+          "name": "Layout",
+          "description": "Kachelraster: 5x2 (10 Kacheln) oder 6x3 (18 Kacheln)."
+        },
+        "slot": {
+          "name": "Platz",
+          "description": "Position der Kachel, ab 0 gezählt, Zeile für Zeile."
+        },
+        "entity": {
+          "name": "Entität",
+          "description": "Die Entität, die die Kachel steuert."
+        },
+        "kind": {
+          "name": "Typ",
+          "description": "Kacheltyp. Leer lassen, um den aus dem Katalog zu verwenden."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Der eigene Kurzname dieser Kachel (höchstens 15 Zeichen). Leer lassen, um den Kurznamen der Entität zu verwenden."
+        }
+      }
+    },
+    "clear_tile": {
+      "name": "Kachel leeren",
+      "description": "Leert einen Platz im Raster eines Bereichs.",
+      "fields": {
+        "area": {
+          "name": "Bereich",
+          "description": "Room-Tiles-Bereichs-ID (z. B. kitchen)."
+        },
+        "layout": {
+          "name": "Layout",
+          "description": "Kachelraster: 5x2 (10 Kacheln) oder 6x3 (18 Kacheln)."
+        },
+        "slot": {
+          "name": "Platz",
+          "description": "Position der Kachel, ab 0 gezählt, Zeile für Zeile."
+        }
+      }
+    },
+    "move_tile": {
+      "name": "Kachel verschieben",
+      "description": "Tauscht zwei Plätze im Raster eines Bereichs (auf einen leeren Platz ist es ein Verschieben).",
+      "fields": {
+        "area": {
+          "name": "Bereich",
+          "description": "Room-Tiles-Bereichs-ID (z. B. kitchen)."
+        },
+        "layout": {
+          "name": "Layout",
+          "description": "Kachelraster: 5x2 (10 Kacheln) oder 6x3 (18 Kacheln)."
+        },
+        "from_slot": {
+          "name": "Von Platz",
+          "description": "Der zu verschiebende Platz."
+        },
+        "to_slot": {
+          "name": "Zu Platz",
+          "description": "Wohin sie kommt."
+        }
+      }
+    },
+    "auto_board": {
+      "name": "Boards automatisch einrichten",
+      "description": "Ersetzt Boards durch ihre automatischen Kacheln; neue Geräte, Saugroboter und Pools kommen danach von selbst dazu.",
+      "fields": {
+        "area": {
+          "name": "Bereich",
+          "description": "Room-Tiles-Bereichs-ID (z. B. kitchen). Leer lassen für alle Bereiche."
+        },
+        "layout": {
+          "name": "Layout",
+          "description": "Kachelraster: 5x2 (10 Kacheln) oder 6x3 (18 Kacheln). Leer lassen für beide."
+        }
+      }
+    },
+    "add_marker": {
+      "name": "Markierung hinzufügen",
+      "description": "Setzt das Symbol einer Entität auf eine Karte. Antwortet mit der ID der neuen Markierung.",
+      "fields": {
+        "map": {
+          "name": "Karte",
+          "description": "Karten-ID (z. B. house)."
+        },
+        "entity": {
+          "name": "Entität",
+          "description": "Die zu platzierende Entität."
+        },
+        "x": {
+          "name": "X",
+          "description": "X-Position in den Einheiten der Karte."
+        },
+        "y": {
+          "name": "Y",
+          "description": "Y-Position in den Einheiten der Karte."
+        },
+        "show_name": {
+          "name": "Namen zeigen",
+          "description": "Den Namen der Entität über ihrem Symbol zeigen."
+        },
+        "layer": {
+          "name": "Ebene",
+          "description": "Die Kartenebene (z. B. house, rooms). Standard: die erste Ebene der Karte."
+        }
+      }
+    },
+    "update_marker": {
+      "name": "Markierung ändern",
+      "description": "Verschiebt eine Markierung oder ändert ihre Optionen.",
+      "fields": {
+        "marker": {
+          "name": "Markierung",
+          "description": "Markierungs-ID."
+        },
+        "map": {
+          "name": "Karte",
+          "description": "Auf eine andere Karte verschieben."
+        },
+        "x": {
+          "name": "X",
+          "description": "X-Position in den Einheiten der Karte."
+        },
+        "y": {
+          "name": "Y",
+          "description": "Y-Position in den Einheiten der Karte."
+        },
+        "show_name": {
+          "name": "Namen zeigen",
+          "description": "Den Namen der Entität über ihrem Symbol zeigen."
+        },
+        "layer": {
+          "name": "Ebene",
+          "description": "Die Kartenebene (z. B. house, rooms). Standard: die erste Ebene der Karte."
+        }
+      }
+    },
+    "remove_marker": {
+      "name": "Markierung entfernen",
+      "description": "Entfernt eine Markierung von ihrer Karte.",
+      "fields": {
+        "marker": {
+          "name": "Markierung",
+          "description": "Markierungs-ID."
+        }
+      }
+    },
+    "reset_short_names": {
+      "name": "Kurznamen zurücksetzen",
+      "description": "Setzt die Kurznamen der Katalog-Entitäten auf die zurück, die Room Tiles aus ihren vollen Namen vorschlägt, wie bei der Einrichtung. Für alle Entitäten oder nur die angegebenen. Gibt zurück, wie viele sich geändert haben.",
+      "fields": {
+        "entities": {
+          "name": "Entitäten",
+          "description": "Nur diese Entitäten (leer lassen für alle im Katalog)."
+        }
+      }
+    },
+    "set_short_name": {
+      "name": "Kurznamen setzen",
+      "description": "Setzt den Kurznamen (höchstens 15 Zeichen), den ein Bereich oder eine Entität auf Kacheln und der Karte zeigt. Auswahllisten und Dialoge behalten den vollen Namen.",
+      "fields": {
+        "area": {
+          "name": "Bereich",
+          "description": "Der umzubenennende Bereich (Bereich oder Entität angeben)."
+        },
+        "entity": {
+          "name": "Entität",
+          "description": "Die umzubenennende Entität (Bereich oder Entität angeben)."
+        },
+        "short_name": {
+          "name": "Kurzname",
+          "description": "Höchstens 15 Zeichen."
+        }
+      }
+    },
+    "suggest_short_name": {
+      "name": "Kurznamen vorschlagen",
+      "description": "Ein Kurzname, vorgeschlagen aus dem vollen Namen eines Bereichs oder einer Entität nach den Kürzungsregeln von Room Tiles. Es wird nichts geändert.",
+      "fields": {
+        "area": {
+          "name": "Bereich",
+          "description": "Der Bereich (Bereich oder Entität angeben)."
+        },
+        "entity": {
+          "name": "Entität",
+          "description": "Die Entität (Bereich oder Entität angeben)."
+        }
+      }
+    },
+    "set_area_lights": {
+      "name": "Bereichslicht festlegen",
+      "description": "Legt fest, was die Licht-Taste eines Bereichs schaltet: jedes Licht im Home-Assistant-Bereich außer den ausgeschlossenen (Standard) oder eine einzelne Entität wie eine Lichtgruppe.",
+      "fields": {
+        "area": {
+          "name": "Bereich",
+          "description": "Der Bereich."
+        },
+        "entity": {
+          "name": "Diese Entität verwenden",
+          "description": "Optional: nur diese Entität schalten (z. B. eine Lichtgruppe). Leer lassen für alle Lichter des Bereichs."
+        },
+        "exclude": {
+          "name": "Ausschließen",
+          "description": "Lichter im Bereich, die die Taste in Ruhe lassen soll (z. B. die Hintergrundbeleuchtung eines Displays). Ersetzt die aktuelle Liste."
+        }
+      }
+    },
+    "area_lights": {
+      "name": "Bereichslicht",
+      "description": "Schaltet die Lichter eines Bereichs wie seine Licht-Taste. Umschalten: Ist eines an, gehen alle aus; sonst gehen alle an.",
+      "fields": {
+        "area": {
+          "name": "Bereich",
+          "description": "Der Bereich."
+        },
+        "action": {
+          "name": "Aktion",
+          "description": "toggle, turn_on oder turn_off."
+        }
+      }
+    },
+    "catalog_add": {
+      "name": "Zum Katalog hinzufügen",
+      "description": "Bietet eine Entität in der Kachelauswahl von Room Tiles an. Ihr Kacheltyp wird aus Home Assistant ermittelt, sofern nicht angegeben; ihr Kurzname wird aus dem vollen Namen vorgeschlagen, sofern nicht angegeben (und zur Prüfung markiert, wenn er gekürzt werden musste).",
+      "fields": {
+        "entity": {
+          "name": "Entität",
+          "description": "Die anzubietende Entität."
+        },
+        "kind": {
+          "name": "Typ",
+          "description": "Kacheltyp. Leer lassen, um ihn ermitteln zu lassen."
+        },
+        "short_name": {
+          "name": "Kurzname",
+          "description": "Höchstens 15 Zeichen. Leer lassen für einen Vorschlag."
+        }
+      }
+    },
+    "catalog_remove": {
+      "name": "Aus dem Katalog entfernen",
+      "description": "Nimmt eine Entität aus der Kachelauswahl von Room Tiles. Kacheln, die sie schon verwenden, bleiben.",
+      "fields": {
+        "entity": {
+          "name": "Entität",
+          "description": "Die zu entfernende Entität."
+        }
+      }
+    },
+    "set_area": {
+      "name": "Bereich einstellen",
+      "description": "Zeigt oder verbirgt einen Room-Tiles-Bereich oder verschiebt ihn in der Reihenfolge der Bereiche.",
+      "fields": {
+        "area": {
+          "name": "Bereich",
+          "description": "Der Bereich."
+        },
+        "hidden": {
+          "name": "Verborgen",
+          "description": "Den Bereich in Room Tiles verbergen (seine Kacheln bleiben erhalten)."
+        },
+        "position": {
+          "name": "Position",
+          "description": "Wohin er in der Reihenfolge kommt (0 = zuerst)."
+        }
+      }
+    },
+    "set_settings": {
+      "name": "Einstellungen ändern",
+      "description": "Ändert die Einstellungen von Room Tiles selbst.",
+      "fields": {
+        "auto_add_areas": {
+          "name": "Neue Bereiche automatisch aufnehmen",
+          "description": "Später in Home Assistant hinzugefügte Bereiche erscheinen sofort in Room Tiles (sonst kommen sie verborgen an)."
+        },
+        "auto_update_panels": {
+          "name": "Panels automatisch aktualisieren",
+          "description": "Wandpanels installieren eine neuere Room-Tiles-Firmware selbst, wenn niemand sie benutzt."
+        }
+      }
+    },
+    "set_markers": {
+      "name": "Markierungen setzen",
+      "description": "Ersetzt alle Markierungen einer Karte in einem Schritt (vom Speichern im Karteneditor verwendet). Jede Markierung: entity, x, y, layer, show_name und ihre id, um sie zu behalten.",
+      "fields": {
+        "map": {
+          "name": "Karte",
+          "description": "Karten-ID."
+        },
+        "markers": {
+          "name": "Markierungen",
+          "description": "Die vollständige Markierungsliste der Karte."
+        }
+      }
+    },
+    "set_map": {
+      "name": "Karte setzen",
+      "description": "Ersetzt die Zeichnung einer Karte in einem Schritt (vom Speichern im Karteneditor verwendet). Nicht angegebene Felder bleiben. Markierungen auf einer entfernten Ebene kommen auf die erste Ebene.",
+      "fields": {
+        "map": {
+          "name": "Karte",
+          "description": "Karten-ID."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Der Name der Karte in der Kartenauswahl."
+        },
+        "bounds": {
+          "name": "Grenzen",
+          "description": "[x0, y0, x1, y1]: der Bereich, den die Gesamtansicht der Karte zeigt, in Karteneinheiten."
+        },
+        "ha_floor": {
+          "name": "Etage",
+          "description": "Die HA-Etage, die diese Karte zeigt, falls vorhanden."
+        },
+        "wall_width": {
+          "name": "Wandstärke",
+          "description": "Wandstärke in Karteneinheiten."
+        },
+        "walls": {
+          "name": "Wände",
+          "description": "Wandsegmente [x1, y1, x2, y2]."
+        },
+        "windows": {
+          "name": "Fenster",
+          "description": "Fenstersegmente [x1, y1, x2, y2]."
+        },
+        "openings": {
+          "name": "Öffnungen",
+          "description": "Durchgänge / offene Grenzen [x1, y1, x2, y2] (gestrichelt)."
+        },
+        "shapes": {
+          "name": "Formen",
+          "description": "Gefüllte Flächen, jede mit einem Stil (floor, water, grass, deck oder paving) und ihren Punkten."
+        },
+        "zones": {
+          "name": "Räume",
+          "description": "Räume / Flächen, jeweils mit id, name, points, area, label und outdoor."
+        },
+        "links": {
+          "name": "Verknüpfungen",
+          "description": "Sprünge zu einer anderen Karte, jeweils mit to (Karten-ID), at (Punkt) und label."
+        },
+        "layers": {
+          "name": "Ebenen",
+          "description": "Markierungsebenen, jeweils mit id, name und min_zoom."
+        }
+      }
+    },
+    "add_map": {
+      "name": "Karte hinzufügen",
+      "description": "Fügt eine neue, leere Karte hinzu (eine Etage, ein Garten …). Gibt ihre ID zurück.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Der Name der neuen Karte."
+        },
+        "ha_floor": {
+          "name": "Etage",
+          "description": "Die HA-Etage, die sie zeigt, falls vorhanden."
+        }
+      }
+    },
+    "remove_map": {
+      "name": "Karte entfernen",
+      "description": "Löscht eine Karte mit ihren Markierungen (und Verknüpfungen zu ihr). Die letzte Karte kann nicht entfernt werden.",
+      "fields": {
+        "map": {
+          "name": "Karte",
+          "description": "Karten-ID."
+        }
+      }
+    },
+    "order_maps": {
+      "name": "Karten ordnen",
+      "description": "Legt die Reihenfolge der Kartenauswahl fest.",
+      "fields": {
+        "order": {
+          "name": "Reihenfolge",
+          "description": "Jede Karten-ID, in der neuen Reihenfolge."
+        }
+      }
+    },
+    "set_appliance": {
+      "name": "Gerät einrichten",
+      "description": "Fügt ein Geräteprofil hinzu oder ersetzt es – den Sensor, den eine Gerätekachel liest.",
+      "fields": {
+        "appliance": {
+          "name": "Gerät",
+          "description": "Das Profil: id, Name und eine oder zwei Einheiten (Beschriftung, Typ, Vorlage, Status-Entität, Zeit- und Tür-Entitäten, was „fertig“ zurücksetzt)."
+        }
+      }
+    },
+    "remove_appliance": {
+      "name": "Gerät entfernen",
+      "description": "Entfernt ein Geräteprofil und seinen Sensor.",
+      "fields": {
+        "appliance": {
+          "name": "Gerät",
+          "description": "Die Geräte-ID."
+        }
+      }
+    },
+    "clear_appliance": {
+      "name": "Gerät leeren",
+      "description": "Markiert ein fertiges Gerät als ausgeräumt (was ein Tippen auf seine Kachel tut).",
+      "fields": {
+        "appliance": {
+          "name": "Gerät",
+          "description": "Die Geräte-ID."
+        },
+        "unit": {
+          "name": "Einheit",
+          "description": "Nur diese Einheit (Standard: alle)."
+        }
+      }
+    },
+    "combine_appliances": {
+      "name": "Geräte kombinieren",
+      "description": "Legt zwei einzelne Geräte auf eine Kachel (das erste oben); Kacheln und Markierungen des zweiten gehen auf das kombinierte über.",
+      "fields": {
+        "appliance": {
+          "name": "Gerät",
+          "description": "Das obere Gerät."
+        },
+        "with": {
+          "name": "Mit",
+          "description": "Das hinzukommende Gerät."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Name des kombinierten Geräts (Standard: Wäsche, Geschirrspüler oder beide Namen)."
+        }
+      }
+    },
+    "split_appliance": {
+      "name": "Gerät aufteilen",
+      "description": "Gibt einer Einheit eines Geräts mit zwei Einheiten eine eigene Kachel.",
+      "fields": {
+        "appliance": {
+          "name": "Gerät",
+          "description": "Das Gerät mit zwei Einheiten."
+        },
+        "unit": {
+          "name": "Einheit",
+          "description": "Die Einheit, die eine eigene Kachel bekommt."
+        }
+      }
+    },
+    "set_pool": {
+      "name": "Pool / Whirlpool einrichten",
+      "description": "Fügt ein Pool-/Whirlpool-System hinzu oder ersetzt es – die Sensoren, die seine Kacheln Pool, Whirlpool und Pool / Whirlpool lesen.",
+      "fields": {
+        "pool": {
+          "name": "Pool / Whirlpool",
+          "description": "Das System: id, Name, Anlagenaufbau (shared, separate, pool, spa) und die Entitäten jedes Beckens."
+        }
+      }
+    },
+    "remove_pool": {
+      "name": "Pool / Whirlpool entfernen",
+      "description": "Entfernt ein Pool-/Whirlpool-System und seine Sensoren.",
+      "fields": {
+        "pool": {
+          "name": "Pool / Whirlpool",
+          "description": "Die System-ID."
+        }
+      }
+    },
+    "pool_set_target": {
+      "name": "Pool-/Whirlpool-Zieltemperatur setzen",
+      "description": "Setzt den Sollwert der Heizung eines Beckens.",
+      "fields": {
+        "entity": {
+          "name": "Entität",
+          "description": "Ein Room-Tiles-Pool-/Whirlpool-Sensor (der kombinierte wirkt auf das aktive Becken)."
+        },
+        "temperature": {
+          "name": "Temperatur",
+          "description": "Der Sollwert."
+        }
+      }
+    },
+    "pool_set_heater": {
+      "name": "Pool-/Whirlpool-Heizung ein / aus",
+      "description": "Schaltet die Heizung eines Beckens ein (Heizen) oder aus.",
+      "fields": {
+        "entity": {
+          "name": "Entität",
+          "description": "Ein Room-Tiles-Pool-/Whirlpool-Sensor (der kombinierte wirkt auf das aktive Becken)."
+        },
+        "heater": {
+          "name": "Heizung",
+          "description": "Ein oder aus."
+        }
+      }
+    },
+    "pool_set_on": {
+      "name": "Pool / Whirlpool ein / aus",
+      "description": "Schaltet ein Becken ein oder aus: Bei einem gemeinsamen System ist Whirlpool-an der Whirlpool-Modus; sonst die Pumpe dieses Beckens.",
+      "fields": {
+        "entity": {
+          "name": "Entität",
+          "description": "Ein Room-Tiles-Pool-/Whirlpool-Sensor."
+        },
+        "on": {
+          "name": "Ein",
+          "description": "Ein oder aus."
+        },
+        "with_heater": {
+          "name": "Mit seiner Heizung",
+          "description": "Seine Heizung folgt: an mit ihm, aus, wenn es ausgeht. Standard: die eigene Einstellung des Whirlpools (an, außer in seinen Einstellungen ausgeschaltet)."
+        }
+      }
+    },
+    "set_robot": {
+      "name": "Saugroboter einrichten",
+      "description": "Fügt ein Saugroboter-Profil hinzu oder ersetzt es – den Sensor, den seine Saugroboter-Kachel liest.",
+      "fields": {
+        "robot": {
+          "name": "Saugroboter",
+          "description": "Das Profil: id, Name, seine Staubsauger-Entität und (Matter) sein Betriebsfehler-Sensor."
+        }
+      }
+    },
+    "remove_robot": {
+      "name": "Saugroboter entfernen",
+      "description": "Entfernt ein Saugroboter-Profil und seinen Sensor.",
+      "fields": {
+        "robot": {
+          "name": "Saugroboter",
+          "description": "Die Profil-ID."
+        }
+      }
+    },
+    "ignore_device": {
+      "name": "Gerät ignorieren",
+      "description": "Ignoriert ein gefundenes Gerät, einen Pool / Whirlpool oder Saugroboter – oder nimmt ein eingerichtetes aus Room Tiles heraus –, sodass es auf der Geräteseite unter Ignoriert wartet.",
+      "fields": {
+        "kind": {
+          "name": "Typ",
+          "description": "appliance, pool oder robot."
+        },
+        "device": {
+          "name": "Gerät",
+          "description": "Das gefundene (oder eingerichtete) Gerät, wie die Geräteseite es auflistet."
+        },
+        "set_up_id": {
+          "name": "ID der Einrichtung",
+          "description": "Wenn es eingerichtet ist: seine ID – es wird aus Room Tiles entfernt."
+        }
+      }
+    },
+    "set_area_light_entity": {
+      "name": "Bereichslicht-Entität",
+      "description": "Ob Room Tiles sein „Licht“ für einen Bereich anlegt (z. B. Küche Licht) (alle Lichter des Bereichs zusammen, wie die Licht-Taste). Aus entfernt es mit seinen Kacheln und Markierungen.",
+      "fields": {
+        "area": {
+          "name": "Bereich",
+          "description": "Der Bereich."
+        },
+        "enabled": {
+          "name": "Anlegen",
+          "description": "Ein: die Licht-Taste des Bereichs (und das Licht von Room Tiles dafür) – angelegt, sobald der Bereich ein Licht hat. Aus: keines für diesen Bereich."
+        }
+      }
+    },
+    "accept_short_names": {
+      "name": "Kurznamen übernehmen",
+      "description": "Bestätigt die Kurznamen, die auf Prüfung warten (von Bereichen und Entitäten), so wie sie sind. Zu breite für eine Kachel warten weiter (die Antwort listet sie auf).",
+      "fields": {
+        "entities": {
+          "name": "Entitäten",
+          "description": "Optional: nur diese. Leer lassen für alle."
+        }
+      }
+    },
+    "vacuum_queue": {
+      "name": "Raum-Warteschlange des Saugroboters",
+      "description": "Die Raum-Warteschlange eines Saugroboters: einen Raum (einen Bereich) hinzufügen, entfernen oder verschieben, die Warteschlange leeren, starten, pausieren, zum nächsten Raum springen oder stoppen und leeren.",
+      "fields": {
+        "robot": {
+          "name": "Saugroboter",
+          "description": "Die Room-Tiles-ID des Saugroboters."
+        },
+        "action": {
+          "name": "Aktion",
+          "description": "add, remove, move, clear, start, pause, skip oder stop."
+        },
+        "area": {
+          "name": "Bereich",
+          "description": "Der Bereich zum Hinzufügen, Entfernen oder Verschieben."
+        },
+        "index": {
+          "name": "Position",
+          "description": "Wohin er in der Warteschlange kommt (0 = als Nächstes)."
+        },
+        "start": {
+          "name": "Reinigung starten",
+          "description": "Mit add: die Warteschlange starten, wenn der Sauger untätig ist (setzt nie einen pausierten fort)."
+        }
+      }
+    }
+  }
+}

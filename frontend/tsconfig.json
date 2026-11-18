@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    "useDefineForClassFields": false,
+    "resolveJsonModule": true
+  },
+  "include": ["src", "i18n"],
+  "exclude": ["src/**/*.test.ts"]
+}

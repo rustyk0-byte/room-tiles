@@ -1,0 +1,63 @@
+{
+  "_about": "How Room Tiles SUGGESTS a short name (once, when an entity or area first appears) from a Home Assistant name written in this language. The short names themselves are stored per installation and never change with the language.",
+  "abbreviations": [
+    [
+      "Woonkamer",
+      "Woonk."
+    ],
+    [
+      "Slaapkamer",
+      "Slaapk."
+    ],
+    [
+      "Badkamer",
+      "Badk."
+    ],
+    [
+      "Begane grond",
+      "BG"
+    ],
+    [
+      "Eerste verdieping",
+      "1e verd."
+    ],
+    [
+      "Verlichting",
+      "Licht"
+    ],
+    [
+      "Plafondlamp",
+      "Plafondl."
+    ],
+    [
+      "Ventilator",
+      "Vent."
+    ],
+    [
+      "Links",
+      "L"
+    ],
+    [
+      "Rechts",
+      "R"
+    ],
+    [
+      "Buiten",
+      "Bui."
+    ]
+  ],
+  "case": "words",
+  "lower": [
+    "de",
+    "het",
+    "een",
+    "en",
+    "van",
+    "in",
+    "op",
+    "met",
+    "aan",
+    "bij",
+    "voor"
+  ]
+}

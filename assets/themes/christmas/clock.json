@@ -1,0 +1,52 @@
+{
+  "center": [
+    210,
+    210
+  ],
+  "hands": {
+    "hour": {
+      "pivot": [
+        27,
+        104
+      ],
+      "length": 1.0
+    },
+    "minute": {
+      "pivot": [
+        25,
+        144
+      ],
+      "length": 1.0
+    },
+    "second": {
+      "pivot": [
+        24,
+        150
+      ],
+      "length": 1.0
+    }
+  },
+  "cap": {
+    "at": [
+      210,
+      210
+    ]
+  },
+  "date": {
+    "at": [
+      322,
+      210
+    ],
+    "align": "center",
+    "font": "large",
+    "color": "#221E1E"
+  },
+  "order": [
+    "face",
+    "date",
+    "hour",
+    "minute",
+    "second",
+    "cap"
+  ]
+}

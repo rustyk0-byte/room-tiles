@@ -1,0 +1,12 @@
+# Room Tiles fills this in (report.py issue: this form, its "report" field).
+name: "Unknown state"
+description: "Sent from Room Tiles: a state it didn't know, and what it means."
+labels: ["unknown-state"]
+body:
+  - type: textarea
+    id: report
+    attributes:
+      label: "Report"
+      description: "Send this from Room Tiles: answer the question on the appliance's card, then Also tell Room Tiles."
+    validations:
+      required: true

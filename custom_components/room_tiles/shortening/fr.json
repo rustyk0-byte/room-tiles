@@ -1,0 +1,70 @@
+{
+  "_about": "How Room Tiles SUGGESTS a short name (once, when an entity or area first appears) from a Home Assistant name written in this language. The short names themselves are stored per installation and never change with the language.",
+  "abbreviations": [
+    [
+      "Salle de bain",
+      "SdB"
+    ],
+    [
+      "Salle de bains",
+      "SdB"
+    ],
+    [
+      "Salle à manger",
+      "SàM"
+    ],
+    [
+      "Chambre",
+      "Ch."
+    ],
+    [
+      "Cuisine",
+      "Cuis."
+    ],
+    [
+      "Plafonnier",
+      "Plaf."
+    ],
+    [
+      "Lumières",
+      "Lum."
+    ],
+    [
+      "Lumière",
+      "Lum."
+    ],
+    [
+      "Éclairage",
+      "Lum."
+    ],
+    [
+      "Ventilateur",
+      "Ventil."
+    ],
+    [
+      "Principale",
+      "Princ."
+    ],
+    [
+      "Principal",
+      "Princ."
+    ],
+    [
+      "Gauche",
+      "G."
+    ],
+    [
+      "Droite",
+      "D."
+    ],
+    [
+      "Rez-de-chaussée",
+      "RdC"
+    ],
+    [
+      "Extérieur",
+      "Ext."
+    ]
+  ],
+  "case": "first"
+}

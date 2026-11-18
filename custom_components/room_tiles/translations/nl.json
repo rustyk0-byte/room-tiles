@@ -1,0 +1,696 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Room Tiles",
+        "description": "Kies de ruimtes die Room Tiles laat zien. Je kunt dit later wijzigen.",
+        "data": {
+          "areas": "Ruimtes",
+          "auto_add_areas": "Nieuwe ruimtes automatisch opnemen"
+        },
+        "data_description": {
+          "auto_add_areas": "Ruimtes die je later in Home Assistant toevoegt, verschijnen ook in Room Tiles."
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Room Tiles is al ingesteld."
+    },
+    "create_entry": {
+      "default": "Room Tiles is ingesteld voor {areas} ruimtes, met een tegelpagina voor elke ruimte en een startkaart voor elke verdieping.\n\n**[Open Room Tiles]({url})** wanneer je wilt via de zijbalk.",
+      "found": "Room Tiles is ingesteld voor {areas} ruimtes, met een tegelpagina voor elke ruimte en een startkaart voor elke verdieping.\n\nRoom Tiles heeft geschikte apparaten gevonden; ze verschijnen zodra je **[het instellen afrondt]({url}?open=appliances)**.\n\nOpen Room Tiles wanneer je wilt via de zijbalk."
+    }
+  },
+  "issues": {
+    "restart_required": {
+      "title": "Herstart Home Assistant om de update van Room Tiles af te ronden",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Home Assistant herstarten",
+            "description": "Room Tiles is bijgewerkt. Home Assistant nu herstarten om de update af te ronden?"
+          }
+        }
+      }
+    },
+    "missing_entities": {
+      "title": "Room Tiles gebruikt {count} entiteiten die niet meer bestaan",
+      "description": "Deze worden in Room Tiles gebruikt maar bestaan niet meer in Home Assistant. Vervang of verwijder ze in Room Tiles, of zet ze terug.\n\n{entities}"
+    },
+    "area_lights_override_removed": {
+      "title": "Room Tiles: ruimteverlichting gewijzigd",
+      "description": "De entiteit die de lichtknop van deze ruimtes gebruikte is verwijderd, dus die schakelt nu al hun lampen: {areas}. Je kunt in Room Tiles een andere kiezen."
+    },
+    "appliance_question": {
+      "title": "{name} meldt een toestand die Room Tiles niet kent",
+      "description": "Open in Room Tiles de apparaten en geef aan wat het betekent.\n\n{states}"
+    },
+    "panel_needs_firmware": {
+      "title": "Firmware van {name} bijwerken",
+      "description": "De firmware van {name} is ouder dan deze versie van Room Tiles, dus het toont alleen een updatemelding. Het werkt zichzelf binnen een paar minuten bij; zo niet, installeer de firmware opnieuw met een USB-kabel."
+    },
+    "panel_needs_integration": {
+      "title": "Room Tiles bijwerken voor {name}",
+      "description": "{name} heeft nieuwere Room Tiles-firmware dan deze versie van Room Tiles, dus het toont alleen een updatemelding. Werk Room Tiles bij in Home Assistant."
+    }
+  },
+  "entity": {
+    "update": {
+      "firmware": {
+        "name": "Room Tiles-firmware"
+      }
+    }
+  },
+  "services": {
+    "export_data": {
+      "name": "Gegevens exporteren",
+      "description": "Schrijft de hele Room Tiles-instelling (ruimtes, tegels, catalogus, kaarten, markeringen) naar een JSON-bestand in je configuratiemap.",
+      "fields": {
+        "file": {
+          "name": "Bestand",
+          "description": "Bestandsnaam, relatief ten opzichte van de configuratiemap."
+        }
+      }
+    },
+    "import_data": {
+      "name": "Gegevens importeren",
+      "description": "Vervangt de hele Room Tiles-instelling door een JSON-bestand uit je configuratiemap. De huidige instelling wordt eerst bewaard in room_tiles_backups/; een ongeldig bestand verandert niets.",
+      "fields": {
+        "file": {
+          "name": "Bestand",
+          "description": "Bestandsnaam, relatief ten opzichte van de configuratiemap."
+        }
+      }
+    },
+    "set_tile": {
+      "name": "Tegel plaatsen",
+      "description": "Zet een tegel in het raster van een ruimte. Met alleen een entiteit komen type en naam uit de catalogus; zonder entiteit en zonder type wordt de plek leeggemaakt; type 'map' heeft geen entiteit nodig.",
+      "fields": {
+        "area": {
+          "name": "Ruimte",
+          "description": "Room Tiles-ruimte-ID (bijv. kitchen)."
+        },
+        "layout": {
+          "name": "Indeling",
+          "description": "Tegelraster: 5x2 (10 tegels) of 6x3 (18 tegels)."
+        },
+        "slot": {
+          "name": "Plek",
+          "description": "Positie van de tegel, geteld vanaf 0, rij voor rij."
+        },
+        "entity": {
+          "name": "Entiteit",
+          "description": "De entiteit die de tegel bedient."
+        },
+        "kind": {
+          "name": "Type",
+          "description": "Tegeltype. Laat leeg om dat uit de catalogus te gebruiken."
+        },
+        "name": {
+          "name": "Naam",
+          "description": "De eigen korte naam van deze tegel (hoogstens 15 tekens). Laat leeg om de korte naam van de entiteit te gebruiken."
+        }
+      }
+    },
+    "clear_tile": {
+      "name": "Tegel leegmaken",
+      "description": "Maakt één plek in het raster van een ruimte leeg.",
+      "fields": {
+        "area": {
+          "name": "Ruimte",
+          "description": "Room Tiles-ruimte-ID (bijv. kitchen)."
+        },
+        "layout": {
+          "name": "Indeling",
+          "description": "Tegelraster: 5x2 (10 tegels) of 6x3 (18 tegels)."
+        },
+        "slot": {
+          "name": "Plek",
+          "description": "Positie van de tegel, geteld vanaf 0, rij voor rij."
+        }
+      }
+    },
+    "move_tile": {
+      "name": "Tegel verplaatsen",
+      "description": "Wisselt twee plekken in het raster van een ruimte (naar een lege plek is het verplaatsen).",
+      "fields": {
+        "area": {
+          "name": "Ruimte",
+          "description": "Room Tiles-ruimte-ID (bijv. kitchen)."
+        },
+        "layout": {
+          "name": "Indeling",
+          "description": "Tegelraster: 5x2 (10 tegels) of 6x3 (18 tegels)."
+        },
+        "from_slot": {
+          "name": "Van plek",
+          "description": "De plek die verplaatst wordt."
+        },
+        "to_slot": {
+          "name": "Naar plek",
+          "description": "Waar hij heen gaat."
+        }
+      }
+    },
+    "auto_board": {
+      "name": "Borden automatisch instellen",
+      "description": "Vervangt borden door hun automatische tegels; nieuwe apparaten, robotstofzuigers en zwembaden komen er daarna vanzelf bij.",
+      "fields": {
+        "area": {
+          "name": "Ruimte",
+          "description": "Room Tiles-ruimte-ID (bijv. kitchen). Laat leeg voor alle ruimtes."
+        },
+        "layout": {
+          "name": "Indeling",
+          "description": "Tegelraster: 5x2 (10 tegels) of 6x3 (18 tegels). Laat leeg voor allebei."
+        }
+      }
+    },
+    "add_marker": {
+      "name": "Markering toevoegen",
+      "description": "Plaatst het pictogram van een entiteit op een kaart. Antwoordt met de ID van de nieuwe markering.",
+      "fields": {
+        "map": {
+          "name": "Kaart",
+          "description": "Kaart-ID (bijv. house)."
+        },
+        "entity": {
+          "name": "Entiteit",
+          "description": "De te plaatsen entiteit."
+        },
+        "x": {
+          "name": "X",
+          "description": "X-positie in de eenheden van de kaart."
+        },
+        "y": {
+          "name": "Y",
+          "description": "Y-positie in de eenheden van de kaart."
+        },
+        "show_name": {
+          "name": "Naam tonen",
+          "description": "Toont de naam van de entiteit boven het pictogram."
+        },
+        "layer": {
+          "name": "Laag",
+          "description": "De kaartlaag (bijv. house, rooms). Standaard: de eerste laag van de kaart."
+        }
+      }
+    },
+    "update_marker": {
+      "name": "Markering bijwerken",
+      "description": "Verplaatst een markering of wijzigt de opties.",
+      "fields": {
+        "marker": {
+          "name": "Markering",
+          "description": "Markering-ID."
+        },
+        "map": {
+          "name": "Kaart",
+          "description": "Naar een andere kaart verplaatsen."
+        },
+        "x": {
+          "name": "X",
+          "description": "X-positie in de eenheden van de kaart."
+        },
+        "y": {
+          "name": "Y",
+          "description": "Y-positie in de eenheden van de kaart."
+        },
+        "show_name": {
+          "name": "Naam tonen",
+          "description": "Toont de naam van de entiteit boven het pictogram."
+        },
+        "layer": {
+          "name": "Laag",
+          "description": "De kaartlaag (bijv. house, rooms). Standaard: de eerste laag van de kaart."
+        }
+      }
+    },
+    "remove_marker": {
+      "name": "Markering verwijderen",
+      "description": "Verwijdert een markering van haar kaart.",
+      "fields": {
+        "marker": {
+          "name": "Markering",
+          "description": "Markering-ID."
+        }
+      }
+    },
+    "reset_short_names": {
+      "name": "Korte namen herstellen",
+      "description": "Zet de korte namen van catalogusentiteiten terug naar wat Room Tiles uit hun volledige namen voorstelt, zoals bij het instellen. Voor alle entiteiten of alleen de opgegeven. Geeft terug hoeveel er veranderd zijn.",
+      "fields": {
+        "entities": {
+          "name": "Entiteiten",
+          "description": "Alleen deze entiteiten (laat leeg voor alle in de catalogus)."
+        }
+      }
+    },
+    "set_short_name": {
+      "name": "Korte naam instellen",
+      "description": "Stelt de korte naam in (hoogstens 15 tekens) die een ruimte of entiteit op tegels en de kaart toont. Kiezers en dialogen houden de volledige naam.",
+      "fields": {
+        "area": {
+          "name": "Ruimte",
+          "description": "De te hernoemen ruimte (geef een ruimte of een entiteit op)."
+        },
+        "entity": {
+          "name": "Entiteit",
+          "description": "De te hernoemen entiteit (geef een ruimte of een entiteit op)."
+        },
+        "short_name": {
+          "name": "Korte naam",
+          "description": "Hoogstens 15 tekens."
+        }
+      }
+    },
+    "suggest_short_name": {
+      "name": "Korte naam voorstellen",
+      "description": "Een korte naam, voorgesteld uit de volledige naam van een ruimte of entiteit volgens de inkortregels van Room Tiles. Er verandert niets.",
+      "fields": {
+        "area": {
+          "name": "Ruimte",
+          "description": "De ruimte (geef een ruimte of een entiteit op)."
+        },
+        "entity": {
+          "name": "Entiteit",
+          "description": "De entiteit (geef een ruimte of een entiteit op)."
+        }
+      }
+    },
+    "set_area_lights": {
+      "name": "Ruimteverlichting instellen",
+      "description": "Kiest wat de lichtknop van een ruimte schakelt: elke lamp in de Home Assistant-ruimte behalve de uitgesloten (standaard), of één entiteit zoals een lampengroep.",
+      "fields": {
+        "area": {
+          "name": "Ruimte",
+          "description": "De ruimte."
+        },
+        "entity": {
+          "name": "Deze entiteit gebruiken",
+          "description": "Optioneel: alleen deze entiteit schakelen (bijv. een lampengroep). Laat leeg voor alle lampen van de ruimte."
+        },
+        "exclude": {
+          "name": "Uitsluiten",
+          "description": "Lampen in de ruimte die de knop met rust moet laten (bijv. de achtergrondverlichting van een scherm). Vervangt de huidige lijst."
+        }
+      }
+    },
+    "area_lights": {
+      "name": "Ruimteverlichting",
+      "description": "Schakelt de lampen van een ruimte zoals de lichtknop. Omschakelen: als er een aan is, gaan ze allemaal uit; anders gaan ze allemaal aan.",
+      "fields": {
+        "area": {
+          "name": "Ruimte",
+          "description": "De ruimte."
+        },
+        "action": {
+          "name": "Actie",
+          "description": "toggle, turn_on of turn_off."
+        }
+      }
+    },
+    "catalog_add": {
+      "name": "Aan catalogus toevoegen",
+      "description": "Biedt een entiteit aan in de tegelkiezer van Room Tiles. Het tegeltype wordt uit Home Assistant afgeleid als het niet is opgegeven; de korte naam wordt uit de volledige naam voorgesteld als die niet is opgegeven (en gemarkeerd voor controle als hij ingekort moest worden).",
+      "fields": {
+        "entity": {
+          "name": "Entiteit",
+          "description": "De aan te bieden entiteit."
+        },
+        "kind": {
+          "name": "Type",
+          "description": "Tegeltype. Laat leeg om het af te leiden."
+        },
+        "short_name": {
+          "name": "Korte naam",
+          "description": "Hoogstens 15 tekens. Laat leeg voor een voorstel."
+        }
+      }
+    },
+    "catalog_remove": {
+      "name": "Uit catalogus verwijderen",
+      "description": "Haalt een entiteit uit de tegelkiezer van Room Tiles. Tegels die haar al gebruiken blijven.",
+      "fields": {
+        "entity": {
+          "name": "Entiteit",
+          "description": "De te verwijderen entiteit."
+        }
+      }
+    },
+    "set_area": {
+      "name": "Ruimte instellen",
+      "description": "Toont of verbergt een Room Tiles-ruimte, of verplaatst haar in de volgorde van de ruimtes.",
+      "fields": {
+        "area": {
+          "name": "Ruimte",
+          "description": "De ruimte."
+        },
+        "hidden": {
+          "name": "Verborgen",
+          "description": "De ruimte in Room Tiles verbergen (haar tegels blijven bewaard)."
+        },
+        "position": {
+          "name": "Positie",
+          "description": "Waar ze in de volgorde komt (0 = eerst)."
+        }
+      }
+    },
+    "set_settings": {
+      "name": "Instellingen wijzigen",
+      "description": "Wijzigt de eigen instellingen van Room Tiles.",
+      "fields": {
+        "auto_add_areas": {
+          "name": "Nieuwe ruimtes automatisch opnemen",
+          "description": "Ruimtes die later aan Home Assistant worden toegevoegd, verschijnen meteen in Room Tiles (anders komen ze verborgen binnen)."
+        },
+        "auto_update_panels": {
+          "name": "Panelen automatisch bijwerken",
+          "description": "Wandpanelen installeren zelf nieuwere Room Tiles-firmware wanneer niemand ze gebruikt."
+        }
+      }
+    },
+    "set_markers": {
+      "name": "Markeringen instellen",
+      "description": "Vervangt alle markeringen van één kaart in één stap (gebruikt door Opslaan in de kaarteditor). Elke markering: entity, x, y, layer, show_name en haar id om haar te behouden.",
+      "fields": {
+        "map": {
+          "name": "Kaart",
+          "description": "Kaart-ID."
+        },
+        "markers": {
+          "name": "Markeringen",
+          "description": "De volledige markeringslijst van de kaart."
+        }
+      }
+    },
+    "set_map": {
+      "name": "Kaart instellen",
+      "description": "Vervangt de tekening van een kaart in één stap (gebruikt door Opslaan in de kaarteditor). Niet opgegeven velden blijven. Markeringen op een verwijderde laag gaan naar de eerste laag.",
+      "fields": {
+        "map": {
+          "name": "Kaart",
+          "description": "Kaart-ID."
+        },
+        "name": {
+          "name": "Naam",
+          "description": "De naam van de kaart in de kaartkiezer."
+        },
+        "bounds": {
+          "name": "Grenzen",
+          "description": "[x0, y0, x1, y1]: het gebied dat de weergave van de hele kaart toont, in kaarteenheden."
+        },
+        "ha_floor": {
+          "name": "Verdieping",
+          "description": "De HA-verdieping die deze kaart toont, indien van toepassing."
+        },
+        "wall_width": {
+          "name": "Wanddikte",
+          "description": "Wanddikte in kaarteenheden."
+        },
+        "walls": {
+          "name": "Wanden",
+          "description": "Wandsegmenten [x1, y1, x2, y2]."
+        },
+        "windows": {
+          "name": "Ramen",
+          "description": "Raamsegmenten [x1, y1, x2, y2]."
+        },
+        "openings": {
+          "name": "Openingen",
+          "description": "Doorgangen / open grenzen [x1, y1, x2, y2] (gestippeld)."
+        },
+        "shapes": {
+          "name": "Vormen",
+          "description": "Gevulde vlakken, elk met een stijl (floor, water, grass, deck of paving) en hun punten."
+        },
+        "zones": {
+          "name": "Kamers",
+          "description": "Kamers / ruimtes, elk met id, name, points, area, label en outdoor."
+        },
+        "links": {
+          "name": "Koppelingen",
+          "description": "Sprongen naar een andere kaart, elk met to (kaart-ID), at (punt) en label."
+        },
+        "layers": {
+          "name": "Lagen",
+          "description": "Markeringslagen, elk met id, name en min_zoom."
+        }
+      }
+    },
+    "add_map": {
+      "name": "Kaart toevoegen",
+      "description": "Voegt een nieuwe, lege kaart toe (een verdieping, een tuin...). Geeft de ID terug.",
+      "fields": {
+        "name": {
+          "name": "Naam",
+          "description": "De naam van de nieuwe kaart."
+        },
+        "ha_floor": {
+          "name": "Verdieping",
+          "description": "De HA-verdieping die ze toont, indien van toepassing."
+        }
+      }
+    },
+    "remove_map": {
+      "name": "Kaart verwijderen",
+      "description": "Verwijdert een kaart met haar markeringen (en koppelingen ernaartoe). De laatste kaart kan niet worden verwijderd.",
+      "fields": {
+        "map": {
+          "name": "Kaart",
+          "description": "Kaart-ID."
+        }
+      }
+    },
+    "order_maps": {
+      "name": "Kaarten ordenen",
+      "description": "Stelt de volgorde van de kaartkiezer in.",
+      "fields": {
+        "order": {
+          "name": "Volgorde",
+          "description": "Elke kaart-ID, in de nieuwe volgorde."
+        }
+      }
+    },
+    "set_appliance": {
+      "name": "Apparaat instellen",
+      "description": "Voegt een apparaatprofiel toe of vervangt het: de sensor die een apparaattegel leest.",
+      "fields": {
+        "appliance": {
+          "name": "Apparaat",
+          "description": "Het profiel: id, naam en een of twee eenheden (label, type, voorinstelling, statusentiteit, tijd- en deurentiteiten, wat 'klaar' wist)."
+        }
+      }
+    },
+    "remove_appliance": {
+      "name": "Apparaat verwijderen",
+      "description": "Verwijdert een apparaatprofiel en de sensor.",
+      "fields": {
+        "appliance": {
+          "name": "Apparaat",
+          "description": "De apparaat-ID."
+        }
+      }
+    },
+    "clear_appliance": {
+      "name": "Apparaat leegmaken",
+      "description": "Markeert een klaar apparaat als leeggehaald (wat een tik op de tegel doet).",
+      "fields": {
+        "appliance": {
+          "name": "Apparaat",
+          "description": "De apparaat-ID."
+        },
+        "unit": {
+          "name": "Eenheid",
+          "description": "Alleen deze eenheid (standaard: alle)."
+        }
+      }
+    },
+    "combine_appliances": {
+      "name": "Apparaten combineren",
+      "description": "Zet twee losse apparaten op één tegel (het eerste bovenaan); tegels en markeringen van het tweede gaan naar het gecombineerde.",
+      "fields": {
+        "appliance": {
+          "name": "Apparaat",
+          "description": "Het bovenste apparaat."
+        },
+        "with": {
+          "name": "Met",
+          "description": "Het apparaat dat erbij komt."
+        },
+        "name": {
+          "name": "Naam",
+          "description": "Naam van het gecombineerde apparaat (standaard: Was, Vaatwassers of beide namen)."
+        }
+      }
+    },
+    "split_appliance": {
+      "name": "Apparaat splitsen",
+      "description": "Geeft één eenheid van een apparaat met twee eenheden een eigen tegel.",
+      "fields": {
+        "appliance": {
+          "name": "Apparaat",
+          "description": "Het apparaat met twee eenheden."
+        },
+        "unit": {
+          "name": "Eenheid",
+          "description": "De eenheid die een eigen tegel krijgt."
+        }
+      }
+    },
+    "set_pool": {
+      "name": "Zwembad / spa instellen",
+      "description": "Voegt een zwembad-/spasysteem toe of vervangt het: de sensoren die de tegels Zwembad, Spa en Zwembad / Spa lezen.",
+      "fields": {
+        "pool": {
+          "name": "Zwembad / spa",
+          "description": "Het systeem: id, naam, opbouw van de installatie (shared, separate, pool, spa) en de entiteiten van elk bad."
+        }
+      }
+    },
+    "remove_pool": {
+      "name": "Zwembad / spa verwijderen",
+      "description": "Verwijdert een zwembad-/spasysteem en de sensoren.",
+      "fields": {
+        "pool": {
+          "name": "Zwembad / spa",
+          "description": "De systeem-ID."
+        }
+      }
+    },
+    "pool_set_target": {
+      "name": "Doeltemperatuur zwembad / spa instellen",
+      "description": "Stelt het setpoint van de verwarming van een bad in.",
+      "fields": {
+        "entity": {
+          "name": "Entiteit",
+          "description": "Een Room Tiles-zwembad-/spasensor (de gecombineerde werkt op het actieve bad)."
+        },
+        "temperature": {
+          "name": "Temperatuur",
+          "description": "Het setpoint."
+        }
+      }
+    },
+    "pool_set_heater": {
+      "name": "Verwarming zwembad / spa aan / uit",
+      "description": "Zet de verwarming van een bad aan (verwarmen) of uit.",
+      "fields": {
+        "entity": {
+          "name": "Entiteit",
+          "description": "Een Room Tiles-zwembad-/spasensor (de gecombineerde werkt op het actieve bad)."
+        },
+        "heater": {
+          "name": "Verwarming",
+          "description": "Aan of uit."
+        }
+      }
+    },
+    "pool_set_on": {
+      "name": "Zwembad / spa aan / uit",
+      "description": "Zet een bad aan of uit: bij een gedeeld systeem is spa aan de spamodus; anders de pomp van dat bad.",
+      "fields": {
+        "entity": {
+          "name": "Entiteit",
+          "description": "Een Room Tiles-zwembad-/spasensor."
+        },
+        "on": {
+          "name": "Aan",
+          "description": "Aan of uit."
+        },
+        "with_heater": {
+          "name": "Met de verwarming",
+          "description": "De verwarming volgt: aan ermee, uit als het uitgaat. Standaard: de eigen instelling van de spa (aan, tenzij uitgezet in de instellingen)."
+        }
+      }
+    },
+    "set_robot": {
+      "name": "Robotstofzuiger instellen",
+      "description": "Voegt een robotstofzuigerprofiel toe of vervangt het: de sensor die de stofzuigertegel leest.",
+      "fields": {
+        "robot": {
+          "name": "Robotstofzuiger",
+          "description": "Het profiel: id, naam, de stofzuigerentiteit en (Matter) de sensor voor bedieningsfouten."
+        }
+      }
+    },
+    "remove_robot": {
+      "name": "Robotstofzuiger verwijderen",
+      "description": "Verwijdert een robotstofzuigerprofiel en de sensor.",
+      "fields": {
+        "robot": {
+          "name": "Robotstofzuiger",
+          "description": "De profiel-ID."
+        }
+      }
+    },
+    "ignore_device": {
+      "name": "Apparaat negeren",
+      "description": "Negeert een gevonden apparaat, zwembad / spa of stofzuiger, of haalt een ingesteld exemplaar uit Room Tiles, zodat het wacht onder Genegeerd op de pagina Apparaten.",
+      "fields": {
+        "kind": {
+          "name": "Type",
+          "description": "appliance, pool of robot."
+        },
+        "device": {
+          "name": "Apparaat",
+          "description": "Het gevonden (of ingestelde) apparaat zoals de pagina Apparaten het toont."
+        },
+        "set_up_id": {
+          "name": "Instellings-ID",
+          "description": "Als het is ingesteld: de ID; het wordt uit Room Tiles verwijderd."
+        }
+      }
+    },
+    "set_area_light_entity": {
+      "name": "Ruimteverlichtingsentiteit",
+      "description": "Of Room Tiles zijn 'verlichting'-lamp voor een ruimte maakt (bijv. Keuken verlichting) (alle lampen van de ruimte samen, zoals de lichtknop). Uit verwijdert haar, met haar tegels en markeringen.",
+      "fields": {
+        "area": {
+          "name": "Ruimte",
+          "description": "De ruimte."
+        },
+        "enabled": {
+          "name": "Aanmaken",
+          "description": "Aan: de lichtknop van de ruimte (en de Room Tiles-lamp ervoor), aangemaakt zodra de ruimte een lamp heeft. Uit: geen voor deze ruimte."
+        }
+      }
+    },
+    "accept_short_names": {
+      "name": "Korte namen accepteren",
+      "description": "Bevestigt de korte namen die op controle wachten (van ruimtes en entiteiten) zoals ze zijn. Namen die te breed zijn voor een tegel blijven wachten (het antwoord somt ze op).",
+      "fields": {
+        "entities": {
+          "name": "Entiteiten",
+          "description": "Optioneel: alleen deze. Laat leeg voor allemaal."
+        }
+      }
+    },
+    "vacuum_queue": {
+      "name": "Kamerwachtrij van de stofzuiger",
+      "description": "De kamerwachtrij van een robotstofzuiger: een kamer (een ruimte) toevoegen, verwijderen of verplaatsen, de wachtrij leegmaken, starten, pauzeren, naar de volgende kamer gaan, of stoppen en leegmaken.",
+      "fields": {
+        "robot": {
+          "name": "Robotstofzuiger",
+          "description": "De Room Tiles-ID van de robotstofzuiger."
+        },
+        "action": {
+          "name": "Actie",
+          "description": "add, remove, move, clear, start, pause, skip of stop."
+        },
+        "area": {
+          "name": "Ruimte",
+          "description": "De ruimte om toe te voegen, te verwijderen of te verplaatsen."
+        },
+        "index": {
+          "name": "Positie",
+          "description": "Waar ze in de wachtrij komt (0 = als volgende)."
+        },
+        "start": {
+          "name": "Schoonmaken starten",
+          "description": "Met add: start de wachtrij als de stofzuiger niets doet (hervat nooit een gepauzeerde)."
+        }
+      }
+    }
+  }
+}

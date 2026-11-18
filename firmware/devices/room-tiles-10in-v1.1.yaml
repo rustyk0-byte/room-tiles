@@ -1,0 +1,26 @@
+# Room Tiles - the generic image for an Elecrow CrowPanel Advanced 10.1"
+# ESP32-P4 with "V1.1" printed on its board. Nothing about one panel or home
+# inside (identity/generic.yaml). BETA: built like V1.2 (V1.1 and V1.2 differ
+# only in parts Room Tiles doesn't use) but not tried on a V1.1 yet; its
+# Wi-Fi chip link runs at 20 MHz to be safe (boards/elecrow-p4.yaml). tools/sync-firmware.sh copies this file
+# into the ESPHome config folder beside room_tiles/.
+# The chip's revision is a substitution so CI can build both from one file
+# (esphome -s engineering_sample false ...): see the vars below.
+substitutions:
+  engineering_sample: "true"
+
+packages:
+  board: !include
+    file: room_tiles/boards/elecrow-p4.yaml
+    vars:
+      board_rev: "1.1"
+      # The chip's own revision - NOT printed on the board: esptool says
+      # "ESP32-P4 (revision v1.x)" = true (an engineering sample - every
+      # board so far), "v3.x" or later = false. Wrong = "Illegal instruction"
+      # right at boot. The install page will read it from the chip itself.
+      engineering_sample: ${engineering_sample}
+      ldo4_voltage: passthrough
+      board_size: 10in
+  board_10in: !include room_tiles/boards/elecrow-p4-10in.yaml
+  identity: !include room_tiles/identity/generic.yaml
+  room_tiles: !include room_tiles/room_tiles.yaml

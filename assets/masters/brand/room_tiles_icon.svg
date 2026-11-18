@@ -1,0 +1,13 @@
+<!-- Room Tiles icon (option D, chosen 2026-11-10): the dashboard's grid icon
+     with each outline in a tile colour - lights amber, switches blue, covers
+     green, locks purple (frontend/src/theme.ts). Outlines 20 wide so the
+     small sizes (HA's cards, lists) stay crisp. The master; PNGs are made
+     from the same geometry by assets/tools/make_brand_icon.py. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <g fill="none" stroke-width="20">
+    <rect x="30" y="30" width="80" height="80" rx="16" stroke="#FFB300"/>
+    <rect x="146" y="30" width="80" height="80" rx="16" stroke="#4B9EF3"/>
+    <rect x="30" y="146" width="80" height="80" rx="16" stroke="#62A363"/>
+    <rect x="146" y="146" width="80" height="80" rx="16" stroke="#9270AB"/>
+  </g>
+</svg>

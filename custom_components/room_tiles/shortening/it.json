@@ -1,0 +1,58 @@
+{
+  "_about": "How Room Tiles SUGGESTS a short name (once, when an entity or area first appears) from a Home Assistant name written in this language. The short names themselves are stored per installation and never change with the language.",
+  "abbreviations": [
+    [
+      "Camera da letto",
+      "Camera"
+    ],
+    [
+      "Sala da pranzo",
+      "Sala pranzo"
+    ],
+    [
+      "Soggiorno",
+      "Sogg."
+    ],
+    [
+      "Cucina",
+      "Cuc."
+    ],
+    [
+      "Lampada",
+      "Lamp."
+    ],
+    [
+      "Illuminazione",
+      "Luci"
+    ],
+    [
+      "Ventilatore",
+      "Ventil."
+    ],
+    [
+      "Principale",
+      "Princ."
+    ],
+    [
+      "Ingresso",
+      "Ingr."
+    ],
+    [
+      "Sinistra",
+      "Sx"
+    ],
+    [
+      "Destra",
+      "Dx"
+    ],
+    [
+      "Piano terra",
+      "PT"
+    ],
+    [
+      "Esterno",
+      "Est."
+    ]
+  ],
+  "case": "first"
+}

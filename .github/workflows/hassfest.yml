@@ -1,0 +1,36 @@
+name: Hassfest
+
+# HA's own checks of the integration's metadata: only when that changes (or
+# run by hand, e.g. before a release).
+on:
+  push:
+    paths:
+      - "custom_components/room_tiles/manifest.json"
+      - "custom_components/room_tiles/strings.json"
+      - "custom_components/room_tiles/services.yaml"
+      - "custom_components/room_tiles/translations/**"
+      - "custom_components/room_tiles/brand/**"
+      - "custom_components/room_tiles/config_flow.py"
+      - ".github/workflows/hassfest.yml"
+  # (a contributor's pull request: the same checks, before it's reviewed)
+  pull_request:
+    paths:
+      - "custom_components/room_tiles/manifest.json"
+      - "custom_components/room_tiles/strings.json"
+      - "custom_components/room_tiles/services.yaml"
+      - "custom_components/room_tiles/translations/**"
+      - "custom_components/room_tiles/brand/**"
+      - "custom_components/room_tiles/config_flow.py"
+      - ".github/workflows/hassfest.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: hassfest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master

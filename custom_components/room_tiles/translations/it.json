@@ -1,0 +1,696 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Room Tiles",
+        "description": "Scegli le aree da mostrare in Room Tiles. Puoi cambiarle in seguito.",
+        "data": {
+          "areas": "Aree",
+          "auto_add_areas": "Includi automaticamente le nuove aree"
+        },
+        "data_description": {
+          "auto_add_areas": "Le aree che aggiungi in seguito a Home Assistant compaiono anche in Room Tiles."
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Room Tiles è già configurato."
+    },
+    "create_entry": {
+      "default": "Room Tiles è configurato per {areas} aree, con una pagina di riquadri per ciascuna e una mappa iniziale per ogni piano.\n\n**[Apri Room Tiles]({url})** quando vuoi dalla barra laterale.",
+      "found": "Room Tiles è configurato per {areas} aree, con una pagina di riquadri per ciascuna e una mappa iniziale per ogni piano.\n\nRoom Tiles ha trovato elettrodomestici compatibili; compaiono quando **[completi la loro configurazione]({url}?open=appliances)**.\n\nApri Room Tiles quando vuoi dalla barra laterale."
+    }
+  },
+  "issues": {
+    "restart_required": {
+      "title": "Riavvia Home Assistant per completare l'aggiornamento di Room Tiles",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Riavvia Home Assistant",
+            "description": "Room Tiles è stato aggiornato. Riavviare Home Assistant ora per completare l'aggiornamento?"
+          }
+        }
+      }
+    },
+    "missing_entities": {
+      "title": "Room Tiles usa {count} entità che non esistono più",
+      "description": "Sono usate in Room Tiles ma non esistono più in Home Assistant. Sostituiscile o rimuovile in Room Tiles, oppure ripristinale.\n\n{entities}"
+    },
+    "area_lights_override_removed": {
+      "title": "Room Tiles: luci dell'area cambiate",
+      "description": "L'entità usata dal pulsante luci di queste aree è stata eliminata, quindi ora accende tutte le loro luci: {areas}. Puoi sceglierne un'altra in Room Tiles."
+    },
+    "appliance_question": {
+      "title": "{name} ha segnalato uno stato che Room Tiles non conosce",
+      "description": "In Room Tiles, apri Elettrodomestici e indica cosa significa.\n\n{states}"
+    },
+    "panel_needs_firmware": {
+      "title": "Aggiorna il firmware di {name}",
+      "description": "Il firmware di {name} è più vecchio di questa versione di Room Tiles, quindi mostra solo un avviso di aggiornamento. Si aggiorna da solo entro pochi minuti; altrimenti reinstalla il firmware con un cavo USB."
+    },
+    "panel_needs_integration": {
+      "title": "Aggiorna Room Tiles per {name}",
+      "description": "{name} ha un firmware Room Tiles più recente di questa versione di Room Tiles, quindi mostra solo un avviso di aggiornamento. Aggiorna Room Tiles in Home Assistant."
+    }
+  },
+  "entity": {
+    "update": {
+      "firmware": {
+        "name": "Firmware Room Tiles"
+      }
+    }
+  },
+  "services": {
+    "export_data": {
+      "name": "Esporta dati",
+      "description": "Scrive l'intera configurazione di Room Tiles (aree, riquadri, catalogo, mappe, indicatori) in un file JSON nella tua cartella di configurazione.",
+      "fields": {
+        "file": {
+          "name": "File",
+          "description": "Nome del file, relativo alla cartella di configurazione."
+        }
+      }
+    },
+    "import_data": {
+      "name": "Importa dati",
+      "description": "Sostituisce l'intera configurazione di Room Tiles con un file JSON dalla tua cartella di configurazione. Prima la configurazione attuale viene salvata in room_tiles_backups/; un file non valido non cambia nulla.",
+      "fields": {
+        "file": {
+          "name": "File",
+          "description": "Nome del file, relativo alla cartella di configurazione."
+        }
+      }
+    },
+    "set_tile": {
+      "name": "Imposta riquadro",
+      "description": "Mette un riquadro nella griglia di un'area. Con la sola entità, tipo e nome vengono dal catalogo; senza entità né tipo la posizione viene svuotata; il tipo 'map' non richiede un'entità.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "ID dell'area di Room Tiles (es. kitchen)."
+        },
+        "layout": {
+          "name": "Disposizione",
+          "description": "Griglia: 5x2 (10 riquadri) o 6x3 (18 riquadri)."
+        },
+        "slot": {
+          "name": "Posizione",
+          "description": "Posizione del riquadro, contata da 0, riga per riga."
+        },
+        "entity": {
+          "name": "Entità",
+          "description": "L'entità che il riquadro controlla."
+        },
+        "kind": {
+          "name": "Tipo",
+          "description": "Tipo di riquadro. Lascia vuoto per usare quello del catalogo."
+        },
+        "name": {
+          "name": "Nome",
+          "description": "Il nome breve proprio di questo riquadro (al massimo 15 caratteri). Lascia vuoto per usare il nome breve dell'entità."
+        }
+      }
+    },
+    "clear_tile": {
+      "name": "Svuota riquadro",
+      "description": "Svuota una posizione della griglia di un'area.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "ID dell'area di Room Tiles (es. kitchen)."
+        },
+        "layout": {
+          "name": "Disposizione",
+          "description": "Griglia: 5x2 (10 riquadri) o 6x3 (18 riquadri)."
+        },
+        "slot": {
+          "name": "Posizione",
+          "description": "Posizione del riquadro, contata da 0, riga per riga."
+        }
+      }
+    },
+    "move_tile": {
+      "name": "Sposta riquadro",
+      "description": "Scambia due posizioni della griglia di un'area (verso una posizione vuota è uno spostamento).",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "ID dell'area di Room Tiles (es. kitchen)."
+        },
+        "layout": {
+          "name": "Disposizione",
+          "description": "Griglia: 5x2 (10 riquadri) o 6x3 (18 riquadri)."
+        },
+        "from_slot": {
+          "name": "Dalla posizione",
+          "description": "La posizione da spostare."
+        },
+        "to_slot": {
+          "name": "Alla posizione",
+          "description": "Dove va."
+        }
+      }
+    },
+    "auto_board": {
+      "name": "Configura automaticamente le bacheche",
+      "description": "Sostituisce le bacheche con i loro riquadri automatici; nuovi elettrodomestici, robot aspirapolvere e piscine vi vengono poi aggiunti da soli.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "ID dell'area di Room Tiles (es. kitchen). Lascia vuoto per tutte le aree."
+        },
+        "layout": {
+          "name": "Disposizione",
+          "description": "Griglia: 5x2 (10 riquadri) o 6x3 (18 riquadri). Lascia vuoto per entrambe."
+        }
+      }
+    },
+    "add_marker": {
+      "name": "Aggiungi indicatore",
+      "description": "Mette l'icona di un'entità su una mappa. Risponde con l'ID del nuovo indicatore.",
+      "fields": {
+        "map": {
+          "name": "Mappa",
+          "description": "ID della mappa (es. house)."
+        },
+        "entity": {
+          "name": "Entità",
+          "description": "L'entità da posizionare."
+        },
+        "x": {
+          "name": "X",
+          "description": "Posizione X nelle unità della mappa."
+        },
+        "y": {
+          "name": "Y",
+          "description": "Posizione Y nelle unità della mappa."
+        },
+        "show_name": {
+          "name": "Mostra nome",
+          "description": "Mostra il nome dell'entità sopra la sua icona."
+        },
+        "layer": {
+          "name": "Livello",
+          "description": "Il livello della mappa (es. house, rooms). Predefinito: il primo livello della mappa."
+        }
+      }
+    },
+    "update_marker": {
+      "name": "Aggiorna indicatore",
+      "description": "Sposta un indicatore o ne cambia le opzioni.",
+      "fields": {
+        "marker": {
+          "name": "Indicatore",
+          "description": "ID dell'indicatore."
+        },
+        "map": {
+          "name": "Mappa",
+          "description": "Spostalo su un'altra mappa."
+        },
+        "x": {
+          "name": "X",
+          "description": "Posizione X nelle unità della mappa."
+        },
+        "y": {
+          "name": "Y",
+          "description": "Posizione Y nelle unità della mappa."
+        },
+        "show_name": {
+          "name": "Mostra nome",
+          "description": "Mostra il nome dell'entità sopra la sua icona."
+        },
+        "layer": {
+          "name": "Livello",
+          "description": "Il livello della mappa (es. house, rooms). Predefinito: il primo livello della mappa."
+        }
+      }
+    },
+    "remove_marker": {
+      "name": "Rimuovi indicatore",
+      "description": "Rimuove un indicatore dalla sua mappa.",
+      "fields": {
+        "marker": {
+          "name": "Indicatore",
+          "description": "ID dell'indicatore."
+        }
+      }
+    },
+    "reset_short_names": {
+      "name": "Reimposta nomi brevi",
+      "description": "Riporta i nomi brevi delle entità del catalogo a quelli che Room Tiles suggerisce dai loro nomi completi, come durante la configurazione. Per tutte le entità o solo quelle indicate. Restituisce quanti sono cambiati.",
+      "fields": {
+        "entities": {
+          "name": "Entità",
+          "description": "Solo queste entità (lascia vuoto per tutte quelle del catalogo)."
+        }
+      }
+    },
+    "set_short_name": {
+      "name": "Imposta nome breve",
+      "description": "Imposta il nome breve (al massimo 15 caratteri) che un'area o un'entità mostra sui riquadri e sulla mappa. Selettori e finestre di dialogo mantengono il nome completo.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "L'area da rinominare (indica un'area o un'entità)."
+        },
+        "entity": {
+          "name": "Entità",
+          "description": "L'entità da rinominare (indica un'area o un'entità)."
+        },
+        "short_name": {
+          "name": "Nome breve",
+          "description": "Al massimo 15 caratteri."
+        }
+      }
+    },
+    "suggest_short_name": {
+      "name": "Suggerisci nome breve",
+      "description": "Un nome breve suggerito dal nome completo di un'area o di un'entità, secondo le regole di abbreviazione di Room Tiles. Non viene cambiato nulla.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "L'area (indica un'area o un'entità)."
+        },
+        "entity": {
+          "name": "Entità",
+          "description": "L'entità (indica un'area o un'entità)."
+        }
+      }
+    },
+    "set_area_lights": {
+      "name": "Imposta luci dell'area",
+      "description": "Sceglie cosa comanda il pulsante luci di un'area: tutte le luci dell'area di Home Assistant tranne quelle escluse (predefinito), oppure una sola entità come un gruppo di luci.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "L'area."
+        },
+        "entity": {
+          "name": "Usa questa entità",
+          "description": "Facoltativo: comanda solo questa entità (es. un gruppo di luci). Lascia vuoto per tutte le luci dell'area."
+        },
+        "exclude": {
+          "name": "Escludi",
+          "description": "Luci dell'area che il pulsante deve lasciare stare (es. la retroilluminazione di un display). Sostituisce l'elenco attuale."
+        }
+      }
+    },
+    "area_lights": {
+      "name": "Luci dell'area",
+      "description": "Comanda le luci di un'area come il suo pulsante luci. Commuta: se una è accesa si spengono tutte; altrimenti si accendono tutte.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "L'area."
+        },
+        "action": {
+          "name": "Azione",
+          "description": "toggle, turn_on o turn_off."
+        }
+      }
+    },
+    "catalog_add": {
+      "name": "Aggiungi al catalogo",
+      "description": "Offre un'entità nel selettore di riquadri di Room Tiles. Il tipo di riquadro viene ricavato da Home Assistant se non indicato; il nome breve viene suggerito dal nome completo se non indicato (e segnalato per la revisione se è stato necessario abbreviarlo).",
+      "fields": {
+        "entity": {
+          "name": "Entità",
+          "description": "L'entità da offrire."
+        },
+        "kind": {
+          "name": "Tipo",
+          "description": "Tipo di riquadro. Lascia vuoto per ricavarlo."
+        },
+        "short_name": {
+          "name": "Nome breve",
+          "description": "Al massimo 15 caratteri. Lascia vuoto per un suggerimento."
+        }
+      }
+    },
+    "catalog_remove": {
+      "name": "Rimuovi dal catalogo",
+      "description": "Toglie un'entità dal selettore di riquadri di Room Tiles. I riquadri che già la usano restano.",
+      "fields": {
+        "entity": {
+          "name": "Entità",
+          "description": "L'entità da rimuovere."
+        }
+      }
+    },
+    "set_area": {
+      "name": "Imposta area",
+      "description": "Mostra o nasconde un'area di Room Tiles, o la sposta nell'ordine delle aree.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "L'area."
+        },
+        "hidden": {
+          "name": "Nascosta",
+          "description": "Nascondi l'area in Room Tiles (i suoi riquadri vengono conservati)."
+        },
+        "position": {
+          "name": "Posizione",
+          "description": "Dove va nell'ordine (0 = prima)."
+        }
+      }
+    },
+    "set_settings": {
+      "name": "Imposta impostazioni",
+      "description": "Cambia le impostazioni proprie di Room Tiles.",
+      "fields": {
+        "auto_add_areas": {
+          "name": "Includi automaticamente le nuove aree",
+          "description": "Le aree aggiunte in seguito a Home Assistant compaiono subito in Room Tiles (altrimenti arrivano nascoste)."
+        },
+        "auto_update_panels": {
+          "name": "Aggiorna automaticamente i pannelli",
+          "description": "I pannelli a parete installano da soli un firmware di Room Tiles più recente quando nessuno li usa."
+        }
+      }
+    },
+    "set_markers": {
+      "name": "Imposta indicatori",
+      "description": "Sostituisce tutti gli indicatori di una mappa in un solo passaggio (usato da Salva dell'editor di mappe). Ogni indicatore: entity, x, y, layer, show_name e il suo id per conservarlo.",
+      "fields": {
+        "map": {
+          "name": "Mappa",
+          "description": "ID della mappa."
+        },
+        "markers": {
+          "name": "Indicatori",
+          "description": "L'elenco completo degli indicatori della mappa."
+        }
+      }
+    },
+    "set_map": {
+      "name": "Imposta mappa",
+      "description": "Sostituisce il disegno di una mappa in un solo passaggio (usato da Salva dell'editor di mappe). I campi non indicati restano. Gli indicatori di un livello rimosso passano al primo livello.",
+      "fields": {
+        "map": {
+          "name": "Mappa",
+          "description": "ID della mappa."
+        },
+        "name": {
+          "name": "Nome",
+          "description": "Il nome della mappa nel selettore delle mappe."
+        },
+        "bounds": {
+          "name": "Limiti",
+          "description": "[x0, y0, x1, y1]: la zona che mostra la vista dell'intera mappa, in unità della mappa."
+        },
+        "ha_floor": {
+          "name": "Piano",
+          "description": "Il piano di HA che questa mappa mostra, se c'è."
+        },
+        "wall_width": {
+          "name": "Spessore dei muri",
+          "description": "Spessore dei muri in unità della mappa."
+        },
+        "walls": {
+          "name": "Muri",
+          "description": "Segmenti di muro [x1, y1, x2, y2]."
+        },
+        "windows": {
+          "name": "Finestre",
+          "description": "Segmenti di finestra [x1, y1, x2, y2]."
+        },
+        "openings": {
+          "name": "Aperture",
+          "description": "Passaggi / confini aperti [x1, y1, x2, y2] (tratteggiati)."
+        },
+        "shapes": {
+          "name": "Forme",
+          "description": "Superfici piene, ognuna con uno stile (floor, water, grass, deck o paving) e i suoi punti."
+        },
+        "zones": {
+          "name": "Stanze",
+          "description": "Stanze / spazi, ognuno con id, name, points, area, label e outdoor."
+        },
+        "links": {
+          "name": "Collegamenti",
+          "description": "Salti a un'altra mappa, ognuno con to (ID della mappa), at (punto) e label."
+        },
+        "layers": {
+          "name": "Livelli",
+          "description": "Livelli degli indicatori, ognuno con id, name e min_zoom."
+        }
+      }
+    },
+    "add_map": {
+      "name": "Aggiungi mappa",
+      "description": "Aggiunge una nuova mappa vuota (un piano, un giardino...). Restituisce il suo ID.",
+      "fields": {
+        "name": {
+          "name": "Nome",
+          "description": "Il nome della nuova mappa."
+        },
+        "ha_floor": {
+          "name": "Piano",
+          "description": "Il piano di HA che mostra, se c'è."
+        }
+      }
+    },
+    "remove_map": {
+      "name": "Rimuovi mappa",
+      "description": "Elimina una mappa con i suoi indicatori (e i collegamenti verso di essa). L'ultima mappa non si può rimuovere.",
+      "fields": {
+        "map": {
+          "name": "Mappa",
+          "description": "ID della mappa."
+        }
+      }
+    },
+    "order_maps": {
+      "name": "Ordina mappe",
+      "description": "Imposta l'ordine del selettore delle mappe.",
+      "fields": {
+        "order": {
+          "name": "Ordine",
+          "description": "Ogni ID di mappa, nel nuovo ordine."
+        }
+      }
+    },
+    "set_appliance": {
+      "name": "Imposta elettrodomestico",
+      "description": "Aggiunge o sostituisce il profilo di un elettrodomestico: il sensore che legge il suo riquadro.",
+      "fields": {
+        "appliance": {
+          "name": "Elettrodomestico",
+          "description": "Il profilo: id, nome e una o due unità (etichetta, tipo, preimpostazione, entità di stato, entità di tempo e di sportello, cosa azzera «finito»)."
+        }
+      }
+    },
+    "remove_appliance": {
+      "name": "Rimuovi elettrodomestico",
+      "description": "Rimuove il profilo di un elettrodomestico e il suo sensore.",
+      "fields": {
+        "appliance": {
+          "name": "Elettrodomestico",
+          "description": "L'ID dell'elettrodomestico."
+        }
+      }
+    },
+    "clear_appliance": {
+      "name": "Svuota elettrodomestico",
+      "description": "Segna un elettrodomestico finito come svuotato (ciò che fa un tocco sul suo riquadro).",
+      "fields": {
+        "appliance": {
+          "name": "Elettrodomestico",
+          "description": "L'ID dell'elettrodomestico."
+        },
+        "unit": {
+          "name": "Unità",
+          "description": "Solo questa unità (predefinito: tutte)."
+        }
+      }
+    },
+    "combine_appliances": {
+      "name": "Combina elettrodomestici",
+      "description": "Mette due elettrodomestici singoli su un riquadro (il primo sopra); riquadri e indicatori del secondo passano a quello combinato.",
+      "fields": {
+        "appliance": {
+          "name": "Elettrodomestico",
+          "description": "L'elettrodomestico sopra."
+        },
+        "with": {
+          "name": "Con",
+          "description": "L'elettrodomestico che si aggiunge."
+        },
+        "name": {
+          "name": "Nome",
+          "description": "Nome dell'elettrodomestico combinato (predefinito: Bucato, Lavastoviglie o entrambi i nomi)."
+        }
+      }
+    },
+    "split_appliance": {
+      "name": "Dividi elettrodomestico",
+      "description": "Dà a un'unità di un elettrodomestico a due unità il suo riquadro.",
+      "fields": {
+        "appliance": {
+          "name": "Elettrodomestico",
+          "description": "L'elettrodomestico a due unità."
+        },
+        "unit": {
+          "name": "Unità",
+          "description": "L'unità che riceve il suo riquadro."
+        }
+      }
+    },
+    "set_pool": {
+      "name": "Imposta piscina / spa",
+      "description": "Aggiunge o sostituisce un sistema piscina / spa: i sensori che leggono i suoi riquadri Piscina, Spa e Piscina / Spa.",
+      "fields": {
+        "pool": {
+          "name": "Piscina / spa",
+          "description": "Il sistema: id, nome, disposizione dell'impianto (shared, separate, pool, spa) e le entità di ogni vasca."
+        }
+      }
+    },
+    "remove_pool": {
+      "name": "Rimuovi piscina / spa",
+      "description": "Rimuove un sistema piscina / spa e i suoi sensori.",
+      "fields": {
+        "pool": {
+          "name": "Piscina / spa",
+          "description": "L'ID del sistema."
+        }
+      }
+    },
+    "pool_set_target": {
+      "name": "Imposta temperatura piscina / spa",
+      "description": "Imposta il setpoint del riscaldatore di una vasca.",
+      "fields": {
+        "entity": {
+          "name": "Entità",
+          "description": "Un sensore piscina / spa di Room Tiles (quello combinato agisce sulla vasca attiva)."
+        },
+        "temperature": {
+          "name": "Temperatura",
+          "description": "Il setpoint."
+        }
+      }
+    },
+    "pool_set_heater": {
+      "name": "Riscaldatore piscina / spa acceso / spento",
+      "description": "Accende (riscalda) o spegne il riscaldatore di una vasca.",
+      "fields": {
+        "entity": {
+          "name": "Entità",
+          "description": "Un sensore piscina / spa di Room Tiles (quello combinato agisce sulla vasca attiva)."
+        },
+        "heater": {
+          "name": "Riscaldatore",
+          "description": "Acceso o spento."
+        }
+      }
+    },
+    "pool_set_on": {
+      "name": "Piscina / spa accesa / spenta",
+      "description": "Accende o spegne una vasca: in un sistema condiviso accendere la spa è la modalità spa; altrimenti la pompa di quella vasca.",
+      "fields": {
+        "entity": {
+          "name": "Entità",
+          "description": "Un sensore piscina / spa di Room Tiles."
+        },
+        "on": {
+          "name": "Acceso",
+          "description": "Acceso o spento."
+        },
+        "with_heater": {
+          "name": "Con il suo riscaldatore",
+          "description": "Il suo riscaldatore la segue: acceso con lei, spento quando si spegne. Predefinito: l'impostazione propria della spa (attiva salvo che sia disattivata nelle sue impostazioni)."
+        }
+      }
+    },
+    "set_robot": {
+      "name": "Imposta robot aspirapolvere",
+      "description": "Aggiunge o sostituisce il profilo di un robot aspirapolvere: il sensore che legge il suo riquadro.",
+      "fields": {
+        "robot": {
+          "name": "Robot aspirapolvere",
+          "description": "Il profilo: id, nome, la sua entità aspirapolvere e (Matter) il suo sensore di errore operativo."
+        }
+      }
+    },
+    "remove_robot": {
+      "name": "Rimuovi robot aspirapolvere",
+      "description": "Rimuove il profilo di un robot aspirapolvere e il suo sensore.",
+      "fields": {
+        "robot": {
+          "name": "Robot aspirapolvere",
+          "description": "L'ID del profilo."
+        }
+      }
+    },
+    "ignore_device": {
+      "name": "Ignora dispositivo",
+      "description": "Ignora un elettrodomestico, una piscina / spa o un aspirapolvere trovato (o toglie da Room Tiles uno configurato), così che attenda in Ignorati nella pagina Elettrodomestici.",
+      "fields": {
+        "kind": {
+          "name": "Tipo",
+          "description": "appliance, pool o robot."
+        },
+        "device": {
+          "name": "Dispositivo",
+          "description": "Il dispositivo trovato (o configurato) come lo elenca la pagina Elettrodomestici."
+        },
+        "set_up_id": {
+          "name": "ID di configurazione",
+          "description": "Se è configurato: il suo ID; viene rimosso da Room Tiles."
+        }
+      }
+    },
+    "set_area_light_entity": {
+      "name": "Entità luci dell'area",
+      "description": "Se Room Tiles crea la sua luce «Luci» per un'area (es. Luci Cucina) (tutte le luci dell'area insieme, come il pulsante luci). Disattivato la rimuove, con i suoi riquadri e indicatori.",
+      "fields": {
+        "area": {
+          "name": "Area",
+          "description": "L'area."
+        },
+        "enabled": {
+          "name": "Crearla",
+          "description": "Attivato: il pulsante luci dell'area (e la luce di Room Tiles per essa), creati appena l'area ha una luce. Disattivato: nessuno per quest'area."
+        }
+      }
+    },
+    "accept_short_names": {
+      "name": "Accetta nomi brevi",
+      "description": "Conferma così come sono i nomi brevi in attesa di revisione (di aree ed entità). Quelli troppo larghi per un riquadro restano in attesa (la risposta li elenca).",
+      "fields": {
+        "entities": {
+          "name": "Entità",
+          "description": "Facoltativo: solo questi. Lascia vuoto per tutti."
+        }
+      }
+    },
+    "vacuum_queue": {
+      "name": "Coda delle stanze dell'aspirapolvere",
+      "description": "La coda delle stanze di un robot aspirapolvere: aggiungere, rimuovere o spostare una stanza (un'area), svuotare la coda, avviare, mettere in pausa, passare alla stanza successiva, o fermare e svuotare.",
+      "fields": {
+        "robot": {
+          "name": "Robot aspirapolvere",
+          "description": "L'ID Room Tiles del robot aspirapolvere."
+        },
+        "action": {
+          "name": "Azione",
+          "description": "add, remove, move, clear, start, pause, skip o stop."
+        },
+        "area": {
+          "name": "Area",
+          "description": "L'area da aggiungere, rimuovere o spostare."
+        },
+        "index": {
+          "name": "Posizione",
+          "description": "Dove spostarla nella coda (0 = la prossima)."
+        },
+        "start": {
+          "name": "Avvia la pulizia",
+          "description": "Con add: avvia la coda se l'aspirapolvere è inattivo (non riprende mai uno in pausa)."
+        }
+      }
+    }
+  }
+}

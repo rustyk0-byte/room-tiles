@@ -1,0 +1,585 @@
+export_data:
+  fields:
+    file:
+      default: room_tiles_export.json
+      example: room_tiles_export.json
+      selector:
+        text:
+
+import_data:
+  fields:
+    file:
+      default: room_tiles_export.json
+      example: room_tiles_export.json
+      selector:
+        text:
+
+set_tile:
+  fields:
+    area:
+      required: true
+      example: kitchen
+      selector:
+        text:
+    layout:
+      required: true
+      default: "5x2"
+      selector:
+        select:
+          options: ["5x2", "6x3"]
+    slot:
+      required: true
+      example: 0
+      selector:
+        number:
+          min: 0
+          max: 17
+    entity:
+      example: light.kitchen_counter
+      selector:
+        entity:
+    kind:
+      selector:
+        select:
+          options:
+            - blank
+            - onoff_light
+            - dimmable_light
+            - color_light
+            - switch
+            - fan
+            - cover
+            - lock
+            - climate
+            - appliance
+            - vacuum
+            - water
+            - map
+    name:
+      example: Counter
+      selector:
+        text:
+
+clear_tile:
+  fields:
+    area:
+      required: true
+      selector:
+        text:
+    layout:
+      required: true
+      default: "5x2"
+      selector:
+        select:
+          options: ["5x2", "6x3"]
+    slot:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 17
+
+move_tile:
+  fields:
+    area:
+      required: true
+      selector:
+        text:
+    layout:
+      required: true
+      default: "5x2"
+      selector:
+        select:
+          options: ["5x2", "6x3"]
+    from_slot:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 17
+    to_slot:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 17
+
+auto_board:
+  fields:
+    area:
+      required: false
+      selector:
+        text:
+    layout:
+      required: false
+      selector:
+        select:
+          options: ["5x2", "6x3"]
+
+add_marker:
+  fields:
+    map:
+      required: true
+      example: house
+      selector:
+        text:
+    entity:
+      required: true
+      selector:
+        entity:
+    x:
+      required: true
+      selector:
+        number:
+          min: -100000
+          max: 100000
+          mode: box
+    y:
+      required: true
+      selector:
+        number:
+          min: -100000
+          max: 100000
+          mode: box
+    layer:
+      example: rooms
+      selector:
+        text:
+    show_name:
+      default: false
+      selector:
+        boolean:
+
+update_marker:
+  fields:
+    marker:
+      required: true
+      selector:
+        text:
+    map:
+      selector:
+        text:
+    x:
+      selector:
+        number:
+          min: -100000
+          max: 100000
+          mode: box
+    y:
+      selector:
+        number:
+          min: -100000
+          max: 100000
+          mode: box
+    layer:
+      selector:
+        text:
+    show_name:
+      selector:
+        boolean:
+
+remove_marker:
+  fields:
+    marker:
+      required: true
+      selector:
+        text:
+
+accept_short_names:
+  fields:
+    entities:
+      selector:
+        entity:
+          multiple: true
+
+reset_short_names:
+  fields:
+    entities:
+      selector:
+        entity:
+          multiple: true
+
+set_short_name:
+  fields:
+    area:
+      example: master_bathroom
+      selector:
+        area:
+    entity:
+      example: light.master_bathroom_niche
+      selector:
+        entity:
+    short_name:
+      required: true
+      example: Bath Niche
+      selector:
+        text:
+
+suggest_short_name:
+  fields:
+    area:
+      example: master_bathroom
+      selector:
+        area:
+    entity:
+      example: light.master_bathroom_niche
+      selector:
+        entity:
+
+set_area_lights:
+  fields:
+    area:
+      required: true
+      selector:
+        area:
+    entity:
+      selector:
+        entity:
+    exclude:
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: light
+
+set_area_light_entity:
+  fields:
+    area:
+      required: true
+      selector:
+        area:
+    enabled:
+      required: true
+      selector:
+        boolean:
+
+area_lights:
+  fields:
+    area:
+      required: true
+      selector:
+        area:
+    action:
+      default: toggle
+      selector:
+        select:
+          options: ["toggle", "turn_on", "turn_off"]
+
+catalog_add:
+  fields:
+    entity:
+      required: true
+      selector:
+        entity:
+    kind:
+      selector:
+        select:
+          options: [onoff_light, dimmable_light, color_light, switch, fan, cover, lock, climate, appliance, vacuum, water]
+    short_name:
+      selector:
+        text:
+
+catalog_remove:
+  fields:
+    entity:
+      required: true
+      selector:
+        entity:
+
+set_area:
+  fields:
+    area:
+      required: true
+      selector:
+        area:
+    hidden:
+      selector:
+        boolean:
+    position:
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: box
+
+set_settings:
+  fields:
+    auto_add_areas:
+      selector:
+        boolean:
+    auto_update_panels:
+      selector:
+        boolean:
+
+set_markers:
+  fields:
+    map:
+      required: true
+      example: house
+      selector:
+        text:
+    markers:
+      required: true
+      example: '[{"entity": "light.kitchen", "x": 120, "y": 80, "layer": "rooms"}]'
+      selector:
+        object:
+
+set_map:
+  fields:
+    map:
+      required: true
+      example: house
+      selector:
+        text:
+    name:
+      example: Ground floor
+      selector:
+        text:
+    bounds:
+      example: "[0, 0, 1000, 600]"
+      selector:
+        object:
+    ha_floor:
+      selector:
+        floor:
+    wall_width:
+      example: 6
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 0.5
+          mode: box
+    walls:
+      example: "[[0, 0, 100, 0]]"
+      selector:
+        object:
+    windows:
+      selector:
+        object:
+    openings:
+      selector:
+        object:
+    shapes:
+      selector:
+        object:
+    zones:
+      selector:
+        object:
+    links:
+      selector:
+        object:
+    layers:
+      selector:
+        object:
+
+add_map:
+  fields:
+    name:
+      required: true
+      example: Upstairs
+      selector:
+        text:
+    ha_floor:
+      selector:
+        floor:
+
+remove_map:
+  fields:
+    map:
+      required: true
+      example: upstairs
+      selector:
+        text:
+
+order_maps:
+  fields:
+    order:
+      required: true
+      example: '["ground", "upstairs", "yard"]'
+      selector:
+        object:
+
+set_appliance:
+  fields:
+    appliance:
+      required: true
+      selector:
+        object:
+
+remove_appliance:
+  fields:
+    appliance:
+      required: true
+      example: laundry
+      selector:
+        text:
+
+vacuum_queue:
+  fields:
+    robot:
+      required: true
+      example: matic
+      selector:
+        text:
+    action:
+      required: true
+      example: add
+      selector:
+        select:
+          options:
+            - add
+            - remove
+            - move
+            - clear
+            - start
+            - pause
+            - skip
+            - stop
+    area:
+      example: kitchen
+      selector:
+        area:
+    index:
+      example: 0
+      selector:
+        number:
+          min: 0
+          max: 50
+    start:
+      example: true
+      selector:
+        boolean:
+
+clear_appliance:
+  fields:
+    appliance:
+      required: true
+      example: laundry
+      selector:
+        text:
+    unit:
+      example: washer
+      selector:
+        text:
+
+combine_appliances:
+  fields:
+    appliance:
+      required: true
+      example: washer
+      selector:
+        text:
+    with:
+      required: true
+      example: dryer
+      selector:
+        text:
+    name:
+      example: Laundry
+      selector:
+        text:
+
+split_appliance:
+  fields:
+    appliance:
+      required: true
+      example: laundry
+      selector:
+        text:
+    unit:
+      required: true
+      example: washer
+      selector:
+        text:
+
+set_pool:
+  fields:
+    pool:
+      required: true
+      selector:
+        object:
+
+remove_pool:
+  fields:
+    pool:
+      required: true
+      example: pool
+      selector:
+        text:
+
+pool_set_target:
+  fields:
+    entity:
+      required: true
+      example: sensor.room_tiles_pool_spa
+      selector:
+        entity:
+          integration: room_tiles
+    temperature:
+      required: true
+      example: 100
+      selector:
+        number:
+          min: 34
+          max: 104
+
+pool_set_heater:
+  fields:
+    entity:
+      required: true
+      example: sensor.room_tiles_pool_spa
+      selector:
+        entity:
+          integration: room_tiles
+    heater:
+      required: true
+      selector:
+        boolean:
+
+pool_set_on:
+  fields:
+    entity:
+      required: true
+      example: sensor.room_tiles_pool_spa
+      selector:
+        entity:
+          integration: room_tiles
+    "on":
+      required: true
+      selector:
+        boolean:
+    with_heater:
+      selector:
+        boolean:
+
+set_robot:
+  fields:
+    robot:
+      required: true
+      selector:
+        object:
+
+remove_robot:
+  fields:
+    robot:
+      required: true
+      example: matic
+      selector:
+        text:
+
+ignore_device:
+  fields:
+    kind:
+      required: true
+      selector:
+        select:
+          options: ["appliance", "pool", "robot"]
+    device:
+      required: true
+      selector:
+        object:
+    set_up_id:
+      example: laundry
+      selector:
+        text:

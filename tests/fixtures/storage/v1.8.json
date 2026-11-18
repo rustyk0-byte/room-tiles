@@ -1,0 +1,319 @@
+{
+  "version": 1,
+  "minor_version": 8,
+  "key": "room_tiles",
+  "data": {
+    "areas": [
+      {
+        "id": "office",
+        "name": "Robin's Office",
+        "floor": "ground",
+        "short_name": "Office",
+        "review": false,
+        "hidden": false,
+        "lights": "light.office",
+        "tiles": {
+          "5x2": [
+            {
+              "kind": "dimmable_light",
+              "entity": "light.main"
+            },
+            {
+              "kind": "dimmable_light",
+              "entity": "light.desk"
+            },
+            {
+              "kind": "map"
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "6x3": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        "lights_exclude": [
+          "light.backlight"
+        ]
+      }
+    ],
+    "maps": [
+      {
+        "id": "home",
+        "name": "Home",
+        "bounds": [
+          0.0,
+          0.0,
+          400.0,
+          240.0
+        ],
+        "ha_floor": null,
+        "generated": false,
+        "wall_width": 6.0,
+        "walls": [
+          [
+            0.0,
+            0.0,
+            400.0,
+            0.0
+          ]
+        ],
+        "windows": [
+          [
+            10.0,
+            0.0,
+            40.0,
+            0.0
+          ]
+        ],
+        "openings": [],
+        "shapes": [
+          {
+            "style": "water",
+            "points": [
+              [
+                300.0,
+                100.0
+              ],
+              [
+                350.0,
+                100.0
+              ],
+              [
+                325.0,
+                150.0
+              ]
+            ]
+          }
+        ],
+        "zones": [
+          {
+            "id": "office",
+            "name": "Office",
+            "points": [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                100.0,
+                0.0
+              ],
+              [
+                100.0,
+                100.0
+              ],
+              [
+                0.0,
+                100.0
+              ]
+            ],
+            "area": "office",
+            "label": null,
+            "outdoor": false
+          },
+          {
+            "id": "bar_vac",
+            "name": "Bar",
+            "points": [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                100.0,
+                0.0
+              ],
+              [
+                100.0,
+                100.0
+              ],
+              [
+                0.0,
+                100.0
+              ]
+            ],
+            "area": "office",
+            "label": null,
+            "outdoor": false,
+            "vacuum": "vacuum.matic"
+          }
+        ],
+        "links": [],
+        "layers": [
+          {
+            "id": "house",
+            "name": "House",
+            "min_zoom": 1.0
+          },
+          {
+            "id": "rooms",
+            "name": "Rooms",
+            "min_zoom": 1.7
+          }
+        ]
+      }
+    ],
+    "markers": [
+      {
+        "id": "m1",
+        "map": "home",
+        "entity": "light.main",
+        "x": 50.0,
+        "y": 50.0,
+        "show_name": true,
+        "layer": "rooms"
+      },
+      {
+        "id": "m2",
+        "map": "home",
+        "entity": "light.main",
+        "x": 60,
+        "y": 60,
+        "layer": "house",
+        "show_name": false
+      },
+      {
+        "id": "m3",
+        "map": "home",
+        "entity": "light.main",
+        "x": 70,
+        "y": 40,
+        "layer": "house",
+        "show_name": false
+      }
+    ],
+    "catalog": {
+      "entries": [
+        {
+          "entity": "light.main",
+          "kind": "dimmable_light",
+          "short_name": "Main Light",
+          "review": false,
+          "auto": true
+        }
+      ],
+      "hidden": []
+    },
+    "settings": {
+      "auto_add_areas": false
+    },
+    "appliances": [
+      {
+        "id": "laundry",
+        "name": "Laundry",
+        "units": [
+          {
+            "id": "dryer",
+            "label": "Dryer",
+            "appliance": "dryer",
+            "preset": "lg_thinq_dryer",
+            "status": "sensor.dryer_current_status",
+            "time": "sensor.dryer_remaining_time",
+            "door": null,
+            "finished": "done",
+            "clear": [
+              "binary_sensor.back_door"
+            ],
+            "drawer": false,
+            "overrides": {},
+            "door_clears": true
+          },
+          {
+            "id": "washer",
+            "label": "Washer",
+            "appliance": "washer",
+            "preset": "lg_thinq_washer",
+            "status": "sensor.washer_current_status",
+            "time": "sensor.washer_remaining_time",
+            "door": null,
+            "finished": "waiting",
+            "clear": [
+              "unit:dryer"
+            ],
+            "drawer": false,
+            "overrides": {},
+            "door_clears": true
+          }
+        ]
+      },
+      {
+        "id": "dishwasher",
+        "name": "Dishwasher",
+        "units": [
+          {
+            "id": "upper",
+            "label": "Upper",
+            "appliance": "dishwasher",
+            "preset": "fp_dishdrawer",
+            "status": "sensor.dishdrawer_upper_cycle_state",
+            "time": "sensor.dishdrawer_upper_time_remaining",
+            "door": "binary_sensor.dishdrawer_upper_door",
+            "finished": "done",
+            "clear": [],
+            "drawer": true,
+            "overrides": {
+              "sanitizing": "washing"
+            },
+            "door_clears": false
+          }
+        ]
+      }
+    ],
+    "pools": [
+      {
+        "id": "pool",
+        "name": "Pool & Spa",
+        "preset": "iaqualink",
+        "layout": "shared",
+        "pool": {
+          "temp": "sensor.pool_temp",
+          "heater": "climate.pool",
+          "pump": null
+        },
+        "spa": {
+          "temp": "sensor.spa_temp",
+          "heater": "climate.spa",
+          "pump": null
+        },
+        "spa_mode": "switch.spa_pump",
+        "pump": "switch.pool_pump",
+        "spa_heater_follows": true
+      }
+    ],
+    "robots": [
+      {
+        "id": "matic",
+        "name": "Matic",
+        "vacuum": "vacuum.matic",
+        "error": "sensor.matic_operational_error",
+        "preset": "matter"
+      }
+    ],
+    "ignored": [
+      "vacuum.old_roomba"
+    ]
+  }
+}

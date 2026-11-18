@@ -1,0 +1,185 @@
+<!doctype html>
+<!-- The Room Tiles install page (docs/TODO.md phase C): pick the panel,
+     plug it in, Install. tools/make_install_site.py adds boards.json,
+     manifests/ and firmware/ beside this file (CI, for a release). The
+     installer is ESP Web Tools (the tasmota-esp-web-tools fork: it tells an
+     ESP32-P4's chip revisions apart and picks the matching build). -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Install Room Tiles</title>
+    <link rel="icon" href="icon.png" />
+    <script type="module" src="https://unpkg.com/tasmota-esp-web-tools@12.3.2/dist/web/install-button.js?module"></script>
+    <style>
+      :root {
+        --page: #f4f5f7;
+        --card: #ffffff;
+        --text: #1c1f24;
+        --dim: #5d6470;
+        --line: #d9dde3;
+        --accent: #2f7fd6;
+        --on-accent: #ffffff;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --page: #121417;
+          --card: #1d2025;
+          --text: #eceef1;
+          --dim: #9aa1ab;
+          --line: #30353c;
+          --accent: #4b9ef3;
+          --on-accent: #ffffff;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 32px 16px 48px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      header img {
+        width: 56px;
+        height: 56px;
+      }
+      h1 {
+        font-size: 1.7rem;
+        margin: 0;
+      }
+      h2 {
+        font-size: 1.15rem;
+        margin: 28px 0 10px;
+      }
+      p,
+      li {
+        color: var(--dim);
+      }
+      ol {
+        padding-left: 1.3em;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+      }
+      .board {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--card);
+      }
+      .board .name {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .board .what {
+        font-size: 0.9rem;
+        color: var(--dim);
+      }
+      .board button {
+        min-height: 44px;
+        border: none;
+        border-radius: 10px;
+        background: var(--accent);
+        color: var(--on-accent);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .note {
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--card);
+      }
+      .note.warn {
+        display: none;
+      }
+      .no-serial .note.warn {
+        display: block;
+      }
+      a {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="icon.png" alt="" />
+        <h1>Install Room Tiles on a panel</h1>
+      </header>
+      <p>One USB cable and a few minutes. After this, your panel updates through Home Assistant.</p>
+      <div class="note warn">
+        This page needs Chrome or Edge on a computer (they can talk to USB devices). Open it there to install.
+      </div>
+
+      <h2>1. Find your panel</h2>
+      <p>The size and the version are printed on the back of the board, like <b>V1.2</b>.</p>
+      <div class="grid" id="boards"><p>Loading…</p></div>
+
+      <h2>2. Install</h2>
+      <ol>
+        <li>Plug the panel into this computer with a USB-C cable that carries data.</li>
+        <li>Press <b>Install</b> on your panel above, pick its port, and wait until it's done.</li>
+      </ol>
+
+      <h2>3. Connect it</h2>
+      <ol>
+        <li>The panel asks for its language: tap yours.</li>
+        <li>
+          The panel shows a Wi-Fi network to join. Join it with your phone: a page opens where you pick your
+          home network. If it doesn't open, go to <b>http://192.168.4.1</b>.
+        </li>
+        <li>
+          In Home Assistant (with the Room Tiles integration set up), go to <b>Settings › Devices &amp; services</b>.
+          The panel is under <b>Discovered</b> with the name it shows, like <b>Room Tiles Panel a1b2c3</b>: select <b>Add</b>.
+        </li>
+        <li>A minute later the panel asks which area to show.</li>
+      </ol>
+      <p>More help, and changing Wi-Fi later: <a href="https://github.com/rustyk0-byte/room-tiles#wall-panels">Wall panels</a>.</p>
+    </main>
+    <script>
+      if (!("serial" in navigator)) document.body.classList.add("no-serial");
+      const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+      fetch("boards.json")
+        .then((r) => r.json())
+        .then((boards) => {
+          const grid = document.getElementById("boards");
+          grid.innerHTML = boards
+            .map((b) => {
+              const name = b.round ? `${b.size}" round` : `${b.size}" V${b.pcb}`;
+              const what = b.round ? "CrowPanel round display" : "CrowPanel Advanced";
+              return `<div class="board">
+                <span class="name">${esc(name)}</span>
+                <span class="what">${esc(what)}</span>
+                <esp-web-install-button manifest="manifests/${esc(b.id)}.json" baud-rate="460800">
+                  <button slot="activate">Install</button>
+                  <span slot="unsupported">Use Chrome or Edge on a computer</span>
+                  <span slot="not-allowed">This page must be opened over https</span>
+                </esp-web-install-button>
+              </div>`;
+            })
+            .join("");
+        })
+        .catch(() => {
+          document.getElementById("boards").innerHTML = "<p>No panels to install yet.</p>";
+        });
+    </script>
+  </body>
+</html>

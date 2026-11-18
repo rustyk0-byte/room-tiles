@@ -1,0 +1,8 @@
+# Room Tiles - the generic image for an Elecrow CrowPanel 2.1" round
+# ESP32-S3 (the round panel: the area's tiles in one strip, no map). Nothing
+# about one panel or home inside (identity/generic.yaml). tools/sync-firmware.sh
+# copies this file into the ESPHome config folder beside room_tiles/.
+packages:
+  board: !include room_tiles/boards/elecrow-s3-round-2.1.yaml
+  identity: !include room_tiles/identity/generic.yaml
+  room_tiles: !include room_tiles/room_tiles.yaml

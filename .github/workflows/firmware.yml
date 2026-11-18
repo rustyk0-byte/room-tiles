@@ -1,0 +1,135 @@
+name: Firmware
+
+# The panel firmware (docs/TODO.md "Installing and updating panels", phases
+# A + B). Actions minutes cost, and a board takes minutes to build, so it
+# runs only when asked (not on a push):
+# - by hand (Actions > Firmware > Run workflow): the boards named (device
+#   files, comma-separated - default the 10.1" V1.2) or "all", for the chip
+#   kind picked - does it build, does it fit its slot (at most 80%: the
+#   flash layout is frozen); each image kept as an artifact;
+# - a pull request that changes the firmware: ONE board - only while it's
+#   free (a public repo: GitHub's runners cost nothing there); on the
+#   private repo it's skipped (run it by hand when worth it);
+# - a published release (release.yml calls it): EVERY board's generic image,
+#   kept as artifacts - room-tiles-<board>.ota.bin (the update image Room
+#   Tiles installs: into the release's HACS zip) and .factory.bin (the first
+#   USB install).
+on:
+  pull_request:
+    paths:
+      - "firmware/**"
+      - "tools/sync-firmware.sh"
+      - "tools/check_firmware_size.py"
+      - ".github/workflows/firmware.yml"
+  workflow_dispatch:
+    inputs:
+      boards:
+        description: "Device files (firmware/devices), comma-separated - or all"
+        type: string
+        default: room-tiles-10in-v1.2
+      chips:
+        description: "Chip kind (the round panel has one kind)"
+        type: choice
+        options: [engineering-sample, production, both]
+        default: engineering-sample
+  workflow_call:
+
+concurrency:
+  group: firmware-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # the ESPHome the firmware is built and tested with
+  ESPHOME_VERSION: "2026.10.2"
+
+jobs:
+  devices:
+    # (a pull request: only on the public repo - free there)
+    if: github.event_name != 'pull_request' || !github.event.repository.private
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.list.outputs.list }}
+    steps:
+      - uses: actions/checkout@v4
+      # each device file; an ESP32-P4 board twice: for engineering-sample
+      # chips (below v3.0 - the default) and production ones (v3.x) - the
+      # install page picks by the chip it finds, updates by what the panel
+      # reports
+      - id: list
+        env:
+          EVENT: ${{ github.event_name }}
+          BOARDS: ${{ inputs.boards }}
+          CHIPS: ${{ inputs.chips }}
+        run: |
+          # a pull request: the 10.1" V1.2, engineering sample; by hand: the
+          # boards and chip kind asked for; a release (no inputs): everything
+          python3 - >> "$GITHUB_OUTPUT" <<'PY'
+          import json, os, pathlib, sys
+          event, boards, chips = os.environ["EVENT"], os.environ["BOARDS"].strip(), os.environ["CHIPS"]
+          if event == "pull_request":
+              boards, chips = "room-tiles-10in-v1.2", "engineering-sample"
+          files = {f.stem: f for f in pathlib.Path("firmware/devices").glob("*.yaml")}
+          names = sorted(files) if boards in ("", "all") else [b.strip() for b in boards.split(",") if b.strip()]
+          unknown = [n for n in names if n not in files]
+          if unknown:
+              sys.exit(f"No such device file: {', '.join(unknown)} (firmware/devices: {', '.join(sorted(files))})")
+          kinds = {"engineering-sample": ["true"], "production": ["false"]}.get(chips, ["true", "false"])
+          out = []
+          for n in names:
+              if "engineering_sample" in files[n].read_text():
+                  out += [{"device": n, "es": es} for es in kinds]
+              else:
+                  out.append({"device": n, "es": ""})
+          print("list=" + json.dumps(out))
+          print(json.dumps(out), file=sys.stderr)
+          PY
+
+  build:
+    needs: devices
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.devices.outputs.list) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # ESP-IDF and its toolchains (~1 GB): downloaded once per ESPHome version
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/esphome
+          key: esphome-${{ env.ESPHOME_VERSION }}-${{ contains(matrix.device, 'round') && 's3' || 'p4' }}-${{ matrix.es }}
+      - run: pip install --quiet "esphome==${ESPHOME_VERSION}"
+      - name: Build
+        run: |
+          sh tools/sync-firmware.sh build
+          cd build
+          if [ -n "${{ matrix.es }}" ]; then
+            esphome -s engineering_sample "${{ matrix.es }}" compile "${{ matrix.device }}.yaml"
+          else
+            esphome compile "${{ matrix.device }}.yaml"
+          fi
+      - name: Fits its slot (at most 80%)
+        run: |
+          case "${{ matrix.device }}" in
+            *round*) parts=firmware/partitions_s3_16mb.csv ;;
+            *) parts=firmware/partitions_16mb.csv ;;
+          esac
+          python tools/check_firmware_size.py build/.esphome/build/room-tiles/build/firmware.ota.bin "$parts"
+      - name: Name the images by board
+        run: |
+          out=build/.esphome/build/room-tiles/build
+          tag=$(grep -ao 'RT-IMAGE:[A-Za-z0-9.-]*:generic:[0-9]*;' "$out/firmware.ota.bin" | head -1)
+          [ -n "$tag" ] || { echo "No generic image tag in the build"; exit 1; }
+          board=$(echo "$tag" | cut -d: -f2)
+          mkdir -p images
+          cp "$out/firmware.ota.bin" "images/room-tiles-$board.ota.bin"
+          cp "$out/firmware.factory.bin" "images/room-tiles-$board.factory.bin"
+          ls -l images
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.device }}${{ matrix.es == 'false' && '-production' || '' }}
+          path: images/
+          retention-days: 14

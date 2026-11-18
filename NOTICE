@@ -1,0 +1,19 @@
+Room Tiles
+Copyright 2026 The Room Tiles Authors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE), except:
+
+- firmware/components/mipi_dsi/ is a modified copy of ESPHome's mipi_dsi
+  display component, under the GNU General Public License v3
+  (see its README.md).
+- The panel firmware images are built with ESPHome, whose C++ runtime is
+  under the GNU General Public License v3; a firmware image as a whole is
+  therefore distributed under the GPLv3. Its complete source is this
+  repository.
+
+- firmware/wifi_chip/ holds Espressif's ESP-Hosted network_adapter firmware
+  for the boards' Wi-Fi chip (ESP32-C6), as built by ESPHome - Copyright
+  Espressif Systems, under the Apache License 2.0.
+
+The Apache License does not grant permission to use the Room Tiles name or
+logo (section 6).

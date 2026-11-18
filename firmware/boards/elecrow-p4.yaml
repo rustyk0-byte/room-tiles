@@ -1,0 +1,153 @@
+# Elecrow CrowPanel Advanced ESP32-P4 (7", 9", 10.1" - all 1024x600, GT911
+# touch, ESP32-C6 Wi-Fi over SDIO). Hardware only; Room Tiles itself is in
+# room_tiles.yaml. A 9" or 10.1" also includes elecrow-p4-10in.yaml.
+#
+# vars:
+#   board_rev: "1.0" | "1.1" | "1.2"   PCB revision (silkscreen next to the model)
+#   engineering_sample: true | false   SILICON revision - esptool's "Chip is
+#                                      ESP32-P4 (revision vX.Y)": v1.x = true,
+#                                      v3.x+ = false. Wrong value = "Illegal
+#                                      instruction" right at boot.
+#   ldo4_voltage: 2.5V | passthrough   panel rail; the 10.1" needs passthrough
+#                                      (it flickers at 2.5V)
+#   board_size: 7in | 9in | 10in       the screen -
+#                                      part of the board's name Room Tiles
+#                                      matches firmware images by
+
+substitutions:
+  board_rev: "1.2"
+  ldo4_voltage: 2.5V
+  board_size: 7in
+
+# which board this firmware is for: Room Tiles only sends a panel images
+# built for its own board (custom_components/room_tiles/firmware.py)
+room_tiles:
+  board: elecrow-p4-${board_size}-v${board_rev}${'-es' if (engineering_sample|string|lower) == 'true' else ''}
+
+esp32:
+  variant: esp32p4
+  flash_size: 16MB
+  # two firmware slots + the asset area (theme pack, string table)
+  partitions: room_tiles/partitions_16mb.csv
+  engineering_sample: ${engineering_sample}
+  cpu_frequency: 360MHz
+  framework:
+    type: esp-idf
+    advanced:
+      # run the firmware from a copy in PSRAM: writing flash (a theme pack,
+      # an OTA update) then no longer pauses the cache the screen's picture
+      # comes through - without it the screen flashes and the panel freezes
+      # for a moment on every flash erase (~1.5 MB of PSRAM)
+      execute_from_psram: true
+    sdkconfig_options:
+      # the display's next frame started even while flash is written (else
+      # the screen flashes blue on every pack save / update); needs the
+      # display driver's callback in IRAM: room_tiles' own mipi_dsi
+      CONFIG_LCD_DSI_ISR_CACHE_SAFE: y
+      # production chips (engineering_sample false): from revision v3.0 up -
+      # ESP-IDF's default is v3.1, which a v3.0 board would refuse to boot.
+      # (v3.0 support adds ESP-IDF's v3.0 workaround: 256 bytes reserved and
+      # a step after deep sleep - nothing else changes on v3.1+.) Engineering
+      # samples: their own minimum (ESPHome), untouched
+      CONFIG_ESP32P4_REV_MIN_300: ${'n' if (engineering_sample|string|lower) == 'true' else 'y'}
+      CONFIG_ESP32P4_REV_MIN_301: n
+
+psram:
+  mode: hex
+  speed: 200MHz
+
+logger:
+  level: DEBUG
+  hardware_uart: UART0
+
+esp32_hosted:
+  type: sdio
+  variant: ESP32C6
+  active_high: true
+  reset_pin: GPIO32
+  cmd_pin: GPIO19
+  clk_pin: GPIO18
+  # D0-D3: V1.0 = GPIO14-17 on a 1-bit bus (Elecrow's spec for V1.0);
+  # V1.1 and later reversed the data lines (17-14) and run 4-bit.
+  bus_width: ${1 if board_rev == '1.0' else 4}
+  d0_pin: GPIO${14 if board_rev == '1.0' else 17}
+  d1_pin: GPIO${15 if board_rev == '1.0' else 16}
+  d2_pin: GPIO${16 if board_rev == '1.0' else 15}
+  d3_pin: GPIO${17 if board_rev == '1.0' else 14}
+  # 40 MHz (Elecrow's default) on V1.0 and V1.2. V1.1 - not tried yet,
+  # likely without V1.2's filter parts on these lines (V1.0 without them had
+  # link errors until its bus mode was fixed) - runs at 20 MHz to be safe:
+  # still far more than the panel needs
+  sdio_frequency: ${'20MHz' if board_rev == '1.1' else '40MHz'}
+  use_psram: true
+
+# The Wi-Fi chip's firmware (firmware/wifi_chip/README.md): carried in every
+# image; Room Tiles brings an older chip up to it once, at startup - before
+# Wi-Fi, so a board straight from the box gets there too (DESIGN.md "The
+# Wi-Fi chip"). Its HA update entity shows the chip's version.
+update:
+  - platform: esp32_hosted
+    id: wifi_chip_update
+    name: "Wi-Fi Chip Firmware"
+    type: embedded
+    path: room_tiles/wifi_chip/network_adapter_esp32c6-2.12.13.bin
+    sha256: 09e4ed4ff648444ad045c1d934825af407648f58898586ce9f4275e53fdb23f6
+    on_update_available:
+      - lambda: id(rt).wifi_chip_update_available(id(wifi_chip_update));
+
+esp_ldo:
+  - channel: 3
+    voltage: 2.5V
+  # the GT911's rail: without it some boards' touch latches the wrong
+  # address and fails calibration
+  - channel: 4
+    voltage: ${ldo4_voltage}
+
+i2c:
+  - id: bus_touch
+    sda: GPIO45
+    scl: GPIO46
+    frequency: 400kHz
+    scan: true
+
+touchscreen:
+  platform: gt911
+  id: rt_touchscreen
+  interrupt_pin: GPIO42
+  reset_pin: GPIO40
+  update_interval: 50ms
+  # any touch counts as activity (screen dimming / sleep)
+  on_touch:
+    - lambda: "id(rt_last_touch_ms) = millis();"
+
+output:
+  - platform: ledc
+    pin: GPIO31
+    id: rt_backlight_pwm
+    frequency: 30000Hz
+
+light:
+  - platform: monochromatic
+    name: "Backlight"
+    output: rt_backlight_pwm
+    id: rt_backlight
+    default_transition_length: 0s
+    restore_mode: ALWAYS_ON
+    # a setting, not a room's light: left out when HA switches an area's lights
+    entity_category: config
+    # switched from outside (HA): the panel sleeps / wakes with it - dark, a
+    # touch only wakes it, never reaching a tile
+    on_turn_off:
+      - lambda: id(rt).backlight_switched(false);
+    on_turn_on:
+      - lambda: id(rt).backlight_switched(true);
+
+display:
+  - platform: mipi_dsi
+    id: rt_display
+    model: WAVESHARE-ESP32-P4-WIFI6-TOUCH-LCD-7B
+    reset_pin: GPIO41
+    rotation: 0
+    dimensions:
+      width: 1024
+      height: 600

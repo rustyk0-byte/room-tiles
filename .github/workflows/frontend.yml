@@ -1,0 +1,57 @@
+name: Frontend
+
+# Only when the dashboard or its art changes (or run by hand). Pushes are
+# batched, and a newer push cancels a run still going - Actions minutes cost.
+on:
+  push:
+    paths:
+      - "frontend/**"
+      - "assets/**"
+      - ".github/workflows/frontend.yml"
+  # (a contributor's pull request: the same checks, before it's reviewed)
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "assets/**"
+      - ".github/workflows/frontend.yml"
+  workflow_dispatch:
+  # (release.yml: the bundle for the release's HACS zip)
+  workflow_call:
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm test
+      # colorpicker.ts computes the LIGHT's colours (data, not theme)
+      - name: Colours only in theme.ts (theme-ready rule, docs/DESIGN.md)
+        run: |
+          if grep -nE "#[0-9a-fA-F]{3,8}\b|rgba?\(|var\(--(primary|secondary|card|state|ha-|paper)" src/*.ts | grep -v "^src/theme.ts:" | grep -v "^src/colorpicker.ts:"; then
+            echo "Hard-coded colour or HA theme variable outside src/theme.ts" && exit 1
+          fi
+      - run: npm run build
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Artwork (assets/masters -> per-theme web files)
+        run: |
+          pip install --quiet pillow
+          python ../assets/build_web.py ../custom_components/room_tiles/frontend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend
+          path: custom_components/room_tiles/frontend/
+          retention-days: 14

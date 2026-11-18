@@ -1,0 +1,12 @@
+# Room Tiles fills this in (report.py issue: this form, its "report" field).
+name: "Bug"
+description: "Something in Room Tiles doesn't work right."
+labels: ["bug"]
+body:
+  - type: textarea
+    id: report
+    attributes:
+      label: "What happened?"
+      description: "Easiest from Room Tiles itself: the settings menu, Send feedback. It adds the versions for you. Writing it here? Attach Home Assistant's Download diagnostics for Room Tiles (Settings, Devices & services, Room Tiles, the three dots)."
+    validations:
+      required: true

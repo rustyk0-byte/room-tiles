@@ -1,0 +1,34 @@
+# A hand-built Room Tiles panel: its own name, API key and Wi-Fi (the
+# ESPHome config's secrets.yaml). Include beside room_tiles.yaml.
+#
+# vars:
+#   name, friendly_name   the device
+#   api_key               API encryption key (also protects OTA)
+#   ap_ssid, ap_password  fallback hotspot when Wi-Fi fails
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+api:
+  encryption:
+    key: ${api_key}
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: ${ap_ssid}
+    password: ${ap_password}
+
+captive_portal:
+
+# updates from ESPHome (its key: the API key above)
+ota:
+  - platform: esphome
+    encryption: {}
+    # the screen stays on (no sleep) while the firmware is written
+    on_begin:
+      - lambda: "id(rt).set_updating(true);"
+    on_error:
+      - lambda: "id(rt).set_updating(false);"

@@ -1,0 +1,669 @@
+# Room Tiles panel firmware (docs/TODO.md "Step 3"): boots to the Room Tiles
+# screen, fetches its data, theme pack and wording from the Room Tiles
+# integration, then shows its area's tile board (components/room_tiles draws
+# it at runtime): every tile kind; the area picker, tile editing and the map
+# come next (milestones 5-6).
+#
+# Who the panel is - its name, API key and Wi-Fi - is NOT here: a device file
+# includes one identity package beside this one:
+#   identity/generic.yaml  nothing about one panel or home inside (the
+#                          installer's images): the name gets the chip's ID,
+#                          HA sets the key, Wi-Fi is set on the panel
+#   identity/own.yaml      a hand-built panel: its name, key and Wi-Fi given
+
+esphome:
+  comment: Room Tiles panel
+  project:
+    name: room-tiles.panel
+    version: "0.1.0"
+  # (a list: see boards/elecrow-p4-10in.yaml)
+  on_boot:
+    - priority: -100
+      then:
+        - lambda: |-
+            // the board draws into main_root with the fonts the hidden labels hold
+            esphome::room_tiles::Fonts f;
+            f.bar = lv_obj_get_style_text_font(id(font_ref_bar), LV_PART_MAIN);
+            f.name = lv_obj_get_style_text_font(id(font_ref_name), LV_PART_MAIN);
+            f.name_s = lv_obj_get_style_text_font(id(font_ref_name_s), LV_PART_MAIN);
+            f.play = lv_obj_get_style_text_font(id(font_ref_play), LV_PART_MAIN);
+            f.play_s = lv_obj_get_style_text_font(id(font_ref_play_s), LV_PART_MAIN);
+            f.roll = lv_obj_get_style_text_font(id(ref_rt_font_roll), LV_PART_MAIN);
+            f.roll_s = lv_obj_get_style_text_font(id(ref_rt_font_roll_s), LV_PART_MAIN);
+            f.roll_sel = lv_obj_get_style_text_font(id(ref_rt_font_roll_sel), LV_PART_MAIN);
+            f.roll_sel_s = lv_obj_get_style_text_font(id(ref_rt_font_roll_sel_s), LV_PART_MAIN);
+            f.roll_mid = lv_obj_get_style_text_font(id(ref_rt_font_roll_mid), LV_PART_MAIN);
+            f.roll_mid_s = lv_obj_get_style_text_font(id(ref_rt_font_roll_mid_s), LV_PART_MAIN);
+            f.prefix = lv_obj_get_style_text_font(id(ref_rt_font_prefix), LV_PART_MAIN);
+            f.prefix_s = lv_obj_get_style_text_font(id(ref_rt_font_prefix_s), LV_PART_MAIN);
+            f.thermo = lv_obj_get_style_text_font(id(ref_rt_font_thermo), LV_PART_MAIN);
+            f.thermo_s = lv_obj_get_style_text_font(id(ref_rt_font_thermo_s), LV_PART_MAIN);
+            f.glyph = lv_obj_get_style_text_font(id(ref_rt_icon_glyph), LV_PART_MAIN);
+            f.glyph_s = lv_obj_get_style_text_font(id(ref_rt_icon_glyph_s), LV_PART_MAIN);
+            f.tiny = lv_obj_get_style_text_font(id(ref_rt_icon_tiny), LV_PART_MAIN);
+            f.menu = lv_obj_get_style_text_font(id(ref_rt_icon_menu), LV_PART_MAIN);
+            f.clock = lv_obj_get_style_text_font(id(ref_rt_font_clock), LV_PART_MAIN);
+            f.date = lv_obj_get_style_text_font(id(ref_rt_font_date), LV_PART_MAIN);
+            f.brand = id(rt_brand_icon_bar)->get_lv_image_dsc();
+            id(rt).attach_board(id(main_root), f);
+            id(rt).attach_language_picker(id(boot_lang));
+            id(rt).set_backlight(id(rt_backlight));  // (the panel's own brightness)
+
+api:
+  # (the key: the identity package)
+  encryption: {}
+
+# (ota: the identity package - a hand-built panel takes ESPHome's updates;
+# a generic one only Room Tiles' own, its key set at run time)
+
+mdns:
+  disabled: false
+
+time:
+  - platform: homeassistant
+    id: rt_time
+
+globals:
+  - id: rt_last_touch_ms
+    type: uint32_t
+    initial_value: "0"
+
+external_components:
+  - source:
+      type: local
+      path: room_tiles/components
+    # mipi_dsi: ESPHome's display driver with its callback in IRAM, for
+    # CONFIG_LCD_DSI_ISR_CACHE_SAFE (components/mipi_dsi/README.md)
+    components: [room_tiles, mipi_dsi]
+
+# The link to the Room Tiles integration: it watches the integration's
+# sensor.room_tiles_panel_link (a revision + where HA answers) and fetches
+# this panel's data whenever the revision changes.
+room_tiles:
+  id: rt
+  # the boot screen (connecting, downloads) or the tile board
+  on_screen:
+    - if:
+        condition:
+          lambda: return x;
+        then:
+          - lvgl.page.show: page_main
+        else:
+          - lvgl.page.show: page_boot
+  on_status:
+    - lambda: |-
+        lv_label_set_text(id(boot_status), id(rt).status().c_str());
+        // "Add this panel in Home Assistant": its name as HA lists it, and where
+        const std::string name = id(rt).setup_name();
+        if (name.empty()) {
+          lv_obj_add_flag(id(boot_name), LV_OBJ_FLAG_HIDDEN);
+          lv_obj_add_flag(id(boot_hint), LV_OBJ_FLAG_HIDDEN);
+        } else {
+          lv_label_set_text(id(boot_name), name.c_str());
+          lv_label_set_text(id(boot_hint), id(rt).setup_hint().c_str());
+          lv_obj_remove_flag(id(boot_name), LV_OBJ_FLAG_HIDDEN);
+          lv_obj_remove_flag(id(boot_hint), LV_OBJ_FLAG_HIDDEN);
+        }
+        // Change Wi-Fi (on Wi-Fi, no Home Assistant for a while)
+        const int wb = id(rt).wifi_button();
+        // (below the add screen's name and hint when they show)
+        lv_obj_set_y(id(boot_wifi), name.empty() ? 150 : 240);
+        if (wb == 0) {
+          lv_obj_add_flag(id(boot_wifi), LV_OBJ_FLAG_HIDDEN);
+        } else {
+          lv_obj_remove_flag(id(boot_wifi), LV_OBJ_FLAG_HIDDEN);
+          lv_label_set_text(id(boot_wifi_label), id(rt).wifi_button_text().c_str());
+          lv_obj_set_style_bg_color(id(boot_wifi), lv_color_hex(wb == 2 ? 0x4B9EF3 : 0x333333), 0);
+        }
+        // the progress bar: a pack downloading, then being saved
+        const int p = id(rt).progress();
+        if (p < 0) {
+          lv_obj_add_flag(id(boot_progress), LV_OBJ_FLAG_HIDDEN);
+        } else {
+          lv_obj_remove_flag(id(boot_progress), LV_OBJ_FLAG_HIDDEN);
+          lv_bar_set_value(id(boot_progress), p, LV_ANIM_OFF);
+        }
+
+# Fonts are compiled in: Roboto with the Latin letters every Room Tiles
+# language needs (docs/DESIGN.md "Panel firmware").
+font:
+  - file: "gfonts://Roboto@700"
+    id: rt_font_title
+    size: 40
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    # the set lists combining accent marks Roboto doesn't draw on their own
+    # (it has the accented letters themselves)
+    ignore_missing_glyphs: true
+  - file: "gfonts://Roboto@400"
+    id: rt_font_body
+    size: 20
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  # the top bar's area name; tile names (5x2 / 6x3 boards)
+  - file: "gfonts://Roboto@700"
+    id: rt_font_bar
+    size: 24
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  - file: "gfonts://Roboto@400"
+    id: rt_font_name
+    size: 22
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  - file: "gfonts://Roboto@400"
+    id: rt_font_name_s
+    size: 16
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  # rollers: rows, the selected row (big / smaller kinds), the word beside it
+  - file: "gfonts://Roboto@400"
+    id: rt_font_roll
+    size: 16
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  - file: "gfonts://Roboto@400"
+    id: rt_font_roll_s
+    size: 12
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  - file: "gfonts://Roboto@700"
+    id: rt_font_roll_sel
+    size: 28
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  - file: "gfonts://Roboto@700"
+    id: rt_font_roll_sel_s
+    size: 21
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  - file: "gfonts://Roboto@700"
+    id: rt_font_roll_mid
+    size: 22
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  - file: "gfonts://Roboto@700"
+    id: rt_font_roll_mid_s
+    size: 16
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  - file: "gfonts://Roboto@300"
+    id: rt_font_prefix
+    size: 16
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  - file: "gfonts://Roboto@300"
+    id: rt_font_prefix_s
+    size: 12
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  # the idle clock's date ("Sat 14": the analog dial's, a theme clock's
+  # "large" date)
+  - file: "gfonts://Roboto@400"
+    id: rt_font_date
+    size: 26
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  # thermostat / pool: the current temperature (digits, "-", "°")
+  # the idle clock's digits (idle_clock.cpp): big and light
+  - file: "gfonts://Roboto@300"
+    id: rt_font_clock
+    size: 120
+    bpp: 4
+    glyphs: "0123456789:-"
+  - file: "gfonts://Roboto@700"
+    id: rt_font_thermo
+    size: 44
+    bpp: 4
+    glyphs: "0123456789-°"
+  - file: "gfonts://Roboto@700"
+    id: rt_font_thermo_s
+    size: 30
+    bpp: 4
+    glyphs: "0123456789-°"
+  # Material Design Icons glyphs, small: the pool / spa heater button, the map buttons
+  - file:
+      type: web
+      url: "https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/fonts/materialdesignicons-webfont.ttf"
+    id: rt_icon_glyph
+    size: 28
+    bpp: 4
+    # fire, snowflake; floor plan (the top bar's map button), close (the map's X)
+    # + the map's back arrow and zoom in / out
+    # + the vacuum queue's play / pause / skip / stop
+    # + the top bar's area lights (on / off) and help
+    glyphs: ["\U000F0238", "\U000F0717", "\U000F0821", "\U000F0156", "\U000F004D", "\U000F0415", "\U000F0374",
+             "\U000F040A", "\U000F03E4", "\U000F04AD", "\U000F04DB", "\U000F1253", "\U000F1254", "\U000F0625"]
+  - file:
+      type: web
+      url: "https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/fonts/materialdesignicons-webfont.ttf"
+    id: rt_icon_glyph_s
+    size: 19
+    bpp: 4
+    glyphs: ["\U000F0238", "\U000F0717"]
+  # tiny Material Design Icons glyphs (text size): a map link's arrow
+  - file:
+      type: web
+      url: "https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/fonts/materialdesignicons-webfont.ttf"
+    id: rt_icon_tiny
+    size: 14
+    bpp: 4
+    # a map link's arrow; play (the room the vacuum is cleaning)
+    glyphs: ["\U000F005C", "\U000F040A"]
+  # the drop-down triangle after a top bar name that opens a list: the
+  # dashboard's mdi:menu-down (24 px by a 25.6 px name), scaled to the bar's
+  # 24 px name; + the Help page's button icons (menu-down, grid, floor plan,
+  # area lights, cog)
+  - file:
+      type: web
+      url: "https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/fonts/materialdesignicons-webfont.ttf"
+    id: rt_icon_menu
+    size: 22
+    bpp: 4
+    # + Done's check mark (editing) + the queue Help's play / pause / skip /
+    # stop / auto-start and the map Help's close
+    glyphs: ["\U000F035D", "\U000F02C1", "\U000F0821", "\U000F1254", "\U000F0493", "\U000F012C", "\U000F040A",
+             "\U000F03E4", "\U000F04AD", "\U000F04DB", "\U000F0A1A", "\U000F0156",
+             "\U000F09FE", "\U000F0140"]  # + the map nav: layers-outline, chevron-down
+  # Material Design Icons glyphs: play (scene / script button), floor plan (Map tile)
+  - file:
+      type: web
+      url: "https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/fonts/materialdesignicons-webfont.ttf"
+    id: rt_icon_play
+    size: 64
+    bpp: 4
+    glyphs: ["\U000F040A", "\U000F0821"]
+  - file:
+      type: web
+      url: "https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/fonts/materialdesignicons-webfont.ttf"
+    id: rt_icon_play_s
+    size: 44
+    bpp: 4
+    glyphs: ["\U000F040A", "\U000F0821"]
+
+image:
+  # built into the firmware so it shows before anything is downloaded.
+  # RGB565 + alpha ON PURPOSE: ESPHome enables LVGL's support for a pixel
+  # format only when a YAML image uses it, and the theme packs' pictures are
+  # RGB565A8 - drawn fine without it, but turned / scaled (the idle clock's
+  # theme hands) they come out as garbage. This boot image (a widget below)
+  # switches it on.
+  - platform: file
+    id: rt_brand_icon
+    file: room_tiles/images/brand_icon_160.png
+    type: RGB565
+    transparency: alpha_channel
+  # the top bars' (tiles and map): far left
+  - platform: file
+    id: rt_brand_icon_bar
+    file: room_tiles/images/brand_icon_36.png
+    type: RGB
+    transparency: alpha_channel
+
+lvgl:
+  # 1/8 of the screen: ESPHome then puts LVGL's render buffer in internal RAM
+  # (~150 KB) - frames render in strips, but writing internal RAM is far
+  # faster than PSRAM (a full-screen PSRAM buffer: the map panned at ~15 fps)
+  buffer_size: 12.5%
+  touchscreens:
+    - rt_touchscreen
+  pages:
+    - id: page_boot
+      bg_color: 0x000000
+      bg_opa: 100%
+      pad_all: 0
+      scrollable: false
+      widgets:
+        - image:
+            id: boot_icon
+            src: rt_brand_icon
+            align: CENTER
+            y: -70
+        - label:
+            id: boot_title
+            text: "Room Tiles"
+            align: CENTER
+            y: 50
+            text_font: rt_font_title
+            text_color: 0xFFFFFF
+        - label:
+            id: boot_status
+            text: "Connecting to Home Assistant…"
+            align: CENTER
+            y: 100
+            # (long lines wrap, centered - the round panel's 480 px circle)
+            long_mode: WRAP
+            width: 90%
+            text_align: CENTER
+            text_font: rt_font_body
+            text_color: 0x9E9E9E
+        - bar:
+            id: boot_progress
+            hidden: true
+            align: CENTER
+            y: 140
+            width: 360
+            height: 8
+            min_value: 0
+            max_value: 100
+            value: 0
+            bg_color: 0x333333
+            radius: 4
+            indicator:
+              bg_color: 0x4B9EF3
+              radius: 4
+        # "Add this panel in Home Assistant" (no API key yet): the panel's
+        # name as HA's Discovered list shows it, then where that is
+        - label:
+            id: boot_name
+            hidden: true
+            text: " "
+            align: CENTER
+            y: 146
+            long_mode: DOT
+            width: 90%
+            text_align: CENTER
+            text_font: rt_font_bar
+            text_color: 0xFFFFFF
+        - label:
+            id: boot_hint
+            hidden: true
+            text: " "
+            align: CENTER
+            y: 186
+            # (narrower: inside the round panel's circle when it wraps)
+            long_mode: WRAP
+            width: 56%
+            text_align: CENTER
+            text_font: rt_font_body
+            text_color: 0x9E9E9E
+        # Change Wi-Fi: shown on Wi-Fi without Home Assistant for a while
+        # (a panel on the wrong network); a second tap forgets the network
+        - button:
+            id: boot_wifi
+            hidden: true
+            align: CENTER
+            # (inside the round panel's circle too)
+            y: 150
+            width: 320
+            height: 56
+            radius: 12
+            bg_color: 0x333333
+            border_width: 0
+            shadow_width: 0
+            on_click:
+              - lambda: id(rt).wifi_button_tap();
+            widgets:
+              - label:
+                  id: boot_wifi_label
+                  text: "Change Wi-Fi"
+                  align: CENTER
+                  text_font: rt_font_body
+                  text_color: 0xFFFFFF
+        # a new panel's first start: its language before anything else
+        # (room_tiles.cpp attach_language_picker fills it: the wall panels'
+        # lower part, under the logo and name; all of the round panel's)
+        - obj:
+            id: boot_lang
+            hidden: true
+            align: CENTER
+            width: 100%
+            height: 100%
+            bg_color: 0x000000
+            bg_opa: 100%
+            border_width: 0
+            radius: 0
+            pad_all: 0
+            scrollable: false
+        # hidden: they hand the board its fonts (C++ reads them back), and
+        # make ESPHome compile in what the board draws with
+        - label:
+            id: font_ref_bar
+            hidden: true
+            text: " "
+            text_font: rt_font_bar
+        - label:
+            id: font_ref_name
+            hidden: true
+            text: " "
+            text_font: rt_font_name
+        - label:
+            id: font_ref_name_s
+            hidden: true
+            text: " "
+            text_font: rt_font_name_s
+        - label:
+            id: font_ref_play
+            hidden: true
+            text: " "
+            text_font: rt_icon_play
+        - label:
+            id: font_ref_play_s
+            hidden: true
+            text: " "
+            text_font: rt_icon_play_s
+        - label:
+            id: ref_rt_font_roll
+            hidden: true
+            text: " "
+            text_font: rt_font_roll
+        - label:
+            id: ref_rt_font_roll_s
+            hidden: true
+            text: " "
+            text_font: rt_font_roll_s
+        - label:
+            id: ref_rt_font_roll_sel
+            hidden: true
+            text: " "
+            text_font: rt_font_roll_sel
+        - label:
+            id: ref_rt_font_roll_sel_s
+            hidden: true
+            text: " "
+            text_font: rt_font_roll_sel_s
+        - label:
+            id: ref_rt_font_roll_mid
+            hidden: true
+            text: " "
+            text_font: rt_font_roll_mid
+        - label:
+            id: ref_rt_font_roll_mid_s
+            hidden: true
+            text: " "
+            text_font: rt_font_roll_mid_s
+        - label:
+            id: ref_rt_font_prefix
+            hidden: true
+            text: " "
+            text_font: rt_font_prefix
+        - label:
+            id: ref_rt_font_prefix_s
+            hidden: true
+            text: " "
+            text_font: rt_font_prefix_s
+        - label:
+            id: ref_rt_font_clock
+            hidden: true
+            text: " "
+            text_font: rt_font_clock
+        - label:
+            id: ref_rt_font_date
+            hidden: true
+            text: " "
+            text_font: rt_font_date
+        - label:
+            id: ref_rt_font_thermo
+            hidden: true
+            text: " "
+            text_font: rt_font_thermo
+        - label:
+            id: ref_rt_font_thermo_s
+            hidden: true
+            text: " "
+            text_font: rt_font_thermo_s
+        - label:
+            id: ref_rt_icon_glyph
+            hidden: true
+            text: " "
+            text_font: rt_icon_glyph
+        - label:
+            id: ref_rt_icon_glyph_s
+            hidden: true
+            text: " "
+            text_font: rt_icon_glyph_s
+        - label:
+            id: ref_rt_icon_tiny
+            hidden: true
+            text: " "
+            text_font: rt_icon_tiny
+        - label:
+            id: ref_rt_icon_menu
+            hidden: true
+            text: " "
+            text_font: rt_icon_menu
+        # (compiles LVGL's roller in)
+        - roller:
+            id: feature_roller
+            hidden: true
+            options: ["-"]
+        # (compiles LVGL's switch in: the vacuum queue's "Start automatically")
+        - switch:
+            id: feature_switch
+            hidden: true
+        # (compiles LVGL's flex layout in: a top bar name with its drop-down
+        # triangle, the Help page)
+        - obj:
+            id: feature_flex
+            hidden: true
+            layout:
+              type: flex
+              flex_flow: row
+            widgets:  # (a layout needs something to lay out)
+              - obj:
+                  hidden: true
+        # (the busy stopwatch's hand)
+        - line:
+            id: feature_line
+            hidden: true
+            points:
+              - [0, 0]
+              - [1, 1]
+        # (and the colour picker's button, sliders and hue arc)
+        - button:
+            id: feature_button
+            hidden: true
+        - slider:
+            id: feature_slider
+            hidden: true
+        - arc:
+            id: feature_arc
+            hidden: true
+
+    # the tile board: components/room_tiles draws it into main_root
+    - id: page_main
+      bg_color: 0x000000
+      bg_opa: 100%
+      pad_all: 0
+      scrollable: false
+      widgets:
+        - obj:
+            id: main_root
+            x: 0
+            y: 0
+            width: 1024
+            height: 600
+            bg_opa: TRANSP
+            border_width: 0
+            radius: 0
+            pad_all: 0
+            scrollable: false
+
+button:
+  - platform: restart
+    id: rt_restart
+    name: "Restart"
+    entity_category: config
+  # fetch the theme pack + wording fresh (a damaged pack, or testing)
+  - platform: template
+    name: "Download Theme Again"
+    icon: mdi:download
+    entity_category: config
+    on_press:
+      - lambda: id(rt).download_again();
+  # back to new (Wi-Fi, the encryption key, its language and settings, its
+  # theme - and Room Tiles' settings for it): disabled until enabled on the
+  # panel's device page, so it's never pressed (or offered to a voice
+  # assistant) by accident
+  - platform: template
+    name: "Factory Reset"
+    icon: mdi:restore-alert
+    entity_category: config
+    disabled_by_default: true
+    on_press:
+      - lambda: id(rt).factory_reset();
+  # the screen as it is, to Home Assistant: a PNG in Media > My media > room_tiles
+  - platform: template
+    name: "Take Screenshot"
+    icon: mdi:monitor-screenshot
+    entity_category: diagnostic
+    on_press:
+      - lambda: id(rt).take_screenshot();
+
+# Diagnostics: why each boot happened, uptime, memory headroom.
+debug:
+  update_interval: 60s
+
+text_sensor:
+  - platform: homeassistant
+    id: rt_link_revision
+    entity_id: sensor.room_tiles_panel_link
+    internal: true
+    on_value:
+      - lambda: id(rt).set_revision(x);
+  - platform: homeassistant
+    id: rt_link_url
+    entity_id: sensor.room_tiles_panel_link
+    attribute: url
+    internal: true
+    on_value:
+      - lambda: id(rt).set_base_url(x);
+  - platform: debug
+    reset_reason:
+      name: "Reset Reason"
+      entity_category: diagnostic
+
+sensor:
+  - platform: uptime
+    name: "Uptime"
+    entity_category: diagnostic
+  - platform: debug
+    free:
+      name: "Heap Free"
+      entity_category: diagnostic
+    block:
+      name: "Heap Max Block"
+      entity_category: diagnostic
+    psram:
+      name: "PSRAM Free"
+      entity_category: diagnostic
+  - platform: template
+    name: "Asset Area"
+    unit_of_measurement: KB
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 600s
+    lambda: "return id(rt).assets_size() / 1024.0f;"

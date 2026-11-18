@@ -1,0 +1,16 @@
+# Room Tiles panel flash layout (16 MB) - docs/DESIGN.md "Panel firmware".
+# FROZEN for release (2026-11-14): an update can't change it - a change is a
+# USB flash for every panel. Two firmware slots (an over-the-air update
+# writes the other one, so a bad update can always fall back), one asset
+# area for the downloaded theme pack + wording (assets/build_panel.py refuses
+# a theme that doesn't fit), a crash report area.
+# Sizes 2026-11-14: firmware 2.0 MiB (+1.2 MiB with the Wi-Fi chip's image to
+# come) of a 5 MiB slot; biggest theme 2.6 MiB of 5.56 MiB.
+# Name,   Type, SubType,  Offset,   Size
+nvs,      data, nvs,      0x9000,   0x10000
+otadata,  data, ota,      0x19000,  0x2000
+phy_init, data, phy,      0x1B000,  0x1000
+app0,     app,  ota_0,    0x20000,  0x500000
+app1,     app,  ota_1,    0x520000, 0x500000
+assets,   data, 0x40,     0xA20000, 0x5D0000
+coredump, data, coredump, 0xFF0000, 0x10000

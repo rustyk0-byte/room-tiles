@@ -1,0 +1,696 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Room Tiles",
+        "description": "Choisis les pièces à afficher dans Room Tiles. Tu pourras changer ça plus tard.",
+        "data": {
+          "areas": "Pièces",
+          "auto_add_areas": "Ajouter les nouvelles pièces automatiquement"
+        },
+        "data_description": {
+          "auto_add_areas": "Les pièces ajoutées plus tard dans Home Assistant apparaissent aussi dans Room Tiles."
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Room Tiles est déjà configuré."
+    },
+    "create_entry": {
+      "default": "Room Tiles est configuré pour {areas} pièces, avec une page de tuiles pour chacune et un plan de départ pour chaque étage.\n\n**[Ouvrir Room Tiles]({url})** à tout moment depuis la barre latérale.",
+      "found": "Room Tiles est configuré pour {areas} pièces, avec une page de tuiles pour chacune et un plan de départ pour chaque étage.\n\nRoom Tiles a trouvé des appareils compatibles ; ils s'affichent une fois que tu as **[terminé leur configuration]({url}?open=appliances)**.\n\nOuvre Room Tiles à tout moment depuis la barre latérale."
+    }
+  },
+  "issues": {
+    "restart_required": {
+      "title": "Redémarre Home Assistant pour terminer la mise à jour de Room Tiles",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Redémarrer Home Assistant",
+            "description": "Room Tiles a été mis à jour. Redémarrer Home Assistant maintenant pour terminer la mise à jour ?"
+          }
+        }
+      }
+    },
+    "missing_entities": {
+      "title": "Room Tiles utilise {count} entités qui n'existent plus",
+      "description": "Elles sont utilisées dans Room Tiles mais n'existent plus dans Home Assistant. Remplace-les ou retire-les dans Room Tiles, ou restaure-les.\n\n{entities}"
+    },
+    "area_lights_override_removed": {
+      "title": "Room Tiles : lumières des pièces modifiées",
+      "description": "L'entité qu'utilisait le bouton des lumières de ces pièces a été supprimée ; il allume maintenant toutes leurs lumières : {areas}. Tu peux en choisir une autre dans Room Tiles."
+    },
+    "appliance_question": {
+      "title": "{name} indique un état que Room Tiles ne connaît pas",
+      "description": "Dans Room Tiles, ouvre Appareils et indique ce qu'il signifie.\n\n{states}"
+    },
+    "panel_needs_firmware": {
+      "title": "Mettre à jour le firmware de {name}",
+      "description": "Le firmware de {name} est plus ancien que cette version de Room Tiles, il n'affiche donc qu'un avis de mise à jour. Il se met à jour tout seul d'ici quelques minutes ; sinon, réinstalle le firmware avec un câble USB."
+    },
+    "panel_needs_integration": {
+      "title": "Mettre à jour Room Tiles pour {name}",
+      "description": "{name} a un firmware Room Tiles plus récent que cette version de Room Tiles, il n'affiche donc qu'un avis de mise à jour. Mets à jour Room Tiles dans Home Assistant."
+    }
+  },
+  "entity": {
+    "update": {
+      "firmware": {
+        "name": "Firmware Room Tiles"
+      }
+    }
+  },
+  "services": {
+    "export_data": {
+      "name": "Exporter les données",
+      "description": "Écrit toute la configuration de Room Tiles (zones, tuiles, catalogue, cartes, repères) dans un fichier JSON de votre dossier de configuration.",
+      "fields": {
+        "file": {
+          "name": "Fichier",
+          "description": "Nom du fichier, relatif au dossier de configuration."
+        }
+      }
+    },
+    "import_data": {
+      "name": "Importer les données",
+      "description": "Remplace toute la configuration de Room Tiles par un fichier JSON de votre dossier de configuration. La configuration actuelle est d'abord enregistrée dans room_tiles_backups/ ; un fichier non valide ne change rien.",
+      "fields": {
+        "file": {
+          "name": "Fichier",
+          "description": "Nom du fichier, relatif au dossier de configuration."
+        }
+      }
+    },
+    "set_tile": {
+      "name": "Placer une tuile",
+      "description": "Place une tuile dans la grille d'une zone. Avec seulement une entité, son type et son nom viennent du catalogue ; sans entité ni type, l'emplacement est vidé ; le type 'map' n'a pas besoin d'entité.",
+      "fields": {
+        "area": {
+          "name": "Zone",
+          "description": "ID de la zone Room Tiles (p. ex. kitchen)."
+        },
+        "layout": {
+          "name": "Disposition",
+          "description": "Grille : 5x2 (10 tuiles) ou 6x3 (18 tuiles)."
+        },
+        "slot": {
+          "name": "Emplacement",
+          "description": "Position de la tuile, comptée à partir de 0, ligne par ligne."
+        },
+        "entity": {
+          "name": "Entité",
+          "description": "L'entité que la tuile commande."
+        },
+        "kind": {
+          "name": "Type",
+          "description": "Type de tuile. Laissez vide pour utiliser celui du catalogue."
+        },
+        "name": {
+          "name": "Nom",
+          "description": "Le nom court propre à cette tuile (15 caractères au plus). Laissez vide pour utiliser le nom court de l'entité."
+        }
+      }
+    },
+    "clear_tile": {
+      "name": "Vider une tuile",
+      "description": "Vide un emplacement de la grille d'une zone.",
+      "fields": {
+        "area": {
+          "name": "Zone",
+          "description": "ID de la zone Room Tiles (p. ex. kitchen)."
+        },
+        "layout": {
+          "name": "Disposition",
+          "description": "Grille : 5x2 (10 tuiles) ou 6x3 (18 tuiles)."
+        },
+        "slot": {
+          "name": "Emplacement",
+          "description": "Position de la tuile, comptée à partir de 0, ligne par ligne."
+        }
+      }
+    },
+    "move_tile": {
+      "name": "Déplacer une tuile",
+      "description": "Échange deux emplacements de la grille d'une zone (vers un emplacement vide, c'est un déplacement).",
+      "fields": {
+        "area": {
+          "name": "Zone",
+          "description": "ID de la zone Room Tiles (p. ex. kitchen)."
+        },
+        "layout": {
+          "name": "Disposition",
+          "description": "Grille : 5x2 (10 tuiles) ou 6x3 (18 tuiles)."
+        },
+        "from_slot": {
+          "name": "Depuis l'emplacement",
+          "description": "L'emplacement à déplacer."
+        },
+        "to_slot": {
+          "name": "Vers l'emplacement",
+          "description": "Où elle va."
+        }
+      }
+    },
+    "auto_board": {
+      "name": "Configurer les tableaux automatiquement",
+      "description": "Remplace les tableaux par leurs tuiles automatiques ; les nouveaux appareils, aspirateurs robots et piscines y sont ensuite ajoutés d'eux-mêmes.",
+      "fields": {
+        "area": {
+          "name": "Zone",
+          "description": "ID de la zone Room Tiles (p. ex. kitchen). Laissez vide pour toutes les zones."
+        },
+        "layout": {
+          "name": "Disposition",
+          "description": "Grille : 5x2 (10 tuiles) ou 6x3 (18 tuiles). Laissez vide pour les deux."
+        }
+      }
+    },
+    "add_marker": {
+      "name": "Ajouter un repère",
+      "description": "Place l'icône d'une entité sur une carte. Répond avec l'ID du nouveau repère.",
+      "fields": {
+        "map": {
+          "name": "Carte",
+          "description": "ID de la carte (p. ex. house)."
+        },
+        "entity": {
+          "name": "Entité",
+          "description": "L'entité à placer."
+        },
+        "x": {
+          "name": "X",
+          "description": "Position X dans les unités de la carte."
+        },
+        "y": {
+          "name": "Y",
+          "description": "Position Y dans les unités de la carte."
+        },
+        "show_name": {
+          "name": "Afficher le nom",
+          "description": "Affiche le nom de l'entité au-dessus de son icône."
+        },
+        "layer": {
+          "name": "Calque",
+          "description": "Le calque de la carte (p. ex. house, rooms). Par défaut : le premier calque de la carte."
+        }
+      }
+    },
+    "update_marker": {
+      "name": "Modifier un repère",
+      "description": "Déplace un repère ou change ses options.",
+      "fields": {
+        "marker": {
+          "name": "Repère",
+          "description": "ID du repère."
+        },
+        "map": {
+          "name": "Carte",
+          "description": "Le déplacer vers une autre carte."
+        },
+        "x": {
+          "name": "X",
+          "description": "Position X dans les unités de la carte."
+        },
+        "y": {
+          "name": "Y",
+          "description": "Position Y dans les unités de la carte."
+        },
+        "show_name": {
+          "name": "Afficher le nom",
+          "description": "Affiche le nom de l'entité au-dessus de son icône."
+        },
+        "layer": {
+          "name": "Calque",
+          "description": "Le calque de la carte (p. ex. house, rooms). Par défaut : le premier calque de la carte."
+        }
+      }
+    },
+    "remove_marker": {
+      "name": "Retirer un repère",
+      "description": "Retire un repère de sa carte.",
+      "fields": {
+        "marker": {
+          "name": "Repère",
+          "description": "ID du repère."
+        }
+      }
+    },
+    "reset_short_names": {
+      "name": "Réinitialiser les noms courts",
+      "description": "Remet les noms courts des entités du catalogue à ceux que Room Tiles propose d'après leurs noms complets, comme lors de la configuration. Pour toutes les entités ou seulement celles indiquées. Renvoie combien ont changé.",
+      "fields": {
+        "entities": {
+          "name": "Entités",
+          "description": "Seulement ces entités (laissez vide pour toutes celles du catalogue)."
+        }
+      }
+    },
+    "set_short_name": {
+      "name": "Définir le nom court",
+      "description": "Définit le nom court (15 caractères au plus) qu'une zone ou une entité affiche sur les tuiles et la carte. Les sélecteurs et les dialogues gardent le nom complet.",
+      "fields": {
+        "area": {
+          "name": "Zone",
+          "description": "La zone à renommer (indiquez une zone ou une entité)."
+        },
+        "entity": {
+          "name": "Entité",
+          "description": "L'entité à renommer (indiquez une zone ou une entité)."
+        },
+        "short_name": {
+          "name": "Nom court",
+          "description": "15 caractères au plus."
+        }
+      }
+    },
+    "suggest_short_name": {
+      "name": "Proposer un nom court",
+      "description": "Un nom court proposé d'après le nom complet d'une zone ou d'une entité, selon les règles d'abréviation de Room Tiles. Rien n'est modifié.",
+      "fields": {
+        "area": {
+          "name": "Zone",
+          "description": "La zone (indiquez une zone ou une entité)."
+        },
+        "entity": {
+          "name": "Entité",
+          "description": "L'entité (indiquez une zone ou une entité)."
+        }
+      }
+    },
+    "set_area_lights": {
+      "name": "Définir les lumières de la zone",
+      "description": "Choisit ce que commande le bouton des lumières d'une zone : toutes les lumières de la zone Home Assistant sauf celles exclues (par défaut), ou une seule entité comme un groupe de lumières.",
+      "fields": {
+        "area": {
+          "name": "Zone",
+          "description": "La zone."
+        },
+        "entity": {
+          "name": "Utiliser cette entité",
+          "description": "Facultatif : commander seulement cette entité (p. ex. un groupe de lumières). Laissez vide pour toutes les lumières de la zone."
+        },
+        "exclude": {
+          "name": "Exclure",
+          "description": "Lumières de la zone que le bouton doit laisser tranquilles (p. ex. le rétroéclairage d'un écran). Remplace la liste actuelle."
+        }
+      }
+    },
+    "area_lights": {
+      "name": "Lumières de la zone",
+      "description": "Commande les lumières d'une zone comme son bouton des lumières. Basculer : si l'une est allumée, toutes s'éteignent ; sinon toutes s'allument.",
+      "fields": {
+        "area": {
+          "name": "Zone",
+          "description": "La zone."
+        },
+        "action": {
+          "name": "Action",
+          "description": "toggle, turn_on ou turn_off."
+        }
+      }
+    },
+    "catalog_add": {
+      "name": "Ajouter au catalogue",
+      "description": "Propose une entité dans le sélecteur de tuiles de Room Tiles. Son type de tuile est déduit de Home Assistant s'il n'est pas indiqué ; son nom court est proposé d'après son nom complet s'il n'est pas indiqué (et signalé pour vérification s'il a fallu l'abréger).",
+      "fields": {
+        "entity": {
+          "name": "Entité",
+          "description": "L'entité à proposer."
+        },
+        "kind": {
+          "name": "Type",
+          "description": "Type de tuile. Laissez vide pour le déduire."
+        },
+        "short_name": {
+          "name": "Nom court",
+          "description": "15 caractères au plus. Laissez vide pour une proposition."
+        }
+      }
+    },
+    "catalog_remove": {
+      "name": "Retirer du catalogue",
+      "description": "Retire une entité du sélecteur de tuiles de Room Tiles. Les tuiles qui l'utilisent déjà restent.",
+      "fields": {
+        "entity": {
+          "name": "Entité",
+          "description": "L'entité à retirer."
+        }
+      }
+    },
+    "set_area": {
+      "name": "Définir la zone",
+      "description": "Affiche ou masque une zone Room Tiles, ou la déplace dans l'ordre des zones.",
+      "fields": {
+        "area": {
+          "name": "Zone",
+          "description": "La zone."
+        },
+        "hidden": {
+          "name": "Masquée",
+          "description": "Masquer la zone dans Room Tiles (ses tuiles sont conservées)."
+        },
+        "position": {
+          "name": "Position",
+          "description": "Sa place dans l'ordre (0 = première)."
+        }
+      }
+    },
+    "set_settings": {
+      "name": "Modifier les réglages",
+      "description": "Modifie les réglages propres à Room Tiles.",
+      "fields": {
+        "auto_add_areas": {
+          "name": "Inclure automatiquement les nouvelles zones",
+          "description": "Les zones ajoutées plus tard à Home Assistant apparaissent tout de suite dans Room Tiles (sinon elles arrivent masquées)."
+        },
+        "auto_update_panels": {
+          "name": "Mettre à jour les panneaux automatiquement",
+          "description": "Les panneaux muraux installent d'eux-mêmes un firmware Room Tiles plus récent quand personne ne les utilise."
+        }
+      }
+    },
+    "set_markers": {
+      "name": "Définir les repères",
+      "description": "Remplace tous les repères d'une carte en une seule étape (utilisé par Enregistrer de l'éditeur de cartes). Chaque repère : entity, x, y, layer, show_name, et son id pour le garder.",
+      "fields": {
+        "map": {
+          "name": "Carte",
+          "description": "ID de la carte."
+        },
+        "markers": {
+          "name": "Repères",
+          "description": "La liste complète des repères de la carte."
+        }
+      }
+    },
+    "set_map": {
+      "name": "Définir la carte",
+      "description": "Remplace le dessin d'une carte en une seule étape (utilisé par Enregistrer de l'éditeur de cartes). Les champs non indiqués sont conservés. Les repères d'un calque supprimé passent sur le premier calque.",
+      "fields": {
+        "map": {
+          "name": "Carte",
+          "description": "ID de la carte."
+        },
+        "name": {
+          "name": "Nom",
+          "description": "Le nom de la carte dans le sélecteur de cartes."
+        },
+        "bounds": {
+          "name": "Limites",
+          "description": "[x0, y0, x1, y1] : la zone que montre la vue de la carte entière, en unités de la carte."
+        },
+        "ha_floor": {
+          "name": "Étage",
+          "description": "L'étage HA que montre cette carte, le cas échéant."
+        },
+        "wall_width": {
+          "name": "Épaisseur des murs",
+          "description": "Épaisseur des murs en unités de la carte."
+        },
+        "walls": {
+          "name": "Murs",
+          "description": "Segments de mur [x1, y1, x2, y2]."
+        },
+        "windows": {
+          "name": "Fenêtres",
+          "description": "Segments de fenêtre [x1, y1, x2, y2]."
+        },
+        "openings": {
+          "name": "Ouvertures",
+          "description": "Passages / limites ouvertes [x1, y1, x2, y2] (en pointillés)."
+        },
+        "shapes": {
+          "name": "Formes",
+          "description": "Surfaces remplies, chacune avec un style (floor, water, grass, deck ou paving) et ses points."
+        },
+        "zones": {
+          "name": "Pièces",
+          "description": "Pièces / espaces, chacun avec id, name, points, area, label et outdoor."
+        },
+        "links": {
+          "name": "Liens",
+          "description": "Sauts vers une autre carte, chacun avec to (ID de carte), at (point) et label."
+        },
+        "layers": {
+          "name": "Calques",
+          "description": "Calques de repères, chacun avec id, name et min_zoom."
+        }
+      }
+    },
+    "add_map": {
+      "name": "Ajouter une carte",
+      "description": "Ajoute une nouvelle carte vide (un étage, un jardin…). Renvoie son ID.",
+      "fields": {
+        "name": {
+          "name": "Nom",
+          "description": "Le nom de la nouvelle carte."
+        },
+        "ha_floor": {
+          "name": "Étage",
+          "description": "L'étage HA qu'elle montre, le cas échéant."
+        }
+      }
+    },
+    "remove_map": {
+      "name": "Retirer une carte",
+      "description": "Supprime une carte avec ses repères (et les liens vers elle). La dernière carte ne peut pas être retirée.",
+      "fields": {
+        "map": {
+          "name": "Carte",
+          "description": "ID de la carte."
+        }
+      }
+    },
+    "order_maps": {
+      "name": "Ordonner les cartes",
+      "description": "Définit l'ordre du sélecteur de cartes.",
+      "fields": {
+        "order": {
+          "name": "Ordre",
+          "description": "Chaque ID de carte, dans le nouvel ordre."
+        }
+      }
+    },
+    "set_appliance": {
+      "name": "Définir un appareil",
+      "description": "Ajoute ou remplace le profil d'un appareil : le capteur que lit sa tuile.",
+      "fields": {
+        "appliance": {
+          "name": "Appareil",
+          "description": "Le profil : id, nom et une ou deux unités (libellé, type, préréglage, entité d'état, entités de durée et de porte, ce qui efface « terminé »)."
+        }
+      }
+    },
+    "remove_appliance": {
+      "name": "Retirer un appareil",
+      "description": "Retire le profil d'un appareil et son capteur.",
+      "fields": {
+        "appliance": {
+          "name": "Appareil",
+          "description": "L'ID de l'appareil."
+        }
+      }
+    },
+    "clear_appliance": {
+      "name": "Vider un appareil",
+      "description": "Marque un appareil terminé comme vidé (ce que fait un appui sur sa tuile).",
+      "fields": {
+        "appliance": {
+          "name": "Appareil",
+          "description": "L'ID de l'appareil."
+        },
+        "unit": {
+          "name": "Unité",
+          "description": "Seulement cette unité (par défaut : toutes)."
+        }
+      }
+    },
+    "combine_appliances": {
+      "name": "Combiner des appareils",
+      "description": "Met deux appareils seuls sur une tuile (le premier en haut) ; les tuiles et repères du second passent à l'appareil combiné.",
+      "fields": {
+        "appliance": {
+          "name": "Appareil",
+          "description": "L'appareil du haut."
+        },
+        "with": {
+          "name": "Avec",
+          "description": "L'appareil qui le rejoint."
+        },
+        "name": {
+          "name": "Nom",
+          "description": "Nom de l'appareil combiné (par défaut : Lessive, Lave-vaisselle ou les deux noms)."
+        }
+      }
+    },
+    "split_appliance": {
+      "name": "Séparer un appareil",
+      "description": "Donne à une unité d'un appareil à deux unités sa propre tuile.",
+      "fields": {
+        "appliance": {
+          "name": "Appareil",
+          "description": "L'appareil à deux unités."
+        },
+        "unit": {
+          "name": "Unité",
+          "description": "L'unité qui reçoit sa propre tuile."
+        }
+      }
+    },
+    "set_pool": {
+      "name": "Définir piscine / spa",
+      "description": "Ajoute ou remplace un système piscine / spa : les capteurs que lisent ses tuiles Piscine, Spa et Piscine / Spa.",
+      "fields": {
+        "pool": {
+          "name": "Piscine / spa",
+          "description": "Le système : id, nom, agencement de l'équipement (shared, separate, pool, spa) et les entités de chaque bassin."
+        }
+      }
+    },
+    "remove_pool": {
+      "name": "Retirer piscine / spa",
+      "description": "Retire un système piscine / spa et ses capteurs.",
+      "fields": {
+        "pool": {
+          "name": "Piscine / spa",
+          "description": "L'ID du système."
+        }
+      }
+    },
+    "pool_set_target": {
+      "name": "Définir la consigne piscine / spa",
+      "description": "Définit la consigne du chauffage d'un bassin.",
+      "fields": {
+        "entity": {
+          "name": "Entité",
+          "description": "Un capteur piscine / spa de Room Tiles (le combiné agit sur le bassin actif)."
+        },
+        "temperature": {
+          "name": "Température",
+          "description": "La consigne."
+        }
+      }
+    },
+    "pool_set_heater": {
+      "name": "Chauffage piscine / spa marche / arrêt",
+      "description": "Allume (chauffe) ou éteint le chauffage d'un bassin.",
+      "fields": {
+        "entity": {
+          "name": "Entité",
+          "description": "Un capteur piscine / spa de Room Tiles (le combiné agit sur le bassin actif)."
+        },
+        "heater": {
+          "name": "Chauffage",
+          "description": "Marche ou arrêt."
+        }
+      }
+    },
+    "pool_set_on": {
+      "name": "Piscine / spa marche / arrêt",
+      "description": "Allume ou éteint un bassin : sur un système partagé, allumer le spa, c'est le mode spa ; sinon la pompe de ce bassin.",
+      "fields": {
+        "entity": {
+          "name": "Entité",
+          "description": "Un capteur piscine / spa de Room Tiles."
+        },
+        "on": {
+          "name": "Marche",
+          "description": "Marche ou arrêt."
+        },
+        "with_heater": {
+          "name": "Avec son chauffage",
+          "description": "Son chauffage suit : allumé avec lui, éteint quand il s'éteint. Par défaut : le réglage propre au spa (activé sauf s'il est désactivé dans ses réglages)."
+        }
+      }
+    },
+    "set_robot": {
+      "name": "Définir un aspirateur robot",
+      "description": "Ajoute ou remplace le profil d'un aspirateur robot : le capteur que lit sa tuile.",
+      "fields": {
+        "robot": {
+          "name": "Aspirateur robot",
+          "description": "Le profil : id, nom, son entité aspirateur et (Matter) son capteur d'erreur de fonctionnement."
+        }
+      }
+    },
+    "remove_robot": {
+      "name": "Retirer un aspirateur robot",
+      "description": "Retire le profil d'un aspirateur robot et son capteur.",
+      "fields": {
+        "robot": {
+          "name": "Aspirateur robot",
+          "description": "L'ID du profil."
+        }
+      }
+    },
+    "ignore_device": {
+      "name": "Ignorer un appareil",
+      "description": "Ignore un appareil, une piscine / un spa ou un aspirateur trouvé, ou retire de Room Tiles un appareil configuré, pour qu'il attende sous Ignorés sur la page Appareils.",
+      "fields": {
+        "kind": {
+          "name": "Type",
+          "description": "appliance, pool ou robot."
+        },
+        "device": {
+          "name": "Appareil",
+          "description": "L'appareil trouvé (ou configuré) tel que la page Appareils le liste."
+        },
+        "set_up_id": {
+          "name": "ID de configuration",
+          "description": "S'il est configuré : son ID ; il est retiré de Room Tiles."
+        }
+      }
+    },
+    "set_area_light_entity": {
+      "name": "Entité des lumières de la zone",
+      "description": "Si Room Tiles crée sa lumière « Lumières » pour une zone (p. ex. Lumières Cuisine) (toutes les lumières de la zone ensemble, comme le bouton des lumières). Désactivé la retire, avec ses tuiles et repères.",
+      "fields": {
+        "area": {
+          "name": "Zone",
+          "description": "La zone."
+        },
+        "enabled": {
+          "name": "La créer",
+          "description": "Activé : le bouton des lumières de la zone (et la lumière Room Tiles correspondante), créés dès que la zone a une lumière. Désactivé : aucun pour cette zone."
+        }
+      }
+    },
+    "accept_short_names": {
+      "name": "Accepter les noms courts",
+      "description": "Confirme tels quels les noms courts en attente de vérification (des zones et des entités). Ceux trop larges pour une tuile restent en attente (la réponse les liste).",
+      "fields": {
+        "entities": {
+          "name": "Entités",
+          "description": "Facultatif : seulement ceux-ci. Laissez vide pour tous."
+        }
+      }
+    },
+    "vacuum_queue": {
+      "name": "File de pièces de l'aspirateur",
+      "description": "La file de pièces d'un aspirateur robot : ajouter, retirer ou déplacer une pièce (une zone), vider la file, démarrer, mettre en pause, passer à la pièce suivante, ou arrêter et vider.",
+      "fields": {
+        "robot": {
+          "name": "Aspirateur robot",
+          "description": "L'ID Room Tiles de l'aspirateur robot."
+        },
+        "action": {
+          "name": "Action",
+          "description": "add, remove, move, clear, start, pause, skip ou stop."
+        },
+        "area": {
+          "name": "Zone",
+          "description": "La zone à ajouter, retirer ou déplacer."
+        },
+        "index": {
+          "name": "Position",
+          "description": "Où la déplacer dans la file (0 = la suivante)."
+        },
+        "start": {
+          "name": "Lancer le nettoyage",
+          "description": "Avec add : lance la file si l'aspirateur est inactif (ne reprend jamais un aspirateur en pause)."
+        }
+      }
+    }
+  }
+}

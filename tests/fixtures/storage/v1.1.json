@@ -1,0 +1,64 @@
+{
+ "version": 1,
+ "minor_version": 1,
+ "key": "room_tiles",
+ "data": {
+  "areas": [
+   {
+    "id": "office",
+    "name": "Robin's Office",
+    "ha_area": "office",
+    "tiles": {
+     "5x2": [
+      {
+       "kind": "dimmable_light",
+       "entity": "light.main",
+       "name": "Robin's Main Light"
+      },
+      {
+       "kind": "dimmable_light",
+       "entity": "light.desk",
+       "name": "Desk"
+      },
+      {
+       "kind": "onoff_light",
+       "entity": "light.shelf",
+       "name": "Shelf Lights"
+      },
+      {
+       "kind": "map",
+       "name": "Map"
+      },
+      null
+     ]
+    }
+   }
+  ],
+  "maps": [
+   {
+    "id": "home",
+    "name": "Home",
+    "bounds": [
+     0,
+     0,
+     10,
+     10
+    ]
+   }
+  ],
+  "catalog": {
+   "entries": [
+    {
+     "entity": "light.main",
+     "kind": "dimmable_light",
+     "name": "Robin's Main Light"
+    },
+    {
+     "entity": "light.shelf",
+     "kind": "onoff_light",
+     "name": "Shelf Lights"
+    }
+   ]
+  }
+ }
+}

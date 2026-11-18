@@ -1,0 +1,183 @@
+{
+ "version": 1,
+ "minor_version": 4,
+ "key": "room_tiles",
+ "data": {
+  "areas": [
+   {
+    "id": "office",
+    "name": "Robin's Office",
+    "floor": "ground",
+    "short_name": "Office",
+    "review": false,
+    "hidden": false,
+    "lights": "light.office",
+    "tiles": {
+     "5x2": [
+      {
+       "kind": "dimmable_light",
+       "entity": "light.main"
+      },
+      {
+       "kind": "dimmable_light",
+       "entity": "light.desk",
+       "name": "Desk"
+      },
+      {
+       "kind": "map"
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "6x3": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    },
+    "lights_exclude": [
+     "light.backlight"
+    ]
+   }
+  ],
+  "maps": [
+   {
+    "id": "home",
+    "name": "Home",
+    "bounds": [
+     0.0,
+     0.0,
+     400.0,
+     240.0
+    ],
+    "ha_floor": null,
+    "generated": false,
+    "wall_width": 6.0,
+    "walls": [
+     [
+      0.0,
+      0.0,
+      400.0,
+      0.0
+     ]
+    ],
+    "windows": [
+     [
+      10.0,
+      0.0,
+      40.0,
+      0.0
+     ]
+    ],
+    "openings": [],
+    "shapes": [
+     {
+      "style": "water",
+      "points": [
+       [
+        300.0,
+        100.0
+       ],
+       [
+        350.0,
+        100.0
+       ],
+       [
+        325.0,
+        150.0
+       ]
+      ]
+     }
+    ],
+    "zones": [
+     {
+      "id": "office",
+      "name": "Office",
+      "points": [
+       [
+        0.0,
+        0.0
+       ],
+       [
+        100.0,
+        0.0
+       ],
+       [
+        100.0,
+        100.0
+       ],
+       [
+        0.0,
+        100.0
+       ]
+      ],
+      "area": "office",
+      "label": null,
+      "outdoor": false
+     }
+    ],
+    "links": [],
+    "layers": [
+     {
+      "id": "house",
+      "name": "House",
+      "min_zoom": 1.0
+     },
+     {
+      "id": "rooms",
+      "name": "Rooms",
+      "min_zoom": 1.7
+     }
+    ]
+   }
+  ],
+  "markers": [
+   {
+    "id": "m1",
+    "map": "home",
+    "entity": "light.main",
+    "x": 50.0,
+    "y": 50.0,
+    "group": null,
+    "show_name": true,
+    "layer": "rooms"
+   }
+  ],
+  "catalog": {
+   "entries": [
+    {
+     "entity": "light.main",
+     "kind": "dimmable_light",
+     "short_name": "Main Light",
+     "review": false,
+     "group": null,
+     "auto": true
+    }
+   ],
+   "hidden": []
+  },
+  "settings": {
+   "auto_add_areas": false
+  }
+ }
+}

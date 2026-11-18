@@ -1,0 +1,12 @@
+# Room Tiles fills this in (report.py issue: this form, its "report" field).
+name: "Problem with an appliance, pool or vacuum"
+description: "Sent from Room Tiles: an appliance, pool or vacuum and its cycle data."
+labels: ["problem"]
+body:
+  - type: textarea
+    id: report
+    attributes:
+      label: "Report"
+      description: "Send this from Room Tiles: Appliances, then Report a problem on its card. It adds the cycle data."
+    validations:
+      required: true

@@ -1,0 +1,32 @@
+# A generic Room Tiles image (docs/TODO.md Step 4 "Installing and updating
+# panels", phase B): nothing about one panel or one home inside, so one image
+# fits every panel of a board.
+# - the name gets the chip's ID: room-tiles-a1b2c3 (HA's device name stays
+#   changeable)
+# - no API key: Home Assistant sets one when it adds the panel (the panel
+#   says "add this panel in Home Assistant" until then)
+# - no Wi-Fi network: until it has one the panel opens a hotspot named like
+#   the panel; its page (captive portal) takes the network and password. Also
+#   Improv over USB (the install page). Later: Wi-Fi on the panel's screen.
+
+esphome:
+  name: room-tiles
+  name_add_mac_suffix: true
+  friendly_name: Room Tiles Panel
+
+api:
+  encryption: {}
+
+wifi:
+  # (no network: the hotspot below until one is set; it's then kept)
+  ap: {}
+
+captive_portal:
+
+improv_serial:
+
+# Updates come from Room Tiles only (its update entity in HA; the panel
+# downloads from HA and installs - room_tiles.cpp). No ESPHome OTA: its key
+# would have to be built in, and an open one would let anyone flash it.
+room_tiles:
+  generic: true
