@@ -1,0 +1,50 @@
+name: Screenshots
+
+# The landing page's pictures (docs/TODO.md "Landing page + browser demo"):
+# the browser demo built from this commit - its made-up home from the real
+# integration (tools/demo/make_demo.py) - opened in a headless browser and
+# photographed (tools/demo/screenshots.mjs). Only when asked (Actions >
+# Screenshots > Run workflow); the pictures come as an artifact, to look
+# over before they go in tools/site/img/.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements_test.txt
+      - name: The demo home (the real integration in HA's test harness)
+        run: |
+          pip install --quiet -r requirements_test.txt pillow
+          DEMO_OUT=demo-data python -m pytest -q tools/demo/make_demo.py -p no:cacheprovider
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: The site (the dashboard's theme pictures, the demo)
+        run: |
+          (cd frontend && npm install --no-audit --no-fund)
+          python assets/build_web.py custom_components/room_tiles/frontend
+          python tools/make_site.py site --demo-data demo-data
+      - name: A browser (Chromium) and the dashboard's font
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq fonts-roboto
+          (cd tools/demo && npm install --no-save --no-audit --no-fund playwright@1.49.1 && npx playwright install --with-deps chromium)
+      - name: The pictures
+        run: |
+          python -m http.server 8000 --directory site >/dev/null 2>&1 &
+          sleep 2
+          node tools/demo/screenshots.mjs http://localhost:8000/demo/ shots
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: shots/
+          retention-days: 14
