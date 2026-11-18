@@ -813,6 +813,7 @@
     "panels.upload": "Subir firmware",
     "panels.uploaded": "Añadido para {board}: {label}",
     "panels.uploading": "Subiendo…",
+    "panels.waiting": "Se actualiza cuando nadie lo use",
     "picker.add_markers": "Añadir marcadores",
     "picker.all_areas_n": "Todas las zonas ({n})",
     "picker.choose": "Elige una entidad",

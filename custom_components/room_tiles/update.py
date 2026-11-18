@@ -52,8 +52,10 @@ def firmware_rows(hass: HomeAssistant, store: Any) -> dict[str, Any]:
             status = "unknown"  # (not heard from since HA started)
         elif not running.generic:
             status = "hand_built"
-        elif dev.device_id in store.fw_install:
+        elif store.firmware_installing(dev.device_id):
             status = "updating"
+        elif dev.device_id in store.fw_install:
+            status = "waiting"  # (an automatic one: until nobody's using the panel)
         elif image is not None and image.build != running.build:
             status = "available"
         else:
@@ -172,7 +174,7 @@ class PanelFirmwareUpdate(UpdateEntity):
 
     @property
     def in_progress(self) -> bool:
-        return self._device_id in self._store.fw_install
+        return self._store.firmware_installing(self._device_id)
 
     @property
     def auto_update(self) -> bool:

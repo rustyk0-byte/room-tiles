@@ -812,6 +812,7 @@
     "panels.upload": "Enviar firmware",
     "panels.uploaded": "Adicionado para {board}: {label}",
     "panels.uploading": "Enviando…",
+    "panels.waiting": "Atualiza quando ninguém estiver usando",
     "picker.add_markers": "Adicionar marcadores",
     "picker.all_areas_n": "Todas as áreas ({n})",
     "picker.choose": "Escolha uma entidade",

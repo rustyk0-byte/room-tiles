@@ -91,6 +91,9 @@ export class RtPanels extends LitElement {
           ${p.entity_id ? html`<button class="primary" @click=${() => this._install(p)}>${t("panels.install")}</button>` : nothing}`;
       case "updating":
         return html`<span class="state busy">${t("panels.updating")}</span>`;
+      case "waiting": // (an automatic update: until nobody's using the panel - Install starts it now)
+        return html`<span class="state">${t("panels.waiting")}: ${p.latest}</span>
+          ${p.entity_id ? html`<button class="primary" @click=${() => this._install(p)}>${t("panels.install")}</button>` : nothing}`;
       case "hand_built":
         return html`<span class="state">${t("panels.hand_built")}</span>`;
       case "unknown":

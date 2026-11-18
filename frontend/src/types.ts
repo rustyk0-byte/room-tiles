@@ -207,7 +207,7 @@ export interface PanelFirmwareRow {
   running: string | null;
   latest: string | null;
   entity_id: string | null;
-  status: "current" | "available" | "updating" | "hand_built" | "unknown";
+  status: "current" | "available" | "waiting" | "updating" | "hand_built" | "unknown";
   auto: boolean;
 }
 

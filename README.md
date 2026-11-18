@@ -286,6 +286,9 @@ you turn it off. Each panel waits until nobody's using it:
   with no touch (and, on the round panel, no turn of the knob) - each use
   starts the 10 minutes over.
 
+Until then, the Panels page shows **Updates when nobody's using it** beside
+the panel.
+
 Then it shows "Downloading the update…" and "Installing the update…",
 restarts (a minute or two) and comes back to its board. Once it has
 started, a touch doesn't stop it. A panel that's dark when its update

@@ -812,6 +812,7 @@
     "panels.upload": "Firmware hochladen",
     "panels.uploaded": "Hinzugefügt für {board}: {label}",
     "panels.uploading": "Wird hochgeladen…",
+    "panels.waiting": "Aktualisiert sich, wenn es niemand benutzt",
     "picker.add_markers": "Marker hinzufügen",
     "picker.all_areas_n": "Alle Bereiche ({n})",
     "picker.choose": "Eine Entität wählen",

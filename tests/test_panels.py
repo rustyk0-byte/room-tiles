@@ -550,6 +550,29 @@ async def test_firmware_tries_survive_a_restart(hass: HomeAssistant, hass_storag
     assert again.fw_tries == {("dev1", "abc"): 3}
 
 
+async def test_an_automatic_update_waits_until_the_panel_fetches_it(hass: HomeAssistant) -> None:
+    """The Panels page and HA's update card: an automatic install is
+    "waiting" until the panel fetches the image (nobody's using it then);
+    one asked for by hand is under way at once."""
+    from types import SimpleNamespace
+
+    from custom_components.room_tiles.store import RoomTilesStore
+
+    store = RoomTilesStore(hass)
+    await store.async_load()
+    store.fw_images = {"b": SimpleNamespace(build="new")}
+    store.fw_install["dev1"] = "new"
+    store.fw_auto.add("dev1")
+    assert not store.firmware_installing("dev1")  # (waiting)
+    store.firmware_downloaded("dev1", "old")  # (another build: still waiting)
+    assert not store.firmware_installing("dev1")
+    store.firmware_downloaded("dev1", "new")
+    assert store.firmware_installing("dev1")
+    store.firmware_install("dev2", "new")  # (by hand)
+    assert store.firmware_installing("dev2")
+    assert not store.firmware_installing("dev3")
+
+
 async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path) -> None:
     """Room Tiles updates its panels: by itself when they run something
     older ("Update panels automatically", the offer marked auto), never with

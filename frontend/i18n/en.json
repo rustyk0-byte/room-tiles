@@ -818,6 +818,7 @@
     "panels.upload": "Upload firmware",
     "panels.uploaded": "Added for {board}: {label}",
     "panels.uploading": "Uploading…",
+    "panels.waiting": "Updates when nobody's using it",
     "picker.add_markers": "Add markers",
     "picker.all_areas_n": "All areas ({n})",
     "picker.choose": "Choose an entity",

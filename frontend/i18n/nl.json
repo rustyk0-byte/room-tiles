@@ -812,6 +812,7 @@
     "panels.upload": "Firmware uploaden",
     "panels.uploaded": "Toegevoegd voor {board}: {label}",
     "panels.uploading": "Uploaden…",
+    "panels.waiting": "Werkt bij wanneer niemand het gebruikt",
     "picker.add_markers": "Markeringen toevoegen",
     "picker.all_areas_n": "Alle ruimtes ({n})",
     "picker.choose": "Kies een entiteit",

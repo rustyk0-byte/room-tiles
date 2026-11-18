@@ -815,6 +815,7 @@
     "panels.upload": "Envoyer un firmware",
     "panels.uploaded": "Ajouté pour {board} : {label}",
     "panels.uploading": "Envoi…",
+    "panels.waiting": "Se met à jour quand personne ne l'utilise",
     "picker.add_markers": "Ajouter des repères",
     "picker.all_areas_n": "Toutes les zones ({n})",
     "picker.choose": "Choisir une entité",

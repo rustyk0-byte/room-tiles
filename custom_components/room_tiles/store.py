@@ -116,6 +116,9 @@ class RoomTilesStore:
         self.fw_reports: dict = {}
         self.fw_install: dict[str, str] = {}
         self.fw_auto: set[str] = set()
+        # the build each panel last fetched (PanelFirmwareView): an automatic
+        # install has started once it's the one asked for (firmware_installing)
+        self.fw_fetched: dict[str, str] = {}
         self.fw_tries: dict[tuple[str, str], int] = {}
         self.fw_listeners: list[Callable[[], None]] = []
         self.fw_rescan: Callable[[], Any] | None = None  # (__init__: read the images again)
@@ -222,10 +225,22 @@ class RoomTilesStore:
 
     @callback
     def firmware_downloaded(self, device_id: str, build: str) -> None:
-        """A panel fetched an image: counted (firmware.AUTO_TRIES)."""
+        """A panel fetched an image: counted (firmware.AUTO_TRIES) - and an
+        install waiting for the panel to be unused has started."""
         key = (device_id, build)
         self.fw_tries[key] = self.fw_tries.get(key, 0) + 1
         self._save_fw_tries()
+        started = self.fw_install.get(device_id) == build and self.fw_fetched.get(device_id) != build
+        self.fw_fetched[device_id] = build
+        if started:
+            self.firmware_changed()
+
+    def firmware_installing(self, device_id: str) -> bool:
+        """An install is under way: one asked for by hand (the panel installs
+        it right away), or an automatic one the panel has started fetching -
+        not one still waiting for nobody to be using the panel."""
+        build = self.fw_install.get(device_id)
+        return build is not None and (device_id not in self.fw_auto or self.fw_fetched.get(device_id) == build)
 
     @callback
     def _save_fw_tries(self) -> None:
