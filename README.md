@@ -315,6 +315,11 @@ for about a minute and restarts once more. Leave it plugged in.
   Tap it twice to start over. (Not added to Home Assistant yet? Do that
   first.)
 
+## Support
+
+Room Tiles is free. If you'd like to help cover its development costs:
+[GitHub Sponsors](https://github.com/sponsors/rustyk0-byte).
+
 ## License
 
 Apache License 2.0 ([LICENSE](LICENSE)). The panel firmware images are
