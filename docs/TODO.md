@@ -303,6 +303,16 @@ Its board can be tried again (2026-11-18). Its code first compiled in the
 first install is over USB (a new flash layout: no update from the old
 firmware), then updates come like every other panel's.
 
+**First install done 2026-11-18** through the browser install page (ESP Web
+Tools, 0.1.0b1): flashed, language, Wi-Fi, added in HA. Found: the page
+asks for the USB port again after flashing (the S3's own USB re-enumerates
+for Improv); a board that ran ESPHome before is recognized by HA, which
+offers Reconfigure on the old device - the panel then never connects (HA's
+ESPHome update entity trips on the old dashboard config) until the old
+device is deleted and the panel is Added fresh (both now in the README and
+the install page). Next: try every screen on the hardware (strip, knob,
+settings, color picker, idle clock), then an update.
+
 A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
 480x480, 8 MB PSRAM, 16 MB flash, CST826 touch, a rotary knob with a press).
 
