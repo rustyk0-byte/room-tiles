@@ -55,8 +55,10 @@ export function parseUnits(tile: unknown): ApplianceUnit[] {
     .slice(0, 2);
 }
 
-/** Static URL base of the integration's frontend files (frontend.py STATIC_URL). */
-export const STATIC_BASE = "/room_tiles_frontend";
+/** Static URL base of the integration's frontend files (frontend.py STATIC_URL) -
+ *  the browser demo's build sets its own (build-demo.mjs DEMO_STATIC). */
+declare const DEMO_STATIC: string | undefined;
+export const STATIC_BASE = typeof DEMO_STATIC !== "undefined" ? DEMO_STATIC : "/room_tiles_frontend";
 
 /** `onTap(i, event)`: a tap on unit i (the panel empties a finished one). */
 export function renderAppliance(

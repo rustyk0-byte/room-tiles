@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Room Tiles demo</title>
+  <meta name="description" content="Try the Room Tiles dashboard on a made-up home, right in your browser.">
+  <style>
+    :root { --bar: 40px; --bar-bg: #1c1c1e; --bar-text: #f2f2f2; --bar-soft: #a8a8ad; --flash: #4b9ef3; }
+    html, body { margin: 0; height: 100%; background: #111; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    #demo-note {
+      position: fixed; inset: 0 0 auto 0; height: var(--bar); box-sizing: border-box;
+      display: flex; align-items: center; gap: 12px; padding: 0 16px;
+      background: var(--bar-bg); color: var(--bar-text); font-size: 14px; z-index: 10;
+      transition: background-color 0.3s;
+    }
+    #demo-note .soft { color: var(--bar-soft); }
+    #demo-note .saved { display: none; }
+    #demo-note.flash { background: var(--flash); }
+    #demo-note.flash .saved { display: inline; }
+    #demo-note.flash .soft { display: none; }
+    #demo-note a { color: inherit; margin-left: auto; white-space: nowrap; }
+    #demo-root { position: fixed; inset: var(--bar) 0 0 0; }
+    room-tiles-panel { display: block; height: 100%; }
+    @media (max-width: 520px) { #demo-note .soft { display: none; } }
+  </style>
+</head>
+<body>
+  <div id="demo-note" role="status">
+    <strong>Room Tiles demo</strong>
+    <span class="soft">A made-up home. Tap away - nothing is saved.</span>
+    <span class="saved">Changes aren't saved in the demo.</span>
+    <a href="https://github.com/rustyk0-byte/room-tiles">Get Room Tiles</a>
+  </div>
+  <div id="demo-root"></div>
+  <script type="module" src="demo.js"></script>
+</body>
+</html>
