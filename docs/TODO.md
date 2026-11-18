@@ -290,8 +290,8 @@ Upload firmware), one image per board in the folder.
   fresh "Add from link" + Install with nothing chosen.
 - **Going public - the repo is public since 2026-11-18** (a fresh one: one
   clean first commit; the history before it stays private). Done: the main
-  branch rule (`tools/github/protect-main.sh`), the report labels. Left:
-  HACS (a pre-release first), the web flasher on GitHub Pages, CI per
+  branch rule (`tools/github/protect-main.sh`), the report labels, the
+  Marketplace install, the install page on GitHub Pages, firmware CI per
   board. `tools/github/protect-main.sh <owner>/<repo>`: main
   changes only through pull requests the code owner approved; outside
   contributors' workflows wait for approval (both need a public repo).
