@@ -874,6 +874,13 @@ show and use what the integration holds; nothing about a house is compiled in.
     it; the panel's area picker changes it. A factory reset clears it, so
     setting up again takes HA's area again (HA restores a re-added device's
     old area and name - no picker then).
+  - **A pick on the panel is kept until HA has it** (`picked_`): the area,
+    layout, theme or language picked on the panel goes to Room Tiles; a
+    send HA can't take (restarting, Wi-Fi) would be lost, so the panel keeps
+    each pick, sends it again with every payload that doesn't have it yet
+    and every 15 s, and shows the picked area and layout meanwhile - until
+    a payload has it (or the area is gone). Not kept across the panel's
+    own restart.
  Home Assistant gone for 10 s (a restart, the
   router, an outage - HA's own connection, not a log viewer) takes the
   board down to it: "Connecting to Home Assistant…" (old states shown as

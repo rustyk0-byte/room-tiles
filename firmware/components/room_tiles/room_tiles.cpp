@@ -46,6 +46,8 @@ static const uint32_t FIRMWARE_RETRY_MS = 10 * 60 * 1000;
 // an automatic update waits until nobody's using the panel: idle (asleep,
 // the clock, dimmed) - or this long untouched when it never goes idle
 static const uint32_t AUTO_UPDATE_UNTOUCHED_MS = 10 * 60 * 1000;
+static const uint32_t PICK_RESEND_MS = 15 * 1000;
+static const int KNOB_SCROLL_PX = 64;  // (a knob click in a list: about one row)
 // back from HA's absence on a screen it darkened: this long for the tiles'
 // states to show an animation (or the clock to come) before it stays dark
 static const uint32_t RESUME_WINDOW_MS = 15 * 1000;
@@ -208,19 +210,33 @@ void RoomTiles::guard_taps() {
 }
 
 void RoomTiles::choose_area(const std::string &area) {
-  this->chosen_area_ = area;
-  this->chosen_until_ = millis() + 8000;
   this->model_.area = area;
   this->board_.build(this->model_);
-  this->actions_.settings("{\"area\":\"" + area + "\"}");
+  this->pick_("area", area);
 }
 
 void RoomTiles::choose_layout(const std::string &layout) {
-  this->chosen_layout_ = layout;
-  this->chosen_until_ = millis() + 8000;
   this->model_.layout = layout;
   this->board_.build(this->model_);
-  this->actions_.settings("{\"layout\":\"" + layout + "\"}");
+  this->pick_("layout", layout);
+}
+
+void RoomTiles::pick_(const char *key, const std::string &value) {
+  this->picked_[key] = value;
+  this->send_picked_();
+}
+
+void RoomTiles::send_picked_() {
+  if (this->picked_.empty())
+    return;
+  std::string json = "{";
+  for (auto &kv : this->picked_) {
+    if (json.size() > 1)
+      json += ",";
+    json += "\"" + kv.first + "\":" + (kv.second.empty() ? std::string("null") : "\"" + kv.second + "\"");
+  }
+  this->actions_.settings(json + "}");
+  this->picked_sent_ms_ = millis();
 }
 
 // ---- the display ----------------------------------------------------------------------
@@ -339,12 +355,10 @@ void RoomTiles::wake_() {
   this->apply_backlight_();
 }
 
-void RoomTiles::choose_language(const std::string &code) {
-  this->actions_.settings(code.empty() ? "{\"language\":null}" : "{\"language\":\"" + code + "\"}");
-}
+void RoomTiles::choose_language(const std::string &code) { this->pick_("language", code); }
 
 void RoomTiles::choose_theme(const std::string &name) {
-  this->actions_.settings("{\"theme\":\"" + name + "\"}");
+  this->pick_("theme", name);
   if (name == this->model_.theme)
     return;  // (this one already: nothing comes)
   // straight to the boot screen (loop() takes the board down - this runs in
@@ -519,13 +533,36 @@ void RoomTiles::dim_(bool on) {
   this->apply_backlight_();
 }
 
+// The topmost thing that scrolls up and down under `obj` (a page's list, a
+// dialog's column, the language list) - nullptr when nothing does.
+static lv_obj_t *vertical_scroller(lv_obj_t *obj) {
+  if (obj == nullptr || lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN))
+    return nullptr;
+  for (int i = (int) lv_obj_get_child_count(obj) - 1; i >= 0; i--)  // (the last child is on top)
+    if (lv_obj_t *s = vertical_scroller(lv_obj_get_child(obj, i)))
+      return s;
+  if (lv_obj_has_flag(obj, LV_OBJ_FLAG_SCROLLABLE) && (lv_obj_get_scroll_dir(obj) & LV_DIR_VER) &&
+      lv_obj_get_scroll_top(obj) + lv_obj_get_scroll_bottom(obj) > 0)
+    return obj;
+  return nullptr;
+}
+
 void RoomTiles::knob_turn(int clicks) {
   lv_display_trigger_activity(nullptr);  // (the screen's idle time)
   if (this->asleep_) {
     this->wake_();
     return;
   }
-  this->board_.knob_turn(clicks);
+  // wherever touch can scroll, the knob scrolls too: a page or dialog on
+  // top (its list), else the strip, else a list on the screen (the
+  // language picker); clockwise = down the list
+  lv_obj_t *list = vertical_scroller(lv_layer_top());
+  if (list == nullptr && this->board_.knob_turn(clicks))
+    return;
+  if (list == nullptr)
+    list = vertical_scroller(lv_screen_active());
+  if (list != nullptr)
+    lv_obj_scroll_by_bounded(list, 0, -clicks * KNOB_SCROLL_PX, LV_ANIM_ON);
 }
 
 void RoomTiles::knob_press() {
@@ -964,6 +1001,7 @@ void RoomTiles::wifi_chip_update_() {
 // language, "Add this panel in Home Assistant", the area.
 void RoomTiles::factory_reset() {
   ESP_LOGW(TAG, "Factory reset: back to new");
+  this->picked_.clear();
   this->actions_.settings("{\"area\":null,\"layout\":null,\"theme\":null,\"language\":null}");
   this->hold_boot_screen_ = true;  // (no tiles back meanwhile - Room Tiles answers)
   this->take_board_down_();       // (nothing may draw from the packs being erased)
@@ -1086,6 +1124,8 @@ void RoomTiles::assets_changed_() {
 }
 
 void RoomTiles::loop() {
+  if (!this->picked_.empty() && millis() - this->picked_sent_ms_ > PICK_RESEND_MS)
+    this->send_picked_();  // (HA hasn't got them yet: picked_)
 #ifdef USE_UPDATE
   if (this->wifi_chip_waiting_ != nullptr && !this->language_needed() && this->job_ == JOB_NONE)
     this->wifi_chip_update_();  // (the Wi-Fi chip, once the language is picked)
@@ -1631,16 +1671,29 @@ void RoomTiles::finish_payload_() {
       JsonObject entities = root["entities"].as<JsonObject>();
       for (JsonPair kv : entities)
         m.entities[kv.key().c_str()] = EntityInfo{kv.value()["kind"] | "", kv.value()["short"] | "", kv.value()["icon"] | ""};
-      // the user's own pick wins until HA's payload has it too
-      if (this->chosen_until_ != 0 && (int32_t) (millis() - this->chosen_until_) < 0) {
-        if (!this->chosen_area_.empty() && m.area != this->chosen_area_)
-          m.area = this->chosen_area_;
-        else
-          this->chosen_area_.clear();
-        if (!this->chosen_layout_.empty() && m.layout != this->chosen_layout_)
-          m.layout = this->chosen_layout_;
-        else
-          this->chosen_layout_.clear();
+      // the user's own picks win until HA's payload has them too - and go
+      // again while it doesn't (picked_)
+      if (!this->picked_.empty()) {
+        for (auto it = this->picked_.begin(); it != this->picked_.end();) {
+          const std::string &key = it->first, &want = it->second;
+          const std::string &has = key == "area" ? m.area : key == "layout" ? m.layout : key == "theme" ? m.theme : m.language;
+          bool gone = false;  // (an area removed meanwhile: HA's stands)
+          if (key == "area") {
+            gone = true;
+            for (auto &a : m.areas)
+              gone = gone && a.id != want;
+          }
+          if (has == want || gone) {
+            it = this->picked_.erase(it);
+            continue;
+          }
+          if (key == "area")
+            m.area = want;
+          else if (key == "layout")
+            m.layout = want;
+          ++it;
+        }
+        this->send_picked_();
       }
       if (!this->map_) {
         // (no map on this panel: nothing of it - no Map button, no map

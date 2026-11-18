@@ -3,6 +3,7 @@
 #pragma once
 
 #include <atomic>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -341,10 +342,16 @@ class RoomTiles : public Component {
   bool wifi_setup_{false};  // (no Wi-Fi network yet: watch_wifi_setup_)
   int wifi_button_{0};        // (watch_wifi_button_)
   uint32_t wifi_armed_ms_{0};  // (its first tap: a second within a few seconds forgets)
-  // the user's own pick, until HA's payload agrees (an older payload in
-  // flight mustn't flip the board back for a moment)
-  std::string chosen_area_, chosen_layout_;
-  uint32_t chosen_until_{0};
+  // settings picked on the panel (area, layout, theme, language -> its
+  // value, "" = the default), kept until HA's payload has them: a send while
+  // HA can't be reached (restarting, Wi-Fi) is lost - they go again with
+  // each payload that doesn't have them yet and every PICK_RESEND_MS; the
+  // area and layout shown meanwhile are the picked ones (and an older
+  // payload in flight doesn't flip the board back for a moment)
+  std::map<std::string, std::string> picked_;
+  uint32_t picked_sent_ms_{0};
+  void pick_(const char *key, const std::string &value);
+  void send_picked_();
   struct Display {
     uint8_t brightness{100};
     uint8_t sleep_s{0};  // (0 = never)

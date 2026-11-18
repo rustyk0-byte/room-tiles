@@ -169,10 +169,11 @@ bool Board::visible_animating() const {
          (p % 2 == 1 && i + 1 < (int) this->tiles_.size() && anim(this->tiles_[i + 1]));
 }
 
-void Board::knob_turn(int clicks) {
+bool Board::knob_turn(int clicks) {
   if (!this->strip_ || this->strip_cont_ == nullptr || this->scrim_ != nullptr)
-    return;
+    return false;
   this->strip_go_(this->strip_point_() + clicks, true);
+  return true;
 }
 
 void Board::knob_press() {

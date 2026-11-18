@@ -96,7 +96,7 @@ class Board {
   void set_strip(bool strip) { this->strip_ = strip; }
   bool strip() const { return this->strip_; }
   /// The knob (round panel): a click = half a tile along the strip.
-  void knob_turn(int clicks);
+  bool knob_turn(int clicks);  // (false: no strip showing - nothing moved)
   /// The knob's press: a tap on the centered tile (nothing at a split).
   void knob_press();
   /// A tile in view is animating (an appliance running) - the idle clock
