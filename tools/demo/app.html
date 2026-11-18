@@ -6,7 +6,9 @@
   <title>Room Tiles demo</title>
   <style>
     html, body { margin: 0; height: 100%; background: #111; }
-    #demo-root, room-tiles-panel { display: block; height: 100%; }
+    /* (the dashboard sizes itself - a display set here would override its
+       own column layout, and its tiles would stop scrolling up and down) */
+    #demo-root { height: 100%; }
   </style>
 </head>
 <body>
