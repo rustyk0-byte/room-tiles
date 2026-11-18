@@ -263,6 +263,22 @@ Upload firmware), one image per board in the folder.
   model, link to the SUPPORTED.md row).
   Reports feed docs/SUPPORTED.md: a confirmed model moves to "Confirmed
   models", its ? marks to ✓ / ✗.
+- **Landing page + browser demo** (started 2026-11-18) - before inviting
+  anyone: a "what is Room Tiles" page with pictures on GitHub Pages, panels
+  first (a panel on its desk stand, then the dashboard on a phone / tablet).
+  No picture of a real house: everything comes from a made-up demo home.
+  1. **Demo home** (`tools/demo/`): a script runs the real integration in
+     HA's test harness with made-up floors, areas, devices and states and
+     writes what the dashboard is sent (the feed, the states, the entity
+     and device lists) as JSON - the demo always matches what Room Tiles
+     really sends.
+  2. **Browser demo:** the real dashboard bundle with a stand-in `hass`
+     that replays those files - taps change states in the page, edits
+     aren't saved. Doubles as "Try it in your browser" on the landing page.
+  3. **Screenshots:** the dashboard from the demo; the panels later, from
+     a developer-only demo mode that serves the same home to one panel.
+  4. **The page:** GitHub Pages next to the install page (built by
+     tools/make_install_site.py in release.yml).
 - **The name:** check "Room Tiles" is free (USPTO search, app stores,
   GitHub) before going public - renaming after release breaks every install;
   file the trademark (intent to use, class 9) shortly before going public.
