@@ -78,12 +78,13 @@ await shot("map.png", {
   area: "living_room",
   then: async (page) => {
     await openMap(page);
-    // (opened from a room, the map shows that room: back to the whole map)
-    const whole = page.locator("room-tiles-panel button.layout.back:visible").first();
-    if (await whole.count()) await whole.click();
+    // (opened from a room, the map shows that room: "Main" - from 1x - is
+    // the whole map, then "Devices" its 2x about the middle; the visible
+    // buttons - the bar keeps hidden copies to measure)
+    const layer = (name) => page.locator("room-tiles-panel button.floor:visible", { hasText: name }).first();
+    await layer("Main").click();
     await page.waitForTimeout(1200);
-    // (the visible one - the bar keeps hidden copies to measure)
-    await page.locator("room-tiles-panel button.floor:visible", { hasText: "Devices" }).first().click();
+    await layer("Devices").click();
     await page.waitForTimeout(1500);
   },
 });
