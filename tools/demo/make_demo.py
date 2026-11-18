@@ -126,7 +126,7 @@ APPLIANCES = [
         "units": [
             # (the dryer on top, as setup pairs them: appliance_detect._pair_laundry)
             {"id": "dryer", "label": "Dryer", "appliance": "dryer", "preset": "lg_thinq_dryer",
-             "status": "sensor.dryer_current_state", "time": "sensor.dryer_finish", "finished": "waiting"},
+             "status": "sensor.dryer_current_state", "time": "sensor.dryer_finish"},
             {"id": "washer", "label": "Washer", "appliance": "washer", "preset": "lg_thinq_washer",
              "status": "sensor.washer_current_state", "time": "sensor.washer_finish", "finished": "waiting", "clear": ["unit:dryer"]},
         ],
@@ -264,7 +264,7 @@ def _build(hass: HomeAssistant) -> None:
 
 async def _appliances(hass: HomeAssistant, entry: MockConfigEntry) -> None:
     """Set the appliances up as setup would, then finish the dryer's cycle
-    (its tile: switch over)."""
+    (its tile: done)."""
     for _area, appliance in APPLIANCES:
         await hass.services.async_call(DOMAIN, "set_appliance", {"appliance": appliance}, blocking=True)
         await hass.async_block_till_done()  # (its tile goes in the area by itself)
