@@ -138,6 +138,42 @@ APPLIANCES = [
 ]
 
 
+# A robot vacuum for the downstairs rooms (not the garage): HA's own room
+# mapping on the vacuum entity (vacuums.py reads it), cleaning the first
+# room of its queue, the next one waiting.
+VACUUM = "vacuum.robot_vacuum"
+VACUUM_ROOMS = ("dining_room", "kitchen", "laundry", "living_room", "office")
+VACUUM_QUEUE = ("kitchen", "living_room")
+VACUUM_FEATURES = 29212  # (start, pause, return home, clean area...)
+
+
+async def _vacuum(hass: HomeAssistant) -> None:
+    ents, devs = er.async_get(hass), dr.async_get(hass)
+    src = MockConfigEntry(domain="demo_vacuum", title="Demo")
+    src.add_to_hass(hass)
+    dev = devs.async_get_or_create(config_entry_id=src.entry_id, identifiers={("demo", "robot_vacuum")}, name="Robot Vacuum",
+                                   manufacturer="Demo", model="Robot Vacuum")
+    devs.async_update_device(dev.id, area_id="living_room")
+    ents.async_get_or_create("vacuum", "demo", "robot_vacuum", suggested_object_id="robot_vacuum", config_entry=src, device_id=dev.id)
+    ents.async_update_entity_options(VACUUM, "vacuum", {"area_mapping": {a: [str(i + 1)] for i, a in enumerate(VACUUM_ROOMS)}})
+    hass.states.async_set(VACUUM, "docked", {"friendly_name": "Robot Vacuum", "supported_features": VACUUM_FEATURES, "battery_level": 86})
+
+    async def nothing(call):  # (what a real HA and the vacuum's integration answer)
+        pass
+
+    for domain, service in (("vacuum", "clean_area"), ("vacuum", "start"), ("vacuum", "pause"), ("vacuum", "return_to_base"),
+                            ("persistent_notification", "create"), ("persistent_notification", "dismiss")):
+        hass.services.async_register(domain, service, nothing)
+    call = lambda service, **data: hass.services.async_call(DOMAIN, service, data, blocking=True)  # noqa: E731
+    await call("set_robot", robot={"id": "robot_vacuum", "name": "Robot Vacuum", "vacuum": VACUUM, "preset": "vacuum"})
+    await hass.async_block_till_done()
+    for area in VACUUM_QUEUE:
+        await call("vacuum_queue", robot="robot_vacuum", action="add", area=area)
+    await call("vacuum_queue", robot="robot_vacuum", action="start")
+    hass.states.async_set(VACUUM, "cleaning", {"friendly_name": "Robot Vacuum", "supported_features": VACUUM_FEATURES, "battery_level": 74})
+    await hass.async_block_till_done()
+
+
 # The generated Main Floor map, changed a little: these two rooms trade
 # places (the Dining Room gets the bay window), and stairs up from the
 # Living Room - a link to the Upstairs map, in the room's upper part (clear
@@ -219,6 +255,7 @@ async def test_make_demo(hass: HomeAssistant, hass_ws_client) -> None:
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     await _appliances(hass, entry)
+    await _vacuum(hass)
     _map_changes(entry)
 
     ws = await hass_ws_client(hass)
