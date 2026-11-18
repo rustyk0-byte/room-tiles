@@ -294,8 +294,8 @@ the panel.
 
 Then it shows "Downloading the update…" and "Installing the update…",
 restarts (a minute or two) and comes back to its board. Once it has
-started, a touch doesn't stop it. A panel that's dark when its update
-starts stays dark.
+started, a touch doesn't stop it. A panel whose screen is off when its
+update starts (its idle setting, or the room's lights off) stays dark.
 
 To update a panel now, while it's in use, press **Install** - on the
 Panels page, or on its card under Settings › **Updates** - it starts right

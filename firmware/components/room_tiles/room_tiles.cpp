@@ -1329,7 +1329,11 @@ void RoomTiles::start_job_(Job job) {
   else if (job == JOB_FIRMWARE)
     this->say_("panel.update_downloading", "Downloading the update…");
   if (job == JOB_FIRMWARE) {
-    this->update_dark_ = this->asleep_;
+    // dark by choice (idle: the screen off; the room's lights off): the
+    // update stays dark and the panel comes back dark - not dark only
+    // because HA was gone (offline_slept_: HA restarting for this very
+    // update): that one shows its progress and comes back lit
+    this->update_dark_ = this->asleep_ && !this->offline_slept_;
     ESP_LOGI(TAG, "Firmware update: build %s (%u KB) - this one is %s", this->want_build_.c_str(),
              (unsigned) (this->want_size_ / 1024), this->build_.c_str());
     this->take_board_down_();  // (the boot screen and its progress bar)

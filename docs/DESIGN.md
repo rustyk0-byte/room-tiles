@@ -796,7 +796,10 @@ show and use what the integration holds; nothing about a house is compiled in.
   it once nobody's using it - by idle time only, whatever is on screen:
   idle (dark, the clock, or dimmed - also a board an animation keeps up),
   or 10 minutes untouched when it never goes idle; one that starts while the screen is
-  dark stays dark (and the new firmware goes dark again as it starts).
+  dark by choice (idle: the screen off; the room's lights off) stays dark
+  (and the new firmware goes dark again as it starts) - dark only because
+  HA was gone (restarting for this very update) doesn't count: the update
+  shows its progress and the panel comes back lit.
   Never older: only an image built more
   than a minute after what the panel runs (a panel flashed by hand with a
   newer build is left alone; firmware that doesn't report its build time
