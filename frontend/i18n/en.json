@@ -643,6 +643,7 @@
     "menu.reduced": "This device asks for reduced motion, so animations are paused.",
     "menu.theme": "Theme",
     "menu.this_device": "This device",
+    "menu.turn": "Turn the tiles in portrait",
     "menu.tile_editor": "Tile editor",
     "model.add": "Add a recent cycle's data",
     "model.add_none": "Don't add any",

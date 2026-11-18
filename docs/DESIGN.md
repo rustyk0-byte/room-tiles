@@ -946,9 +946,14 @@ show and use what the integration holds; nothing about a house is compiled in.
 
 - **The panel formation is kept everywhere** (the area's 5x2 / 6x3 grid):
   a tile is in the same place on a panel, the phone and the computer.
-- **Portrait:** tiles at the "2 wide" size; the grid pans both ways with snap
-  to whole tiles, the next column peeking in, and a small indicator shows
-  which tiles are on screen.
+- **Portrait:** the grid TURNED by default (per device: menu "Turn the tiles
+  in portrait"): columns become rows (5x2 -> 2x5, 6x3 -> 3x6), all of them
+  across the screen, scrolling down - the tiles keep their slots, only the
+  drawing turns (slot at column c, row r drawn at column r, row c), so the
+  panels and landscape are unaffected. Switched off: tiles at the "2 wide"
+  size, the panel's formation kept, panning both ways with snap to whole
+  tiles, the next column peeking in. Either way a small indicator shows
+  which tiles are on screen (of the grid as drawn).
 - **Landscape:** the whole grid fitted to the screen. On touch devices Room
   Tiles covers HA's sidebar and header (full screen; a button shows HA's menu
   again); per-device setting, default on for touch, off for mouse devices.

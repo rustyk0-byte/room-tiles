@@ -99,8 +99,8 @@ await shot("vacuum.png", {
     await page.waitForTimeout(1500);
   },
 });
-// a phone, sideways
-await shot("phone.png", { area: "living_room", viewport: { width: 844, height: 390 }, phone: true });
+// a phone, upright (the grid turned: two columns, scrolling down)
+await shot("phone.png", { area: "living_room", viewport: { width: 390, height: 844 }, phone: true });
 // the themes: the same room in each, side by side
 const themes = ["dark", "light", "christmas"];
 for (const theme of themes) await shot(`theme-${theme}.png`, { area: "living_room", theme, viewport: PANEL });

@@ -638,6 +638,7 @@
     "menu.reduced": "Este dispositivo pede menos movimento, então as animações estão pausadas.",
     "menu.theme": "Tema",
     "menu.this_device": "Este dispositivo",
+    "menu.turn": "Girar os blocos na vertical",
     "menu.tile_editor": "Editor de blocos",
     "model.add": "Adicionar os dados de um ciclo recente",
     "model.add_none": "Não adicionar nada",

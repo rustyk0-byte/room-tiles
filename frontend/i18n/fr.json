@@ -641,6 +641,7 @@
     "menu.reduced": "Cet appareil demande moins de mouvement, les animations sont donc en pause.",
     "menu.theme": "Thème",
     "menu.this_device": "Cet appareil",
+    "menu.turn": "Tourner les tuiles en portrait",
     "menu.tile_editor": "Éditeur de tuiles",
     "model.add": "Ajouter les données d'un cycle récent",
     "model.add_none": "Ne rien ajouter",

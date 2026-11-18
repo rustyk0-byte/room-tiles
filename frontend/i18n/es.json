@@ -639,6 +639,7 @@
     "menu.reduced": "Este dispositivo pide reducir el movimiento, así que las animaciones están en pausa.",
     "menu.theme": "Tema",
     "menu.this_device": "Este dispositivo",
+    "menu.turn": "Girar los mosaicos en vertical",
     "menu.tile_editor": "Editor de mosaicos",
     "model.add": "Añadir los datos de un ciclo reciente",
     "model.add_none": "No añadir nada",

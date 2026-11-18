@@ -136,7 +136,9 @@ map. Some things live in only one place:
   and **Report a problem** with one
 - Panels - your panels' updates, and **Update panels automatically**
 - Send feedback
-- Animations and full screen (each browser's own)
+- Animations, full screen, and **Turn the tiles in portrait** - on a phone
+  held upright, a room's tiles in two or three columns, scrolling down (on
+  unless you switch it off; each browser's own)
 
 **Only on a panel** (each panel's own):
 - Screen brightness, Go idle after, When idle and the 24-hour clock

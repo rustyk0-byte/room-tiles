@@ -403,15 +403,6 @@ A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
   settings: heat or chill, the "pump with heater" setting, spa mode on a
   shared system; a press elsewhere on the tile keeps opening the HA Card
   (the heater's thermostat dialog) like now.
-- **Portrait phones: keep or turn the grid** - one setting for all areas
-  (per device, like the other display settings), used only in portrait:
-  *Keep* = the panel's layout as it is (5x2 / 6x3: two columns on screen,
-  scroll sideways - today's behavior); *Turn* = columns become rows (2x5 /
-  3x6), scrolling down. The tiles keep their slots - only the drawing turns
-  (slot at column c, row r is shown at column r, row c), so the panels and
-  landscape are unaffected. Tile editing (tap / long-press to move), the
-  scroll position dots and the peek of the next column / row follow the
-  turned grid.
 - **Compact tiles on the web** (nice to have): in the browser, text / SVG
   are always sharp and sprites scale smoothly, so it's only about
   legibility and layout. Switch on the tile's REAL rendered size, not on

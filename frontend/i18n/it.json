@@ -639,6 +639,7 @@
     "menu.reduced": "Questo dispositivo chiede di ridurre il movimento, quindi le animazioni sono in pausa.",
     "menu.theme": "Tema",
     "menu.this_device": "Questo dispositivo",
+    "menu.turn": "Ruota i riquadri in verticale",
     "menu.tile_editor": "Editor dei riquadri",
     "model.add": "Aggiungi i dati di un ciclo recente",
     "model.add_none": "Non aggiungere nulla",

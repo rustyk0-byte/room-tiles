@@ -130,6 +130,10 @@ type MotionMode = "follow" | "always" | "never";
 // Full screen in landscape (Room Tiles covers HA's sidebar + header), per
 // device; default on for touch devices, off for mouse devices.
 const STORE_COVER = "room-tiles:fullscreen-landscape";
+// portrait: the grid turned - columns become rows (5x2 -> 2x5), scrolling
+// down - or kept as on the panels (two columns, scrolling sideways); per
+// device, turned unless switched off
+const STORE_TURN = "room-tiles:portrait-turn";
 const STORE_QUEUE_AUTOSTART = "room-tiles:queue-autostart"; // the room queue starts itself when a room is added (this browser)
 
 // Grid geometry (CSS px). Portrait: tiles at the "2 wide" size, the panel's
@@ -189,6 +193,7 @@ export class RoomTilesPanel extends LitElement {
     _autoStart: { state: true },
     _box: { state: true },
     _cover: { state: true },
+    _turn: { state: true },
     _coverOff: { state: true },
     _coverNow: { state: true },
     _view: { state: true },
@@ -272,7 +277,8 @@ export class RoomTilesPanel extends LitElement {
     load(STORE_COVER) !== null ? load(STORE_COVER) === "1" : window.matchMedia("(pointer: coarse)").matches;
   private _coverOff = false; // "show HA" pressed: until the next turn to landscape
   private _coverNow = false; // full screen chosen with the button this visit
-  private _view = { c0: 0, c1: 0, r0: 0, r1: 0 }; // portrait: visible tile range
+  private _view = { c0: 0, c1: 0, r0: 0, r1: 0 }; // portrait: visible tile range (as drawn)
+  private _turn = load(STORE_TURN) !== "0"; // portrait: the grid turned (this device)
   private _resize?: ResizeObserver;
   private _colorFor?: { entity: string; name: string }; // the colour picker's light
   private _mapOpen?: string; // id of the map on screen
@@ -811,6 +817,18 @@ export class RoomTilesPanel extends LitElement {
     this._coverNow = true;
   }
 
+  private _setTurn(on: boolean): void {
+    this._turn = on;
+    save(STORE_TURN, on ? "1" : "0");
+    this.renderRoot.querySelector(".grid-wrap")?.scrollTo(0, 0);
+  }
+
+  /** Portrait with the grid turned: slot (column c, row r) drawn at
+   *  column r, row c - the tiles keep their slots, only the drawing turns. */
+  private get _turned(): boolean {
+    return this._portrait && this._turn;
+  }
+
   private _setCover(on: boolean): void {
     this._cover = on;
     this._coverOff = false;
@@ -821,6 +839,10 @@ export class RoomTilesPanel extends LitElement {
   private _tileWidth(cols: number, rows: number): number {
     const { w, h } = this._box;
     if (!w || !h) return 0;
+    if (this._turned) {
+      // turned: every column across the screen (2 or 3), scrolling down
+      return Math.max(80, (w - 2 * PAD - (cols - 1) * GAP) / cols);
+    }
     if (this._portrait) {
       // the "2 wide" size, the next column peeking in when there is one
       const peek = cols > 2 ? PEEK : 0;
@@ -2496,8 +2518,12 @@ export class RoomTilesPanel extends LitElement {
           ? html`<rt-area-settings .hass=${this.hass} .doc=${this._doc} @close=${() => (this._dialog = undefined)}></rt-area-settings>`
           : nothing}`;
     const grid = area.tiles[this._layout];
-    const cols = LAYOUT_COLUMNS[this._layout];
-    const rows = Math.ceil(grid.length / cols);
+    const slotCols = LAYOUT_COLUMNS[this._layout];
+    const slotRows = Math.ceil(grid.length / slotCols);
+    // as drawn: turned in portrait (_turned) - columns become rows
+    const turned = this._turned;
+    const cols = turned ? slotRows : slotCols;
+    const rows = turned ? slotCols : slotRows;
     const tileW = this._tileWidth(cols, rows);
     this._grid = { tileW, cols, rows };
     const lights = this._areaLights(area);
@@ -2646,7 +2672,10 @@ export class RoomTilesPanel extends LitElement {
         <div class="grid" style="--cols:${cols};--tile-w:${tileW}px">
           ${tileW
             ? grid.map(
-                (tile, i) => html`<div class="cell ${this._editing ? "editing" : ""} ${this._moveFrom === i ? "picked" : ""}">
+                (tile, i) => html`<div
+                  class="cell ${this._editing ? "editing" : ""} ${this._moveFrom === i ? "picked" : ""}"
+                  style=${turned ? `grid-column:${Math.floor(i / slotCols) + 1};grid-row:${(i % slotCols) + 1}` : ""}
+                >
                   ${this._renderTile(tile)}
                   ${this._editing
                     ? html`<div
@@ -2804,6 +2833,10 @@ export class RoomTilesPanel extends LitElement {
         <div class="setting">
           <span class="label">${t("menu.cover")}</span>
           ${toggle(this._cover, (on) => this._setCover(on), t("menu.cover"), this.theme)}
+        </div>
+        <div class="setting">
+          <span class="label">${t("menu.turn")}</span>
+          ${toggle(this._turn, (on) => this._setTurn(on), t("menu.turn"), this.theme)}
         </div>
         <div class="setting">
           <span class="label">${t("menu.language")}</span>
