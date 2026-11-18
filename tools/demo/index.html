@@ -21,8 +21,9 @@
     #demo-note.flash .saved { display: inline; }
     #demo-note.flash .soft { display: none; }
     #demo-note a { color: inherit; margin-left: auto; white-space: nowrap; }
-    #demo-root { position: fixed; inset: var(--bar) 0 0 0; }
-    room-tiles-panel { display: block; height: 100%; }
+    /* the dashboard in a window of its own (app.html): it fills one, like a
+       panel in Home Assistant - its bars and dialogs stay under this bar */
+    #demo-app { position: fixed; inset: var(--bar) 0 0 0; width: 100%; height: calc(100% - var(--bar)); border: 0; display: block; }
     @media (max-width: 520px) { #demo-note .soft { display: none; } }
   </style>
 </head>
@@ -33,7 +34,17 @@
     <span class="saved">Changes aren't saved in the demo.</span>
     <a href="https://github.com/rustyk0-byte/room-tiles">Get Room Tiles</a>
   </div>
-  <div id="demo-root"></div>
-  <script type="module" src="demo.js"></script>
+  <iframe id="demo-app" src="app.html" title="Room Tiles dashboard (demo)"></iframe>
+  <script>
+    // the dashboard says when an edit wasn't saved (demo.ts): flash the bar
+    const note = document.getElementById("demo-note");
+    let timer;
+    addEventListener("message", (e) => {
+      if (e.origin !== location.origin || e.data !== "room-tiles-demo:unsaved") return;
+      note.classList.add("flash");
+      clearTimeout(timer);
+      timer = setTimeout(() => note.classList.remove("flash"), 1600);
+    });
+  </script>
 </body>
 </html>

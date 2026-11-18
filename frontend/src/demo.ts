@@ -153,14 +153,9 @@ async function main(): Promise<void> {
   moveTimes(data.states, data.meta.made);
   let states = data.states;
   const el = document.createElement("room-tiles-panel") as HTMLElement & { hass?: HomeAssistant; narrow?: boolean };
-  const note = document.getElementById("demo-note");
-
-  /** "Not saved": a Room Tiles edit, shown for a moment. */
-  const unsaved = () => {
-    if (!note) return;
-    note.classList.add("flash");
-    setTimeout(() => note.classList.remove("flash"), 1600);
-  };
+  /** "Not saved": a Room Tiles edit - the demo page's bar says so for a
+   *  moment (index.html, this page's parent). */
+  const unsaved = () => window.parent?.postMessage("room-tiles-demo:unsaved", location.origin);
 
   const areas: HomeAssistant["areas"] = {};
   for (const a of (data.feed as any).data?.areas ?? []) areas![a.id] = { area_id: a.id, name: a.name };

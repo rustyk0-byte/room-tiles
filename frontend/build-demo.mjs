@@ -4,7 +4,7 @@
 //   node build-demo.mjs <demo data dir> <out dir>
 //
 // <demo data dir>: what tools/demo/make_demo.py wrote (feed.json, ...).
-// <out dir> gets index.html, demo.js, data/ (the made-up home), static/
+// <out dir> gets index.html (the demo's bar over app.html: the dashboard), demo.js, data/ (the made-up home), static/
 // (the themes' pictures, where the dashboard looks for them) and only the
 // icons the dashboard and the home use (from @mdi/js).
 import { build } from "esbuild";
@@ -53,7 +53,7 @@ await build({
     DEMO_ICONS: JSON.stringify(icons),
   },
 });
-cpSync(join(here, "..", "tools", "demo", "index.html"), join(out, "index.html"));
+for (const page of ["index.html", "app.html"]) cpSync(join(here, "..", "tools", "demo", page), join(out, page));
 cpSync(dataDir, join(out, "data"), { recursive: true });
 // the themes' pictures (the dashboard bundle's folders, as HA serves them)
 const bundle = join(here, "..", "custom_components", "room_tiles", "frontend");
