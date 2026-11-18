@@ -957,6 +957,9 @@ show and use what the integration holds; nothing about a house is compiled in.
   size, the panel's formation kept, panning both ways with snap to whole
   tiles, the next column peeking in. Either way a small indicator shows
   which tiles are on screen (of the grid as drawn).
+- **A narrow screen held upright** (under 560 px wide): the top bar in two
+  rows - the room's name across the first (after the menu button), the
+  buttons under it - a one-row bar left the name no room.
 - **Landscape:** the whole grid fitted to the screen. On touch devices Room
   Tiles covers HA's sidebar and header (full screen; a button shows HA's menu
   again); per-device setting, default on for touch, off for mouse devices.

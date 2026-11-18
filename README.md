@@ -3,7 +3,8 @@
 Room-by-room control tiles and house maps for Home Assistant: a dashboard for
 phones, tablets and computers, and firmware for ESP32 panels (on a wall or a desk).
 
-> **Work in progress - not ready for use yet.**
+> **Early days (0.x):** it works and it's changing fast - feedback is very
+> welcome (see [Feedback and reports](#feedback-and-reports)).
 
 Each room (a Home Assistant area) gets a board of large, touch-friendly
 tiles: lights, fans, blinds, locks, thermostats, and live tiles for your
@@ -28,7 +29,9 @@ shows the same things where they are.
 2. Install **Room Tiles**, then restart Home Assistant.
 
 Updates show under Settings › **Updates**, like Home Assistant's own; the
-ESP32 panels' firmware comes with them.
+ESP32 panels' firmware comes with them. A new version shows up after Home
+Assistant's next restart, or within two days - **Refresh information** on
+Room Tiles' Marketplace page looks right away.
 
 (Or download `room_tiles.zip` from a release, unzip it into
 `config/custom_components/room_tiles`, and restart.)

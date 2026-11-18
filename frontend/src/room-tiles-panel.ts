@@ -144,6 +144,10 @@ const PAD = 16;
 const PEEK = 28; // portrait: how much of the next column shows at the edge
 const TILE_ASPECT = 198 / 254;
 const TOOLBAR_H = 64;
+// a narrow screen held upright: the top bar in two rows - the room's name
+// across the top, the buttons under it (a one-row bar left the name no room)
+const STACK_BELOW = 560; // px wide
+const STACKED_H = TOOLBAR_H + 52;
 
 function load(key: string): string | null {
   try {
@@ -823,6 +827,11 @@ export class RoomTilesPanel extends LitElement {
     this.renderRoot.querySelector(".grid-wrap")?.scrollTo(0, 0);
   }
 
+  /** A narrow screen held upright: the top bar in two rows (STACK_BELOW). */
+  private get _stacked(): boolean {
+    return this._portrait && this._box.w > 0 && this._box.w < STACK_BELOW;
+  }
+
   /** Portrait with the grid turned: slot (column c, row r) drawn at
    *  column r, row c - the tiles keep their slots, only the drawing turns. */
   private get _turned(): boolean {
@@ -894,7 +903,7 @@ export class RoomTilesPanel extends LitElement {
     if (!this._portrait || !tileW) return nothing;
     const { w, h } = this._box;
     const fitsX = cols * tileW + (cols - 1) * GAP + 2 * PAD <= w;
-    const fitsY = rows * (tileW / TILE_ASPECT) + (rows - 1) * GAP + TOOLBAR_H + PAD <= h;
+    const fitsY = rows * (tileW / TILE_ASPECT) + (rows - 1) * GAP + (this._stacked ? STACKED_H : TOOLBAR_H) + PAD <= h;
     if (fitsX && fitsY) return nothing;
     const v = this._view;
     return html`<div class="where" style="--cols:${cols}" aria-hidden="true">
@@ -2531,7 +2540,7 @@ export class RoomTilesPanel extends LitElement {
 
     return html`
       ${this._updateBar()}
-      <div class="toolbar">
+      <div class="toolbar ${this._stacked ? "stacked" : ""}">
         ${this._screenButton()}
         <!-- like the panels: the area's name opens the area picker -->
         <button class="area-name" title=${area.name} @click=${() => (this._picker = true)}>
@@ -3302,6 +3311,16 @@ export class RoomTilesPanel extends LitElement {
     }
     .head-btn {
       flex: none;
+    }
+    /* a narrow screen held upright (_stacked): the room's name across the
+       whole first row (after the menu button), the buttons in the row under it */
+    .toolbar.stacked {
+      flex-wrap: wrap;
+      row-gap: 4px;
+      padding-bottom: 4px;
+    }
+    .toolbar.stacked .area-name {
+      flex: 1 1 calc(100% - 64px);
     }
     .head-btn.on {
       color: var(--rt-light);
