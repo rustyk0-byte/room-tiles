@@ -318,7 +318,8 @@ for about a minute and restarts once more. Leave it plugged in.
 ## Support
 
 Room Tiles is free. If you'd like to help cover its development costs:
-[GitHub Sponsors](https://github.com/sponsors/rustyk0-byte). Sponsors at $5
+[GitHub Sponsors](https://github.com/sponsors/rustyk0-byte) or
+[Ko-fi](https://ko-fi.com/roomtiles). GitHub sponsors at $5
 a month get their bug reports and ideas looked at first; fixes and features
 still go to everyone in the next release.
 
