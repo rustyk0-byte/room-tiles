@@ -131,19 +131,29 @@ nav a:hover {
   letter-spacing: -0.02em;
 }
 /* the logo's four squares, 2 x 2 as in the icon (amber, blue / green, purple) */
+/* (two rows of inline blocks: the block's baseline is its last row's bottom
+   - the squares stand on the text's baseline, like its letters) */
 .hero h1 .tiles {
-  display: inline-grid;
-  grid-template-columns: repeat(2, 0.3em);
-  gap: 0.06em;
-  vertical-align: -0.04em;
+  display: inline-block;
+  width: 0.68em; /* (0.3 + 0.06 + 0.3, and a little: rounding never wraps a square) */
+  line-height: 0;
+  vertical-align: baseline;
   margin-left: 0.18em;
 }
 .hero h1 .tiles i {
+  display: inline-block;
   width: 0.3em;
   height: 0.3em;
   box-sizing: border-box;
   border-radius: 0.08em;
   border: 0.06em solid;
+  margin: 0 0.06em 0.06em 0;
+}
+.hero h1 .tiles i:nth-child(2n) {
+  margin-right: 0;
+}
+.hero h1 .tiles i:nth-child(n + 3) {
+  margin-bottom: 0;
 }
 .hero p.lead {
   font-size: 1.2rem;
