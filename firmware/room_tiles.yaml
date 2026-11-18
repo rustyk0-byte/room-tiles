@@ -15,7 +15,7 @@ esphome:
   comment: Room Tiles panel
   project:
     name: room-tiles.panel
-    version: "0.1.1"
+    version: "0.1.2"
   # (a list: see boards/elecrow-p4-10in.yaml)
   on_boot:
     - priority: -100
