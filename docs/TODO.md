@@ -266,6 +266,13 @@ Upload firmware), one image per board in the folder.
 - **The name:** check "Room Tiles" is free (USPTO search, app stores,
   GitHub) before going public - renaming after release breaks every install;
   file the trademark (intent to use, class 9) shortly before going public.
+- **Before inviting anyone: the Marketplace's main Install button must
+  work.** With only a pre-release out, it installed from the `main` branch,
+  which has no zip (404 - 0.1.0b1 test, 2026-11-18). `hacs.json`
+  `hide_default_branch` is set (HACS's option - check the Marketplace reads
+  it), and a stable release must be out before anyone is invited; betas
+  stay opt-in (the Pre-release switch). Retest: a fresh "Add from link" +
+  Install with nothing chosen.
 - **Going public - the repo is public since 2026-11-18** (a fresh one: one
   clean first commit; the history before it stays private). Done: the main
   branch rule (`tools/github/protect-main.sh`), the report labels. Left:
