@@ -54,7 +54,7 @@ fix what's wrong. A beta flag only goes away through that report: the
 recorded cycle becomes an automatic test, every feature row is checked, and
 the model is added to "Confirmed models" in a release.
 
-## Touch panels (Room Tiles firmware)
+## ESP32 panels (Room Tiles firmware)
 
 Room Tiles' own firmware runs on the Elecrow CrowPanel Advanced ESP32-P4
 (all 1024x600). Pick the firmware by the size and the version printed on

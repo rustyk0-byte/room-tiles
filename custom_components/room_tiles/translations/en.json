@@ -326,7 +326,7 @@
         },
         "auto_update_panels": {
           "name": "Update panels automatically",
-          "description": "Wall panels install a newer Room Tiles firmware on their own, when nobody is using them."
+          "description": "ESP32 panels install a newer Room Tiles firmware on their own, when nobody is using them."
         }
       }
     },

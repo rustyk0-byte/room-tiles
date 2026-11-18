@@ -1,7 +1,7 @@
 # Room Tiles
 
 Room-by-room control tiles and house maps for Home Assistant: a dashboard for
-phones, tablets and computers, and firmware for ESP32-P4 touch panels (on a wall or a desk).
+phones, tablets and computers, and firmware for ESP32 panels (on a wall or a desk).
 
 > **Work in progress - not ready for use yet.**
 
@@ -27,7 +27,7 @@ shows the same things where they are.
 2. Install **Room Tiles**, then restart Home Assistant.
 
 Updates show under Settings › **Updates**, like Home Assistant's own; the
-touch panels' firmware comes with them.
+ESP32 panels' firmware comes with them.
 
 (Or download `room_tiles.zip` from a release, unzip it into
 `config/custom_components/room_tiles`, and restart.)
@@ -68,7 +68,7 @@ Everything is in the settings menu (the gear):
 - **Map editor** - draw your home: walls, rooms, doors, windows, a yard - or
   trace a photo of your floor plan.
 - **Layer editor** - place markers on the map.
-- **Panels** - your touch panels and their updates (see below).
+- **Panels** - your ESP32 panels and their updates (see below).
 - **Send feedback** - report a bug, suggest an idea or ask a question (see
   below).
 
@@ -87,7 +87,7 @@ dashboard: settings menu › **Areas** › **Area lights…** beside the area:
 - **One entity (e.g. a light group)** - your own light or group instead.
 - **None** - no lights button for this area.
 
-Area lights are set on the dashboard only. Touch panels use what's set
+Area lights are set on the dashboard only. ESP32 panels use what's set
 there - for their lights button, and for **Screen off when the following
 area lights are off** (see Panel settings).
 
@@ -110,7 +110,7 @@ area lights are off** (see Panel settings).
   answer so the next release knows it.
 
 A bug report adds what helps find it: on this dashboard, your browser and
-Room Tiles' recent errors on the page; on a touch panel, its model,
+Room Tiles' recent errors on the page; on an ESP32 panel, its model,
 firmware, memory and recent restarts.
 
 Everything goes to Room Tiles as a public GitHub issue, posted from your
@@ -166,11 +166,13 @@ Français, Italiano, Nederlands and Português. A panel can have its own
 (its settings › **Language**). The translations are drafts - corrections are
 very welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Touch panels
+## ESP32 panels
 
-ESP32-P4 touch panels showing the same boards and maps are part of this
-project (boards: [docs/SUPPORTED.md](docs/SUPPORTED.md)). Mount one on a
+ESP32 touch panels running Room Tiles' own firmware, showing the same
+boards and maps, are part of this project (boards: [docs/SUPPORTED.md](docs/SUPPORTED.md)). Mount one on a
 wall or stand it on a desk; a 3D-printable desk stand will be shared here.
+A tablet or any other screen with a web browser doesn't need this: it runs
+the dashboard.
 ### Install the firmware
 
 1. Plug the panel into your computer with a USB-C cable (a data cable,
@@ -284,7 +286,7 @@ or on its card under Settings › **Updates**. (A panel too old to work with
 your Room Tiles at all updates right away.)
 
 An update can bring a newer Wi-Fi chip firmware too (see the note under
-Touch panels): after restarting, the panel shows "Updating the Wi-Fi chip…"
+ESP32 panels): after restarting, the panel shows "Updating the Wi-Fi chip…"
 for about a minute and restarts once more. Leave it plugged in.
 
 ### Changing Wi-Fi

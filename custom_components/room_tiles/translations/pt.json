@@ -366,7 +366,7 @@
         },
         "auto_update_panels": {
           "name": "Atualizar painéis automaticamente",
-          "description": "Os painéis de parede instalam sozinhos um firmware do Room Tiles mais recente quando ninguém os está a usar."
+          "description": "Os painéis ESP32 instalam sozinhos um firmware do Room Tiles mais recente quando ninguém os está a usar."
         }
       }
     },

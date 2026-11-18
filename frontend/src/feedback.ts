@@ -2,7 +2,7 @@
 //   - Something's wrong with an appliance, pool or vacuum: which one, then
 //     its card's Report a problem (<rt-problem>) - that sends its cycle data.
 //   - Report a bug: what happened, and where - this dashboard (the browser
-//     and Room Tiles' recent errors go with it: errors.ts), a touch panel
+//     and Room Tiles' recent errors go with it: errors.ts), an ESP32 panel
 //     (HA adds its board, firmware, memory and restarts), an appliance,
 //     pool or vacuum (handed to its Report a problem as above, the words
 //     kept; "Send without the data" goes on as a bug), somewhere else.
@@ -95,7 +95,7 @@ export class RtFeedback extends LitElement {
   private _picking = false;
   private _words = "";
   private _where?: Where;
-  /** a touch panel's device id (Which panel?) */
+  /** an ESP32 panel's device id (Which panel?) */
   private _panel = "";
   /** the appliance, pool or vacuum a bug happened with */
   private _device?: FeedbackDevice;

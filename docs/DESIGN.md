@@ -476,7 +476,7 @@ nothing that ties it back to the user or their home.**
     kept in memory only: each its message, how many seconds ago, where in
     Room Tiles' code (file:line:column); HA masks the message's URLs,
     emails, ids, times, entity ids and the home's own words -
-    `_error_text` - rather than dropping it), a touch panel (which one, if
+    `_error_text` - rather than dropping it), an ESP32 panel (which one, if
     there are several - never its name; HA adds what it knows of it,
     report.py `panel_facts`: board, firmware label or build, hand-built,
     the Wi-Fi chip's version, online, ESPHome's reset reason, uptime, free
@@ -651,7 +651,7 @@ the test in the same change.
 
 ## Panel firmware
 
-The touch panels (on a wall or a desk) run Room Tiles firmware (ESPHome + LVGL, `firmware/`). They
+The ESP32 panels (on a wall or a desk) run Room Tiles firmware (ESPHome + LVGL, `firmware/`). They
 show and use what the integration holds; nothing about a house is compiled in.
 
 - **Flash layout (16 MB, frozen 2026-11-14):** two firmware slots (5 MiB

@@ -68,7 +68,7 @@ describe("rt-feedback", () => {
   const choices = (el: El) => [...el.shadowRoot!.querySelectorAll("button.choice")].map((b) => b.textContent!.trim());
   const next = (el: El) => [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>("button.primary")].at(-1)!;
 
-  it("a home with only the web dashboard: no touch panel choice, the dashboard is enough", async () => {
+  it("a home with only the web dashboard: no ESP32 panel choice, the dashboard is enough", async () => {
     const el = await openBug({} as RoomTilesDoc);
     expect(choices(el)).toEqual(["This dashboard", "Somewhere else"]);
     const words = el.shadowRoot!.querySelector("textarea")!;
@@ -80,10 +80,10 @@ describe("rt-feedback", () => {
     el.remove();
   });
 
-  it("with panels: a touch panel is one choice among others, never required", async () => {
+  it("with panels: an ESP32 panel is one choice among others, never required", async () => {
     const doc = { panel_firmware: { panels: [{ device_id: "d1", name: "Kitchen", board: "elecrow-p4", running: "1" }, { device_id: "d2", name: "Office", board: "elecrow-p4", running: "1" }], images: [] } } as unknown as RoomTilesDoc;
     const el = await openBug(doc);
-    expect(choices(el)).toEqual(["This dashboard", "A touch panel", "Somewhere else"]);
+    expect(choices(el)).toEqual(["This dashboard", "An ESP32 panel", "Somewhere else"]);
     el.remove();
   });
 });

@@ -366,7 +366,7 @@
         },
         "auto_update_panels": {
           "name": "Panels automatisch aktualisieren",
-          "description": "Wandpanels installieren eine neuere Room-Tiles-Firmware selbst, wenn niemand sie benutzt."
+          "description": "ESP32-Panels installieren eine neuere Room-Tiles-Firmware selbst, wenn niemand sie benutzt."
         }
       }
     },

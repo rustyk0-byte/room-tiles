@@ -366,7 +366,7 @@
         },
         "auto_update_panels": {
           "name": "Aggiorna automaticamente i pannelli",
-          "description": "I pannelli a parete installano da soli un firmware di Room Tiles più recente quando nessuno li usa."
+          "description": "I pannelli ESP32 installano da soli un firmware di Room Tiles più recente quando nessuno li usa."
         }
       }
     },

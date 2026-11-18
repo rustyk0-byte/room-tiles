@@ -366,7 +366,7 @@
         },
         "auto_update_panels": {
           "name": "Panelen automatisch bijwerken",
-          "description": "Wandpanelen installeren zelf nieuwere Room Tiles-firmware wanneer niemand ze gebruikt."
+          "description": "ESP32-panelen installeren zelf nieuwere Room Tiles-firmware wanneer niemand ze gebruikt."
         }
       }
     },

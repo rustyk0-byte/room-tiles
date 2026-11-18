@@ -1,6 +1,6 @@
 # Room Tiles panel firmware
 
-ESPHome firmware for wall panels (Elecrow CrowPanel Advanced ESP32-P4, all
+ESPHome firmware for ESP32 panels (Elecrow CrowPanel Advanced ESP32-P4, all
 1024x600). Work in progress - see `docs/TODO.md` "Step 3".
 
 - `room_tiles.yaml` - the panel (one firmware per board)
