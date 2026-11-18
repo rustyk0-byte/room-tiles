@@ -182,6 +182,36 @@ SWAP_ROOMS = ("dining_room", "garage")
 STAIRS = ("main_floor", "living_room", "upstairs", 146.0)
 
 
+# A second marker layer on each map: from 2x on, a marker for every tile of
+# each room (in a 3 x 3 grid around the room's name, the middle free - and
+# in the stairs' room its top middle too); the first layer ("Main": the
+# rooms' lights) ends there. Two layers: the map gets its layer (zoom)
+# buttons.
+DEVICES_LAYER = ("devices", "Devices", 2.0)
+GRID = 30.0  # map units between a room's markers
+SLOTS = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]
+
+
+def _device_layer(entry: MockConfigEntry) -> None:
+    from custom_components.room_tiles.model import Layer, Marker
+
+    data = entry.runtime_data.data
+    layer_id, name, zoom = DEVICES_LAYER
+    for plan in data.maps:
+        for layer in plan.layers:
+            layer.max_zoom = zoom
+        plan.layers.append(Layer(id=layer_id, name=name, min_zoom=zoom))
+        for zone in plan.zones:
+            area = data.area(zone.area) if zone.area else None
+            if area is None or zone.label is None:
+                continue
+            tiles = [t for t in area.tiles.get("5x2", []) if t is not None and t.entity and t.kind != "blank"]
+            slots = [sl for sl in SLOTS if not (sl == (0, -1) and plan.id == STAIRS[0] and zone.area == STAIRS[1])]
+            for t, (dx, dy) in zip(tiles, slots):
+                data.markers.append(Marker(id=f"{plan.id}_{t.entity}", map=plan.id, entity=t.entity,
+                                           x=zone.label[0] + dx * GRID, y=zone.label[1] + dy * GRID, layer=layer_id))
+
+
 def _map_changes(entry: MockConfigEntry) -> None:
     from custom_components.room_tiles.model import Link
 
@@ -194,6 +224,7 @@ def _map_changes(entry: MockConfigEntry) -> None:
     ma.x, ma.y, mb.x, mb.y = mb.x, mb.y, ma.x, ma.y
     room = next(z for z in plan.zones if z.area == STAIRS[1])
     plan.links.append(Link(to=STAIRS[2], at=(room.label[0], STAIRS[3])))
+    _device_layer(entry)
 
 
 @pytest.fixture(autouse=True)
