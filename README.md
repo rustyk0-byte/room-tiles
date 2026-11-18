@@ -20,9 +20,16 @@ shows the same things where they are.
 
 ## Install
 
-1. HACS › three-dot menu › **Custom repositories** › add
-   `https://github.com/rustyk0-byte/room-tiles` as an **Integration**.
-2. Download **Room Tiles** in HACS, then restart Home Assistant.
+1. Settings › **Marketplace** › **Add from link**, and enter
+   `rustyk0-byte/room-tiles` (it's an **Integration**). Adding a repository
+   by link needs the Marketplace's GitHub connection (Settings › Devices &
+   services › Marketplace).
+2. Install **Room Tiles**, then restart Home Assistant.
+
+Updates show under Settings › **Updates**, like Home Assistant's own; the
+touch panels' firmware comes with them. To try pre-releases, turn on the
+**Pre-release** switch on Room Tiles' device under Settings › Devices &
+services › Marketplace (it's disabled at first: enable it there).
 
 (Or download `room_tiles.zip` from a release, unzip it into
 `config/custom_components/room_tiles`, and restart.)
