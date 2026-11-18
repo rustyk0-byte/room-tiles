@@ -182,6 +182,9 @@ A tablet or any other screen with a web browser doesn't need this: it runs
 the dashboard.
 ### Install the firmware
 
+First install Room Tiles in Home Assistant (see [Install](#install)) - a
+panel needs it to finish setting up.
+
 1. Plug the panel into your computer with a USB-C cable (a data cable,
    not a charge-only one).
 2. In **Chrome or Edge** on that computer, open the

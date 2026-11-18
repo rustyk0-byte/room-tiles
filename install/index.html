@@ -117,6 +117,9 @@
         border-color: var(--accent);
         margin: 0 0 12px;
       }
+      .note.first {
+        margin: 16px 0 0;
+      }
       a {
         color: var(--accent);
       }
@@ -131,6 +134,13 @@
       <p>One USB cable and a few minutes. After this, your panel updates through Home Assistant.</p>
       <div class="note warn">
         This page needs Chrome or Edge on a computer (they can talk to USB devices). Open it there to install.
+      </div>
+
+      <div class="note heads-up first">
+        <b>First, Room Tiles in Home Assistant.</b> The panel works with the Room Tiles integration (Home Assistant
+        2026.11 or newer): <a href="https://github.com/rustyk0-byte/room-tiles#install">install it from the Marketplace</a>
+        and restart Home Assistant before you set up a panel - without it, the panel stays on "Connecting to Home
+        Assistant…".
       </div>
 
       <h2>1. Find your panel</h2>
