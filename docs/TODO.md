@@ -296,11 +296,12 @@ Upload firmware), one image per board in the folder.
   changes only through pull requests the code owner approved; outside
   contributors' workflows wait for approval (both need a public repo).
 
-## 3. Round panel (code goes on, untested)
+## 3. Round panel
 
-The maintainer can't flash its board for now (2026-11-18): the code
-keeps going and must keep compiling (the firmware CI's round build when
-asked), but nothing of it is tried on the hardware until someone can.
+Its board can be tried again (2026-11-18). Its code first compiled in the
+0.1.0b1 release run (`room-tiles-elecrow-s3-round-2.1.factory.bin`); its
+first install is over USB (a new flash layout: no update from the old
+firmware), then updates come like every other panel's.
 
 A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
 480x480, 8 MB PSRAM, 16 MB flash, CST826 touch, a rotary knob with a press).
