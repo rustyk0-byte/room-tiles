@@ -278,7 +278,10 @@ Upload firmware), one image per board in the folder.
   source); Room Tiles' own restart repair now steps aside for the
   Marketplace's (`restart_required_<repo>_<version>`), as it did for
   HACS's. Next: the UPDATE path (the next stable release through the
-  update entity).
+  update entity). Found with 0.1.0: the Marketplace takes the FIRST stable
+  release in GitHub's release list as the newest, and GitHub listed
+  v0.1.0b1 ahead of v0.1.0 - so 0.1.0 wasn't offered until b1 was marked a
+  pre-release. Keep the release list to stable versions in order.
 - **Before inviting anyone: the Marketplace's main Install button must
   work.** With only a pre-release out, it installed from the `main` branch,
   which has no zip (404 - 0.1.0b1 test, 2026-11-18). `hacs.json`
