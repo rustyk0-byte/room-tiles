@@ -20,6 +20,7 @@
 
 import { fullName } from "./picker";
 import { anchorOf } from "./arrange";
+import "./controls"; // (<rt-roller>: the viewing zoom box)
 import { ZOOM_EPS, zoomBox, zoomLabel, zoomStyles } from "./zoom-box";
 import { LitElement, css, html, nothing, svg, unsafeCSS, type PropertyValues } from "lit";
 import { SHEET_COLS, SHEET_ROWS, STATIC_BASE, markerAnimation } from "./appliance";
@@ -203,6 +204,18 @@ export function viewZoom(full: { w: number; h: number }, cam: { w: number; h: nu
  *  0.25 steps. The panels use the same rule (map_view view_max_zoom_). */
 export const VIEW_MAX_ZOOM = 8;
 // MIRRORED: firmware/components/room_tiles/map_view.cpp (max zoom) - a change here must be made there too.
+/** The viewing zoom box's steps (map_view.cpp ZOOM_STEP): each a whole new
+ *  set of panel map tiles. */
+export const VIEW_ZOOM_STEP = 0.5;
+
+/** The zoom box roller's steps: the map's zoom limit on top, then each
+ *  whole step below it (where + and - stop) down to 1x. */
+export function viewZoomSteps(max: number): number[] {
+  const out = [Math.round(max * 100) / 100];
+  for (let n = Math.ceil(max / VIEW_ZOOM_STEP - 1e-3) - 1; n * VIEW_ZOOM_STEP >= 1 - 1e-3; n--) out.push(n * VIEW_ZOOM_STEP);
+  return out;
+}
+
 export function viewMaxZoom(map: MapData | undefined): number {
   let z = VIEW_MAX_ZOOM;
   if (!map) return z;
@@ -710,6 +723,7 @@ export class RtMap extends LitElement {
    *  middle of the map once the whole map is in view (picking a layer
    *  starts at its zoom). Inside the camera's limits. */
   zoomTo(z: number): void {
+    if (!this.editing) z = Math.max(1, z); // (viewing: never past the whole map)
     const c = this._flyTo ?? this._cam;
     const full = this._overviewCam();
     let k = viewZoom(full, c, this._size) / Math.max(0.05, z);
@@ -745,6 +759,11 @@ export class RtMap extends LitElement {
   private get _camLimits(): { atIn: boolean; atOut: boolean } {
     const c = this._flyTo ?? this._cam;
     const full = this._overviewCam();
+    if (!this.editing) {
+      // viewing: from the whole map in to the map's deepest zoom (_capped)
+      const z = viewZoom(full, c, this._size);
+      return { atIn: z >= viewMaxZoom(this.map) - ZOOM_EPS, atOut: z <= 1 + ZOOM_EPS };
+    }
     return { atIn: c.w <= full.w / CAM_IN + 1e-6, atOut: c.w >= full.w * CAM_OUT - 1e-6 };
   }
 
@@ -1155,7 +1174,7 @@ export class RtMap extends LitElement {
         `}
       </svg>
       ${this.editing && this.crosshair ? this._renderCrosshair() : nothing}
-      ${this.editing ? this._renderZoom() : nothing}
+      ${this.editing ? this._renderZoom() : this.queueView ? nothing : this._renderViewZoom()}
     `;
   }
 
@@ -1170,6 +1189,34 @@ export class RtMap extends LitElement {
         <circle class="ring" r=${r}></circle>
         <circle class="dot" r="2.5"></circle>
       </svg>
+    </div>`;
+  }
+
+  /** The viewing zoom box - the panels' own: + on top, a roller of the zoom
+   *  steps (the deepest on top, like + above it - roll it and the map jumps
+   *  to that zoom), - under it. Zooms without pinching (a mouse, one hand).
+   *  MIRRORED: firmware/components/room_tiles/map_view.cpp build_zoom_box_ / set_zoom_steps_ / zoom_by_ - a change here must be made there too. */
+  private _renderViewZoom() {
+    const max = viewMaxZoom(this.map);
+    const steps = viewZoomSteps(max);
+    const z = viewZoom(this._overviewCam(), this._flyTo ?? this._cam, this._size);
+    let row = 0;
+    steps.forEach((st, i) => {
+      if (Math.abs(st - z) < Math.abs(steps[row] - z)) row = i;
+    });
+    const by = (dir: 1 | -1) => {
+      const n = dir > 0 ? Math.floor(z / VIEW_ZOOM_STEP + 1e-3) + 1 : Math.ceil(z / VIEW_ZOOM_STEP - 1e-3) - 1;
+      this.zoomTo(Math.max(1, Math.min(max, n * VIEW_ZOOM_STEP)));
+    };
+    return html`<div class="vzoom" role="group" aria-label=${t("zoom.zoom")}>
+      <button aria-label=${t("zoom.in")} ?disabled=${z >= max - ZOOM_EPS} @click=${() => by(1)}><ha-icon icon="mdi:plus"></ha-icon></button>
+      <rt-roller
+        .options=${steps.map(zoomLabel)}
+        .selected=${row}
+        .label=${t("zoom.zoom")}
+        @change=${(e: CustomEvent) => this.zoomTo(steps[e.detail.row])}
+      ></rt-roller>
+      <button aria-label=${t("zoom.out")} ?disabled=${z <= 1 + ZOOM_EPS} @click=${() => by(-1)}><ha-icon icon="mdi:minus"></ha-icon></button>
     </div>`;
   }
 
@@ -1370,6 +1417,39 @@ export class RtMap extends LitElement {
   static styles = [noSelectStyles, zoomStyles, queueStyles, 
     planStyles,
     css`
+    /* the viewing zoom box (_renderViewZoom): the panels' - 88 wide in the
+       map's top-right corner, +, the steps' roller, - */
+    .vzoom {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 88px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      border-radius: 12px;
+      background: var(--rt-dialog);
+      border: 1px solid var(--rt-tile-border);
+      overflow: hidden;
+      --mdc-icon-size: 24px;
+      --u: 1px;
+    }
+    .vzoom button {
+      height: 48px;
+      border: 0;
+      background: none;
+      color: var(--rt-text);
+      cursor: pointer;
+      padding: 0;
+    }
+    .vzoom button:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+    .vzoom rt-roller {
+      margin: 0 6px;
+      --rt-roller-selected-size: 22px;
+    }
     :host {
       display: block;
       position: relative;

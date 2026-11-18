@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { viewMaxZoom, type MapData } from "./map";
+import { viewMaxZoom, viewZoomSteps, type MapData } from "./map";
 
 // a map as big as the reference view (1024 x 552): zoom = 1024 / a room's width
 const map = (zones: [number, number][][], layers: { id: string; name: string; min_zoom: number }[] = []) =>
@@ -27,5 +27,14 @@ describe("viewMaxZoom", () => {
     const m = map([room(100, 50), room(10, 10)]);
     (m.zones[1] as { vacuum?: string }).vacuum = "robot";
     expect(viewMaxZoom(m)).toBe(8);
+  });
+});
+
+describe("the viewing zoom box's steps (the panels')", () => {
+  it("the map's limit on top, then every half step down to the whole map", () => {
+    expect(viewZoomSteps(2.5)).toEqual([2.5, 2, 1.5, 1]);
+    // a limit off the steps: never a step past the whole map
+    expect(viewZoomSteps(2.25)).toEqual([2.25, 2, 1.5, 1]);
+    expect(viewZoomSteps(1)).toEqual([1]);
   });
 });
