@@ -1284,6 +1284,11 @@ void RoomTiles::job_task_(void *arg) {
     size_t cap = (length > 0 && (size_t) length < MAX_BODY) ? (size_t) length + 1 : 64 * 1024;
     buf = static_cast<uint8_t *>(heap_caps_malloc(cap, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
     while (buf != nullptr) {
+      // (the whole body, as its length said: done - never grow the buffer
+      // just to read the end; doubling a 3 MB pack's buffer to 6 MB is more
+      // than the round panel's 8 MB of PSRAM can give)
+      if (length > 0 && len >= (size_t) length)
+        break;
       if (len + 1 >= cap) {
         if (cap >= MAX_BODY) {
           self->job_error_ = "too big";

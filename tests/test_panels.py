@@ -633,3 +633,20 @@ async def test_a_left_over_room_tiles_device_goes(hass: HomeAssistant) -> None:
     assert await hass.config_entries.async_setup(e.entry_id)
     await hass.async_block_till_done()
     assert dr.async_get(hass).async_get(stale.id) is None
+
+
+def test_a_round_panel_gets_the_round_theme_pack():
+    """The round panel's theme pack: the theme's round cut (only what it
+    draws); a theme without one, or any other panel: the full pack."""
+    from custom_components.room_tiles.panels import Pack
+
+    packs = {
+        "theme-dark": Pack("dark-1", b"x"),
+        "theme-dark-round": Pack("dark-round-1", b"x"),
+        "theme-light": Pack("light-1", b"x"),
+    }
+    assert pack_for(packs, "theme", {"theme": "dark", "round": True}).id == "dark-round-1"
+    assert pack_for(packs, "theme", {"theme": "dark"}).id == "dark-1"
+    assert pack_for(packs, "theme", {"theme": "light", "round": True}).id == "light-1"  # (no round cut yet)
+    out = payload(RoomTilesData(), Panel(id="d1", theme="dark"), _dev(), "7", "en", packs, round_panel=True)
+    assert out["packs"]["theme"]["id"] == "dark-round-1" and out["panel"]["round"] is True

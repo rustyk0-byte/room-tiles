@@ -243,11 +243,25 @@ def pack_ids(packs: dict[str, Pack]) -> dict[str, str]:
     return {name: p.id for name, p in packs.items()}
 
 
+def is_round(store: Any, device_id: str) -> bool:
+    """The panel is a round one (its firmware's board, as it last reported):
+    it gets the round theme packs - only what it draws."""
+    running = store.fw_reports.get(device_id)
+    return running is not None and running.board.startswith("elecrow-s3-round")
+
+
 def pack_for(packs: dict[str, Pack], kind: str, settings: dict[str, Any]) -> Pack | None:
-    """The panel's theme pack ("theme") or its language's wording ("strings";
-    English when there's no table for its language)."""
+    """The panel's theme pack ("theme"; a round panel's own cut of it,
+    `settings["round"]` - assets/build_panel.py ROUND_SKIP) or its language's
+    wording ("strings"; English when there's no table for its language)."""
     if kind == "theme":
-        return packs.get(f"theme-{settings['theme']}") or packs.get(f"theme-{THEMES[0]}")
+        # its theme (its round cut first, on a round panel), else the default's
+        cuts = ("-round", "") if settings.get("round") else ("",)
+        for theme in (settings["theme"], THEMES[0]):
+            for cut in cuts:
+                if (p := packs.get(f"theme-{theme}{cut}")) is not None:
+                    return p
+        return None
     if kind == "strings":
         return packs.get(f"strings-{settings['language']}") or packs.get("strings-en")
     return None
@@ -647,6 +661,7 @@ def payload(
     area_lights: dict[str, list[str]] | None = None,
     firmware: dict[str, Any] | None = None,
     room: list[str] | None = None,
+    round_panel: bool = False,
 ) -> dict[str, Any]:
     """Everything the panel shows (milestone 2: its settings, the shown areas
     with their boards, and the names / kinds of the entities on them)."""
@@ -670,6 +685,7 @@ def payload(
         if entity in entities:
             entities[entity]["icon"] = icon
     settings = resolve(data, panel, dev, ha_language)
+    settings["round"] = round_panel  # (its theme pack: the round one)
     # the room it's in (its HA device's area): its area lights entity, for
     # "Screen off when the following area lights are off" - whatever area it shows
     settings["room_lights"] = list(room or [])
@@ -806,6 +822,7 @@ class PanelView(_PanelRequest):
             store.area_lights,
             fw.offer(image, running, auto) if image is not None and wanted == image.build else None,
             room_lights(hass, store.data, dev),
+            is_round(store, dev.device_id),
         )
         return web.json_response(body, headers={"Cache-Control": "no-store"})
 
@@ -848,6 +865,7 @@ class PanelPackView(_PanelRequest):
         store, panel, dev = found
         hass: HomeAssistant = request.app["hass"]
         settings = resolve(store.data, panel, dev, hass.config.language)
+        settings["round"] = is_round(store, dev.device_id)
         pack = pack_for(store.panel_packs, request.query.get("pack", ""), settings)
         if pack is None:
             return web.Response(status=404)

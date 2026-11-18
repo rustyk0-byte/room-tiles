@@ -6,6 +6,9 @@ dashboard's string tables (needs Pillow). docs/DESIGN.md "Panel firmware".
 
 Writes:
   custom_components/room_tiles/panel_packs/theme-<theme>.rtp.gz   images + colours
+  custom_components/room_tiles/panel_packs/theme-<theme>-round.rtp.gz  the same,
+            only what the round panel draws (ROUND_SKIP: no 6x3 sizes, map
+            markers, tile picker icons or large clock - its memory is small)
   custom_components/room_tiles/panel_packs/strings-<lang>.rtp.gz  wording
   (gzip in the repo - the theme is ~2.5 MB raw, ~230 KB packed; HA unpacks
   them once and serves them raw)
@@ -405,10 +408,26 @@ def pack(kind: int, ident: str, entries: list[tuple[str, int, int, int, int, int
     return body + hashlib.sha256(body).digest()
 
 
-def build_theme(theme: str) -> tuple[bytes, list[str]]:
+# MIRRORED: firmware/components/room_tiles/board_strip.cpp (the round panel's
+# pictures) - a picture it starts drawing must not be skipped here.
+# The round panel (one 5x2 strip, no map, no tile editing, 480 px) never
+# draws the 6x3 sizes (_s, _65), the map's markers (_mk, _30, the Map
+# button), the tile picker's icons (_m) or the wall panels' large clock (_l)
+ROUND_SKIP_ENDINGS = ("_s", "_s_off", "_m", "_mk", "_mk_off", "_30", "_65", "_l")
+ROUND_SKIP = {"bar_map"}
+ROUND_KEEP = {"icon_settings_s"}  # (its settings button: board_strip.cpp)
+
+
+def round_uses(name: str) -> bool:
+    return name in ROUND_KEEP or not (name.endswith(ROUND_SKIP_ENDINGS) or name in ROUND_SKIP)
+
+
+def build_theme(theme: str, round_panel: bool = False) -> tuple[bytes, list[str]]:
     entries = []
     names = []
     for name, img, fmt in panel_images(theme):
+        if round_panel and not round_uses(name):
+            continue
         data, stride = to_i8(img) if fmt == I8 else to_i8x(img) if fmt == I8X else to_rgb565a8(img)
         entries.append((name, KIND_IMAGE, fmt, img.width, img.height, stride, data))
         names.append(name)
@@ -418,7 +437,8 @@ def build_theme(theme: str) -> tuple[bytes, list[str]]:
     if clock is not None:
         entries.append(("clock", KIND_JSON, 0, 0, 0, 0, json.dumps(clock, separators=(",", ":")).encode()))
     digest = hashlib.sha256(b"".join(e[6] for e in entries)).hexdigest()[:12]
-    return pack(PACK_THEME, f"{theme}-{digest}", entries), names
+    ident = f"{theme}-round-{digest}" if round_panel else f"{theme}-{digest}"
+    return pack(PACK_THEME, ident, entries), names
 
 
 def build_strings(lang: str) -> bytes:
@@ -514,6 +534,11 @@ def main() -> int:
         keep.add(OUT / f"theme-{theme}.rtp.gz")
         names += [n for n in own if n not in names]  # (every theme's slots)
         print(f"theme-{theme}: {len(data) / 1024:.0f} KB of {THEME_MAX // 1024} KB, {len(own)} images")
+        # the round panel's: the same theme, only what it draws
+        data, own = build_theme(theme, round_panel=True)
+        _write(OUT / f"theme-{theme}-round.rtp.gz", data)
+        keep.add(OUT / f"theme-{theme}-round.rtp.gz")
+        print(f"theme-{theme}-round: {len(data) / 1024:.0f} KB, {len(own)} images")
     # every entity icon may have an "off" picture (a theme's <icon>_off.png,
     # any icon, any theme): its slots are always there, so a theme pack can
     # add one without a firmware update - a pack without it leaves it empty

@@ -670,7 +670,12 @@ show and use what the integration holds; nothing about a house is compiled in.
   ONE theme in its asset area, drawn straight from flash (no decoding, no
   working memory). A theme change or new art in an update = a download,
   never a reflash. While a pack downloads, or if one is broken, tiles draw
-  in plain colours without art and the panel retries.
+  in plain colours without art and the panel retries. The **round panel** gets
+  each theme's round cut (`theme-<theme>-round`, assets/build_panel.py
+  ROUND_SKIP: no 6x3 sizes, map markers, tile picker icons or large clock -
+  about 60% of the full pack); the integration knows a round panel by the
+  board it reports. A download is held in PSRAM at exactly its length (the
+  round panel's 8 MB has no room for a doubled buffer).
 - **Image formats:** sprite sheets 8-bit palette (I8; never scaled or
   rotated on the panel - one image per size), icons 16-bit with alpha
   (RGB565A8). 16-bit sprite sheets render faster but are about three times
