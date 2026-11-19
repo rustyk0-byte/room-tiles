@@ -544,7 +544,7 @@ the test in the same change.
 - **The Room Tiles icon**: the dashboard's grid
   icon with each rounded outline in a tile colour (lights amber, blue,
   covers green, locks purple - the blue tile stays blue though switches are
-  raspberry now). Master: `assets/masters/brand/
+  raspberry now). Master: `custom_components/room_tiles/themes/masters/brand/
   room_tiles_icon.svg`; `assets/tools/make_brand_icon.py` draws the same
   geometry into `custom_components/room_tiles/brand/` (HA 2026.3+ shows a
   custom integration's own icon.png / icon@2x.png / dark_ variants) and any
@@ -585,7 +585,7 @@ the test in the same change.
   their web pictures, `themes.json`) - built by us, nothing to do on the HA
   box. Installed themes (`/config/room_tiles_themes/<id>/`, a folder or its
   zip) are **built by the integration** with the same pipeline, once, and
-  cached (by their files' fingerprint); the default art (`assets/masters`,
+  cached (by their files' fingerprint); the default art (`custom_components/room_tiles/themes/masters`,
   shipped in the zip for this) fills their gaps, the default theme their
   colours. Rules:
   - **Ids never clash:** an installed theme is `user:<id>` everywhere it's

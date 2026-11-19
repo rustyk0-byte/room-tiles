@@ -38,17 +38,11 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 
-from .const import DOMAIN, LAYOUTS
+from .const import DOMAIN, LAYOUTS, PANEL_SCHEMA
 from .model import Panel, RoomTilesData
 
 PANEL_MANUFACTURER = "room-tiles"
 PANEL_MODEL = "panel"
-# MIRRORED: firmware/components/room_tiles/signing.h PANEL_SCHEMA - a change here must be made there too.
-# The panels' format: payload, packs, taps, screenshots. Bump it (both sides) on
-# any change the other side can't read. Every panel request says its number
-# (?schema=); HA answers another number with 426 and its own in the body - the
-# panel then says which side needs an update, and HA lists it in Repairs.
-PANEL_SCHEMA = 3  # (3: theme packs carry I8X pictures)
 LINK_ENTITY = "sensor.room_tiles_panel_link"
 URL = "/api/room_tiles/panel"
 FIRMWARE_URL = "/api/room_tiles/panel/firmware"

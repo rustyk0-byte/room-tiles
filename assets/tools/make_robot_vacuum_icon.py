@@ -94,6 +94,6 @@ def write_png(path: Path, px: list[list[tuple[int, int, int, int]]]) -> None:
 
 
 if __name__ == "__main__":
-    out = Path(__file__).resolve().parent.parent / "masters" / "ui" / "icon_robot_vacuum.png"
+    out = Path(__file__).resolve().parents[2] / "custom_components" / "room_tiles" / "themes" / "masters" / "ui" / "icon_robot_vacuum.png"
     write_png(out, render())
     print(out)

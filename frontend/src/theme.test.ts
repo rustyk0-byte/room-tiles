@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { BUTTON_ART, hasArt, iconArt, OFF_ART, THEME_NAMES, THEMES } from "./theme";
 
 const art = (theme: string, name: string) =>
-  [`../assets/themes/${theme}/ui/${name}.png`, `../assets/masters/ui/${name}.png`].some((f) => existsSync(resolve(__dirname, "..", f)));
+  [`../assets/themes/${theme}/ui/${name}.png`, `../custom_components/room_tiles/themes/masters/ui/${name}.png`].some((f) => existsSync(resolve(__dirname, "..", f)));
 
 describe("themes", () => {
   it("every theme has its colours, its lists and the same tokens", () => {

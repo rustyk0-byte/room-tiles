@@ -1,5 +1,5 @@
 """Room Tiles' icon as PNGs, from the master's geometry
-(assets/masters/brand/room_tiles_icon.svg - option D: four rounded outlines
+(custom_components/room_tiles/themes/masters/brand/room_tiles_icon.svg - option D: four rounded outlines
 in the tile colours).
 
 Writes HA's brand images into the integration (HA 2026.3+ loads a custom

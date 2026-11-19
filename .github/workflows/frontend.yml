@@ -46,7 +46,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Artwork (assets/masters -> per-theme web files)
+      - name: Artwork (custom_components/room_tiles/themes/masters -> per-theme web files)
         run: |
           pip install --quiet pillow
           python ../assets/build_web.py ../custom_components/room_tiles/frontend

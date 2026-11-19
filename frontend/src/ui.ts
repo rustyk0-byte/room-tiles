@@ -352,7 +352,7 @@ export const touchNoteStyles = css`
   }
 `;
 
-/** The Room Tiles icon (assets/masters/brand/room_tiles_icon.svg - four
+/** The Room Tiles icon (custom_components/room_tiles/themes/masters/brand/room_tiles_icon.svg - four
  *  rounded outlines in the tile colours), inline: the loading and empty
  *  screens. `size` in CSS px. */
 export function brandIcon(size = 96): TemplateResult {

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Convert LVGL 9 I8 C image arrays (256-colour palette + indices) into PNG.
 
-One-off import of the original panel art into assets/masters/. Standard
+One-off import of the original panel art into custom_components/room_tiles/themes/masters/. Standard
 library only. Drops the magenta cut-out key some originals still carry
 (see make_appliance_sprites.py in the old panel repo).
 

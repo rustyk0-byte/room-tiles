@@ -68,7 +68,7 @@ opts = {"A": opt_a(), "B": opt_b(), "C": opt_c(), "D": opt_d()}
 small = {k: v.resize((60, 60), Image.LANCZOS) for k, v in opts.items()}
 for k, v in small.items():
     v.save(f"/tmp/claude-0/-homeassistant/d55aeab9-da70-4e8f-9c9d-4932c1d96e8e/scratchpad/entry_{k}.png")
-blind = Image.open("/share/room-tiles/assets/masters/ui/icon_blind.png").convert("RGBA")
+blind = Image.open("/share/room-tiles/custom_components/room_tiles/themes/masters/ui/icon_blind.png").convert("RGBA")
 Z = 4
 cols = list(small.items()) + [("blind (now)", blind)]
 sheet = Image.new("RGBA", (len(cols) * (60 * Z + 30) + 30, 60 * Z + 80), (30, 30, 30, 255))

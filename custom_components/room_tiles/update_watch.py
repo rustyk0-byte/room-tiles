@@ -26,7 +26,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from .const import DOMAIN
 
 DIR = Path(__file__).parent
-SKIP_DIRS = {"frontend", "__pycache__", "brand", "panel_packs", "firmware_images"}  # served from disk / not code (packs: reloaded live, __init__.py)
+SKIP_DIRS = {"frontend", "__pycache__", "brand", "panel_packs", "firmware_images", "masters"}  # served from disk / not code (packs: reloaded live, __init__.py)
 CHECK_EVERY = timedelta(minutes=2)
 ISSUE_RESTART = "restart_required"
 # whose own "restart required" repair stands in for ours (the Marketplace's:

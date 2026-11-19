@@ -1,8 +1,12 @@
 # Room Tiles artwork
 
-`masters/` holds the master copies of all artwork; everything the wall-panel
-firmware and the dashboard show is generated from them. Edit a master, never
-generated output.
+`masters/` (in the integration: `custom_components/room_tiles/themes/masters/` -
+Home Assistant builds installed themes over it too) holds the master copies of
+all artwork; everything the wall-panel firmware and the dashboard show is
+generated from them. Edit a master, never generated output. The packager is
+`custom_components/room_tiles/themes/` (`panel.py`, `web.py`, `fmt.py`);
+`build_panel.py` / `build_web.py` here run it for the themes that come with
+Room Tiles (`themes/`).
 
 - `masters/appliances/` - appliance pictures. Animated ones are sprite sheets of
   8 x 4 frames (196 px each, played row by row at 16 fps); `plate_knife_fork`

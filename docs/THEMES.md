@@ -147,7 +147,7 @@ with a little room around the picture if you want it to look smaller.
 
 Switch tracks, knobs, sliders and padlocks (`track_*`, `knob_*`,
 `lock_padlock_*`, `temp_track`, `hue_ring`, `swatch_ring`) can be replaced
-too - same names and sizes as the default art (`assets/masters/ui/`).
+too - same names and sizes as the default art (`custom_components/room_tiles/themes/masters/ui/`).
 
 ### Appliances - appliances/
 

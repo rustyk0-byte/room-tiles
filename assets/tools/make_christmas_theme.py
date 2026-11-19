@@ -4,7 +4,7 @@
   python3 assets/tools/make_christmas_theme.py
 
 Writes assets/themes/christmas/{ui,appliances}/*.png - the same names, sizes
-and formats as assets/masters/ (a theme replaces any master by name; what it
+and formats as custom_components/room_tiles/themes/masters/ (a theme replaces any master by name; what it
 doesn't replace comes from masters/). `<icon>_off.png` is a theme's picture
 for an icon when its entity is off (the reindeer's nose goes dark, the tree's
 lights go out); without one an icon looks the same on and off. `bar_*.png`
@@ -27,7 +27,7 @@ from pathlib import Path
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 HERE = Path(__file__).resolve().parent
-MASTERS = HERE.parent / "masters"
+MASTERS = HERE.parents[1] / "custom_components" / "room_tiles" / "themes" / "masters"
 OUT = HERE.parent / "themes" / "christmas"
 SS = 8  # supersampling
 # pictures only a theme has (no master): their sizes - the firmware / dashboard

@@ -85,6 +85,6 @@ def save(im, path):
 
 
 if __name__ == "__main__":
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent / "masters" / "ui"
+    out = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[2] / "custom_components" / "room_tiles" / "themes" / "masters" / "ui"
     save(pool(), out / "icon_pool.png")
     save(spa(), out / "icon_spa.png")

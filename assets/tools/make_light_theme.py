@@ -17,7 +17,7 @@ from pathlib import Path
 from PIL import Image
 
 HERE = Path(__file__).resolve().parent
-MASTERS = HERE.parent / "masters" / "ui"
+MASTERS = HERE.parents[1] / "custom_components" / "room_tiles" / "themes" / "masters" / "ui"
 OUT = HERE.parent / "themes" / "light" / "ui"
 
 INK = (58, 58, 58)  # the glyph-like icons: the theme's text, a little softer

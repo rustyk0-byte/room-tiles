@@ -2,7 +2,7 @@
 // image paths: colours are the --rt-* CSS variables set from these tokens,
 // images go through assetUrl(). A theme is a folder (docs/THEMES.md):
 // assets/themes/<id>/theme.json (its names, colours) + any pictures of its
-// own (what it doesn't replace comes from assets/masters/) - read at build
+// own (what it doesn't replace comes from custom_components/room_tiles/themes/masters/) - read at build
 // time (frontend/theme-data.mjs, THEME_DATA), never listed here by hand. The
 // panels' packs come from the same folders (assets/build_panel.py). Meanings
 // keep their colours in every theme: heat / cool, the vacuum queue's states.
