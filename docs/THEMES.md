@@ -6,8 +6,13 @@ is the theme format - **format 1**.
 
 The themes that come with Room Tiles (Dark, Light, Christmas) are made this
 way, and a theme of your own is installed by putting its folder in Home
-Assistant (see [Installed themes](#installed-themes)). To start from one of
-ours, copy its folder from [`assets/themes/`](../assets/themes/).
+Assistant (see [Installed themes](#installed-themes)).
+
+**Start here:** [`examples/themes/candy/`](../examples/themes/candy/) is a
+small, complete theme - a few colors, two pictures of its own and generated
+"off" pictures - with a guide to trying it and making it yours. The themes
+that come with Room Tiles are in [`assets/themes/`](../assets/themes/) to
+copy from too.
 
 ## A theme is a folder
 

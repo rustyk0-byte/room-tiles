@@ -119,3 +119,20 @@ def test_the_folder_says_what_it_cant_use(tmp_path):
     found, broken = installed.scan(root)
     assert [f.path.name for f in found] == ["candy"]
     assert {b.source for b in broken} == {"loose", "candy.zip"}
+
+
+def test_the_example_theme_builds(tmp_path):
+    """examples/themes/candy (docs/THEMES.md "Start here"): a theme users copy -
+    it keeps to the format and builds without a problem."""
+    from custom_components.room_tiles.themes import fmt
+
+    folder = Path(__file__).resolve().parent.parent / "examples" / "themes" / "candy"
+    assert fmt.read(folder)["id"] == "candy"
+    assert fmt.check_pictures(folder) == []
+    found, broken = installed.scan(folder.parent)
+    assert [f.id for f in found] == ["candy"] and broken == []
+    base = json.loads((Path(__file__).resolve().parent.parent / "custom_components" / "room_tiles" / "panel_packs" / "themes.json").read_text())[0]
+    built = installed.build(found[0], base, tmp_path / "cache")
+    assert built.ok, built.problems
+    assert "icon_light" in built.off_art  # (its own light icon's off picture: generated)
+

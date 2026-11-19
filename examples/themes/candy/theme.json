@@ -1,0 +1,25 @@
+{
+  "format": 1,
+  "id": "candy",
+  "name": {
+    "en": "Candy",
+    "de": "Bonbon",
+    "es": "Caramelo",
+    "fr": "Bonbon",
+    "it": "Caramella",
+    "nl": "Snoep",
+    "pt": "Doce"
+  },
+  "off": "gray",
+  "colors": {
+    "page": "#1A0D14",
+    "tile": "#2A1420",
+    "tileBorder": "#4A2438",
+    "button": "#3A1C2C",
+    "dialog": "#2E1624",
+    "accent": "#E8508A",
+    "accentSoft": "#7A2E4C",
+    "light": "#FFB3D1",
+    "scene": "#9FE2BF"
+  }
+}
