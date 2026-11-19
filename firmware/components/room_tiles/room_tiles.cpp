@@ -500,7 +500,8 @@ void RoomTiles::idle_loop_() {
   if (this->idle_.mode == IDLE_OFF || dark || !this->main_shown_) {
     this->clock_.hide();
     // an animation keeps the board up, dimmed; else the screen goes dark
-    // (also on the boot screen while HA is gone: "Connecting…" goes dark too)
+    // (also on the boot screen while HA is gone: "Connecting…" goes dark too
+    // - if HA stays away, say overnight, a dark screen keeps nobody awake)
     this->dim_(idle && keep);
     if (idle && !keep && (this->main_shown_ || this->offline_) && !this->asleep_) {
       this->sleep_();
