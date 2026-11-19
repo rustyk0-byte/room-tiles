@@ -36,10 +36,11 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm test
-      # colorpicker.ts computes the LIGHT's colours (data, not theme)
+      # colorpicker.ts computes the LIGHT's colours (data, not theme); tests
+      # may name colours (they aren't shown)
       - name: Colours only in theme.ts (theme-ready rule, docs/DESIGN.md)
         run: |
-          if grep -nE "#[0-9a-fA-F]{3,8}\b|rgba?\(|var\(--(primary|secondary|card|state|ha-|paper)" src/*.ts | grep -v "^src/theme.ts:" | grep -v "^src/colorpicker.ts:"; then
+          if grep -nE "#[0-9a-fA-F]{3,8}\b|rgba?\(|var\(--(primary|secondary|card|state|ha-|paper)" src/*.ts | grep -v "^src/theme.ts:" | grep -v "^src/colorpicker.ts:" | grep -v "\.test\.ts:"; then
             echo "Hard-coded colour or HA theme variable outside src/theme.ts" && exit 1
           fi
       - run: npm run build

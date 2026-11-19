@@ -17,7 +17,19 @@ import {
   type RoomTilesDoc,
   type Tile,
 } from "./types";
-import { DEFAULT_THEME, hasArt, iconArt, THEME_NAMES, themeCss, themeName, type ThemeName } from "./theme";
+import {
+  DEFAULT_THEME,
+  hasArt,
+  iconArt,
+  type InstalledTheme,
+  isInstalledId,
+  setInstalledThemes,
+  THEME_NAMES,
+  themeCss,
+  themeName,
+  themeNames,
+  type ThemeName,
+} from "./theme";
 import { LANG_NAMES, num, pct, setLanguage, t, th, tn } from "./i18n";
 import { localText, localTile } from "./words";
 import { STATIC_BASE, applianceStyles, parseUnits, renderAppliance } from "./appliance";
@@ -244,7 +256,8 @@ export class RoomTilesPanel extends LitElement {
   /** This device's Room Tiles theme (⚙ → Theme). Never HA's theme colours. */
   theme: ThemeName = (() => {
     const saved = load(STORE_THEME) as ThemeName | null;
-    return saved && THEME_NAMES.includes(saved) ? saved : DEFAULT_THEME;
+    // (an installed one: kept until the feed says whether it's still there)
+    return saved && (THEME_NAMES.includes(saved) || isInstalledId(saved)) ? saved : DEFAULT_THEME;
   })();
   private _doc?: RoomTilesDoc;
   private _error?: string;
@@ -571,6 +584,8 @@ export class RoomTilesPanel extends LitElement {
       setLanguage(this._language || this.hass?.locale?.language || this.hass?.language);
     // placing markers: the "Here:" row shows any selection - one it doesn't
     // cover (Shift-click, Select all...) becomes the row
+    // the settings menu opened: Room Tiles looks for new or changed installed themes
+    if (changed.has("_menu") && this._menu) void this.hass?.connection.sendMessagePromise?.({ type: "room_tiles/themes_check" }).catch(() => undefined);
     const st = this._markerStack;
     if (changed.has("_sel") && this._mapEdit && this._sel.length && !(st && this._sel.every((id) => st.includes(id))))
       this._markerStack = [...this._sel];
@@ -632,6 +647,7 @@ export class RoomTilesPanel extends LitElement {
     this._error = undefined;
     if (msg.type === "full") void this._checkVersion(); // (re)connected: maybe HA was restarted / updated
     this._doc = msg.type === "full" ? msg.data : ({ ...this._doc, ...msg.data } as RoomTilesDoc);
+    if (msg.data.themes) this._installedThemes(msg.data.themes.themes);
     // back after the Restart bar's restart: onto the new dashboard
     if (msg.type === "full" && this._restarting && !this._doc?.restart_needed) location.reload();
     const waiting = this._docWaiters;
@@ -2345,6 +2361,21 @@ export class RoomTilesPanel extends LitElement {
     save(STORE_LANGUAGE, code);
   }
 
+  /** The installed themes changed (or arrived): the lists take them; this
+   *  device's theme drawn again - or the default, when its theme is gone. */
+  private _installedThemes(list: InstalledTheme[]): void {
+    setInstalledThemes(list);
+    if (!themeNames().includes(this.theme)) {
+      this.theme = DEFAULT_THEME; // (the saved choice stays: it comes back with its theme)
+      return;
+    }
+    if (isInstalledId(this.theme)) {
+      this.setAttribute("style", themeCss(this.theme));
+      this._measure();
+    }
+    this.requestUpdate();
+  }
+
   private _setTheme(name: ThemeName): void {
     this.theme = name;
     save(STORE_THEME, name);
@@ -2841,7 +2872,7 @@ export class RoomTilesPanel extends LitElement {
         <div class="setting">
           <span class="label">${t("menu.theme")}</span>
           <select aria-label=${t("menu.theme")} @change=${(e: Event) => this._setTheme((e.target as HTMLSelectElement).value as ThemeName)}>
-            ${THEME_NAMES.map(
+            ${themeNames().map(
               (name) =>
                 html`<option value=${name} ?selected=${this.theme === name}>
                   ${name === DEFAULT_THEME ? t("theme.default", { name: themeName(name) }) : themeName(name)}

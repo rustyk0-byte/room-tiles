@@ -1,6 +1,8 @@
 // The Room Tiles document as sent by the integration's websocket feed
 // (custom_components/room_tiles/model.py `as_dict`). Keep in step with it.
 
+import type { InstalledTheme } from "./theme";
+
 export const PAYLOAD_SCHEMA = 1;
 
 export type Layout = "5x2" | "6x3";
@@ -77,6 +79,8 @@ export interface RoomTilesDoc {
   recordings?: Record<string, RecordingView>; // "Report a problem": appliance id -> its recording
   /** what's beta ("Report how it went"): "<kind>:<id>" -> its beta units ("" for a pool / vacuum) */
   beta?: Record<string, string[]>;
+  /** the themes the user installed (user_themes.py): ready ones, getting ready, can't be used */
+  themes?: { themes: InstalledTheme[]; building: string[]; problems: { theme: string; problems: string[] }[] };
   restart_needed?: boolean; // newer Room Tiles files installed than HA runs: restart to finish  // unmapped: a room it reports isn't mapped
   /** appliance profiles (integration: model.Appliance) */
   appliances?: ApplianceProfile[];

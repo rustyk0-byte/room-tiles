@@ -26,13 +26,34 @@ declare const THEME_DATA: {
 const DATA: typeof THEME_DATA =
   typeof THEME_DATA !== "undefined" ? THEME_DATA : { themes: [], offArt: {}, buttonArt: {} };
 
-/** Every theme's id, the default first (then each theme.json's order). */
+/** The bundled themes' ids, the default first (then each theme.json's order). */
 export const THEME_NAMES: readonly ThemeName[] = DATA.themes.map((th) => th.id);
 export const DEFAULT_THEME: ThemeName = DATA.themes.find((th) => th.default)?.id ?? THEME_NAMES[0] ?? "dark";
 
+/** A theme the user installed (Room Tiles' feed "themes" - user_themes.py
+ *  for_dashboard): described like the bundled ones, its pictures at `base`. */
+export interface InstalledTheme {
+  id: string; // "my-<its folder>"
+  name: Record<string, string>;
+  order: number;
+  colors: Record<string, string>;
+  offArt: string[];
+  buttonArt: string[];
+  base: string;
+}
+/** An installed theme's id: never a bundled theme's (user_themes.py). */
+export const isInstalledId = (id: string): boolean => id.startsWith("my-");
+const INSTALLED_BASE: Record<ThemeName, string> = {};
+let installed: InstalledTheme[] = [];
+
+/** Every theme to pick: the bundled ones, then the installed ones. */
+export function themeNames(): ThemeName[] {
+  return [...THEME_NAMES, ...installed.map((th) => th.id)];
+}
+
 /** The theme's name in the dashboard's language (its theme.json), else English. */
 export function themeName(id: ThemeName): string {
-  const th = DATA.themes.find((x) => x.id === id);
+  const th = DATA.themes.find((x) => x.id === id) ?? installed.find((x) => x.id === id);
   return th ? (th.name[language()] ?? th.name.en ?? id) : id;
 }
 
@@ -139,5 +160,27 @@ declare const BUILD_ID: string;
 const VERSION = typeof BUILD_ID !== "undefined" ? `?v=${encodeURIComponent(BUILD_ID)}` : "";
 
 export function assetUrl(base: string, name: string, theme: ThemeName = DEFAULT_THEME): string {
+  // an installed theme's pictures: where Room Tiles built them (the address
+  // changes with their content - no version needed)
+  const own = INSTALLED_BASE[theme];
+  if (own) return `${own}/${name}`;
   return `${base}/${theme}/${name}${VERSION}`;
+}
+
+/** The installed themes from Room Tiles' feed: into the lists above (their
+ *  colours already over the default's - the integration fills them). */
+export function setInstalledThemes(list: InstalledTheme[]): void {
+  for (const th of installed) {
+    delete THEMES[th.id];
+    delete (OFF_ART as Record<string, readonly string[]>)[th.id];
+    delete (BUTTON_ART as Record<string, readonly string[]>)[th.id];
+    delete INSTALLED_BASE[th.id];
+  }
+  installed = [...list].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+  for (const th of installed) {
+    THEMES[th.id] = { ...THEMES[DEFAULT_THEME], ...th.colors } as ThemeTokens;
+    (OFF_ART as Record<string, readonly string[]>)[th.id] = th.offArt;
+    (BUTTON_ART as Record<string, readonly string[]>)[th.id] = th.buttonArt;
+    INSTALLED_BASE[th.id] = th.base;
+  }
 }
