@@ -530,6 +530,9 @@ void Board::open_strip_settings_() {
       }
       lv_obj_t *l = lv_label_create(b);
       lv_label_set_text(l, label.c_str());
+      lv_label_set_long_mode(l, LV_LABEL_LONG_MODE_DOTS);  // (an installed theme's long name: cut with "…")
+      lv_obj_set_width(l, 300 - 32);
+      lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
       lv_obj_set_style_text_font(l, this->fonts_.name, 0);
       lv_obj_set_style_text_color(l, lv_color_hex(on ? on_accent : text), 0);
       lv_obj_center(l);

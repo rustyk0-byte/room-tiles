@@ -2365,8 +2365,14 @@ export class RoomTilesPanel extends LitElement {
    *  device's theme drawn again - or the default, when its theme is gone. */
   private _installedThemes(list: InstalledTheme[]): void {
     setInstalledThemes(list);
+    // the saved choice stays: an installed theme that's back is used again
+    const saved = load(STORE_THEME) as ThemeName | null;
+    if (saved && saved !== this.theme && themeNames().includes(saved)) {
+      this.theme = saved;
+      return;
+    }
     if (!themeNames().includes(this.theme)) {
-      this.theme = DEFAULT_THEME; // (the saved choice stays: it comes back with its theme)
+      this.theme = DEFAULT_THEME;
       return;
     }
     if (isInstalledId(this.theme)) {

@@ -921,7 +921,10 @@ void Board::open_theme_list_() {
       },
       LV_EVENT_CLICKED, nullptr);
   const int n = (int) names.size(), row_h = 56, gap = 6, w = 320;
-  const int h = n * row_h + (n - 1) * gap + 12;
+  // as tall as its rows - or the menu's height, and it scrolls (installed
+  // themes: any number)
+  const int full = n * row_h + (n - 1) * gap + 12;
+  const int h = std::min(full, (int) lv_obj_get_height(d) - 20);
   lv_obj_t *list = lv_obj_create(catcher);
   lv_obj_remove_style_all(list);
   lv_obj_set_size(list, w, h);
@@ -931,7 +934,12 @@ void Board::open_theme_list_() {
   lv_obj_set_style_border_color(list, lv_color_hex(this->color_("tileBorder", 0x4A4A4A)), 0);
   lv_obj_set_style_radius(list, 12, 0);
   lv_obj_add_flag(list, LV_OBJ_FLAG_CLICKABLE);  // (a tap on its edge stays in the list)
-  lv_obj_remove_flag(list, LV_OBJ_FLAG_SCROLLABLE);
+  if (full > h) {
+    lv_obj_set_scroll_dir(list, LV_DIR_VER);
+    lv_obj_set_style_pad_bottom(list, 6, 0);  // (the last row's gap, scrolled to the end)
+  } else {
+    lv_obj_remove_flag(list, LV_OBJ_FLAG_SCROLLABLE);
+  }
   // under the row's right end (where the theme's name is), kept in the menu
   // (the theme row is narrower than the list: never past the menu's left edge)
   const int x = std::max(10, std::min((int) lv_obj_get_width(d) - 10 - w, (int) (lv_obj_get_x(row) + lv_obj_get_width(row) - w)));
@@ -965,7 +973,11 @@ void Board::open_theme_list_() {
         name = d.replace(at, 6, name);
     }
     lv_obj_t *l = label(b, name, this->fonts_.name, on ? this->color_("onAccent", 0xFFFFFF) : this->color_("text", 0xFFFFFF));
+    lv_label_set_long_mode(l, LV_LABEL_LONG_MODE_DOTS);  // (an installed theme's long name: cut with "…")
+    lv_obj_set_width(l, w - 12 - 36);
     lv_obj_align(l, LV_ALIGN_LEFT_MID, 18, 0);
+    if (on && full > h)
+      lv_obj_scroll_to_view(b, LV_ANIM_OFF);  // (the theme it has, in view)
   }
 }
 
