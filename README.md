@@ -142,6 +142,7 @@ map. Some things live in only one place:
   and **Report a problem** with one
 - Panels - your panels' updates, and **Update panels automatically**
 - Send feedback
+- **Add a theme from a link** (under Theme; administrators)
 - Animations, full screen, and **Turn the tiles in portrait** - on a phone
   held upright, a room's tiles in two or three columns, scrolling down (on
   unless you switch it off; each browser's own)

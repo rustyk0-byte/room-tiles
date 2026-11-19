@@ -153,6 +153,26 @@ def _unzip(zpath: Path, dest: Path) -> Path:
     return folder
 
 
+def check_zip(zpath: Path, work: Path) -> dict:
+    """A downloaded theme zip, looked at before it's kept: its theme.json
+    (ThemeError when it isn't a theme this Room Tiles reads)."""
+    folder = _unzip(zpath, work)
+    try:
+        # (the folder it unpacks to is named for the download: read the id
+        # from theme.json and check it as if the folder had that name)
+        doc = json.loads((folder / "theme.json").read_text(encoding="utf-8"))
+        theme_id = doc.get("id") if isinstance(doc, dict) else None
+        if not isinstance(theme_id, str) or not fmt.ID.fullmatch(theme_id):
+            raise fmt.ThemeError("theme.json: no valid id")
+        named = folder.parent / theme_id
+        if named != folder:
+            shutil.rmtree(named, ignore_errors=True)
+            folder.rename(named)
+        return fmt.read(named, "theme.json")
+    except (OSError, ValueError, UnicodeDecodeError) as err:
+        raise fmt.ThemeError(f"theme.json: {err}") from None
+
+
 def _art_lists(ui: Path) -> tuple[list[str], list[str]]:
     files = {f.name for f in ui.glob("*.png")} if ui.is_dir() else set()
     off_art = sorted(f[: -len("_off.png")] for f in files if f.endswith("_off.png"))

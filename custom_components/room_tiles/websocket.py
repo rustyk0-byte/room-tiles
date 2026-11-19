@@ -29,6 +29,7 @@ TYPE_REPORT_PREVIEW = f"{DOMAIN}/report_preview"
 TYPE_PROBLEM_CYCLES = f"{DOMAIN}/problem_cycles"
 TYPE_RECORDING = f"{DOMAIN}/recording"
 TYPE_THEMES_CHECK = f"{DOMAIN}/themes_check"
+TYPE_THEME_ADD = f"{DOMAIN}/theme_add"
 
 
 @callback
@@ -38,6 +39,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_problem_cycles)
     websocket_api.async_register_command(hass, ws_recording)
     websocket_api.async_register_command(hass, ws_themes_check)
+    websocket_api.async_register_command(hass, ws_theme_add)
 
 
 def _store(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg_id: int) -> Any:
@@ -250,6 +252,23 @@ def ws_themes_check(hass: HomeAssistant, connection: websocket_api.ActiveConnect
     if store.user_themes is not None:
         store.user_themes.check_soon()
     connection.send_result(msg["id"])
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {vol.Required("type"): TYPE_THEME_ADD, vol.Required("url"): str, vol.Optional("replace", default=False): bool}
+)
+@websocket_api.async_response
+async def ws_theme_add(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The dashboard's "Add from link": a theme downloaded into the themes
+    folder (user_themes.py). The result: {"id", "name"} or {"error": code}."""
+    store = _store(hass, connection, msg["id"])
+    if store is None:
+        return
+    if store.user_themes is None:
+        connection.send_result(msg["id"], {"error": "download_failed"})
+        return
+    connection.send_result(msg["id"], await store.user_themes.async_add_from_link(msg["url"], msg["replace"]))
 
 
 @websocket_api.websocket_command({vol.Required("type"): TYPE_SUBSCRIBE})

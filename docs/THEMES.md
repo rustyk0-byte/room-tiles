@@ -214,6 +214,14 @@ screens.
 editor or Samba add-on, for example, can do it). A zip may have
 `theme.json` at its top or inside one folder.
 
+**Or from a link:** on the dashboard, the settings menu's Theme has **Add a
+theme from a link** (for administrators). Paste a theme zip's link, or a
+GitHub repository's - Room Tiles takes its latest release's zip, or the
+repository itself when it has no release. It's checked, then saved as
+`<id>.zip` in the same folder. Sharing a theme: put it in a GitHub
+repository with `theme.json` at its top, and attach a zip of it to a
+release.
+
 - **No restart:** Room Tiles looks there every few minutes, and whenever
   the dashboard's settings menu opens. The first time, it builds the
   theme's pictures for the panels and the dashboard - a few seconds, up to

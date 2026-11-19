@@ -2361,6 +2361,75 @@ export class RoomTilesPanel extends LitElement {
     save(STORE_LANGUAGE, code);
   }
 
+  private _themeLink = "";
+  private _themeLinkBusy = false;
+  private _themeLinkMsg?: { text: string; replace?: boolean };
+
+  /** "Add a theme from a link" (administrators: it writes into HA's
+   *  config folder): a theme zip or a GitHub repository (user_themes.py). */
+  private _themeLinkRow(): TemplateResult {
+    const msg = this._themeLinkMsg;
+    return html`<div class="setting theme-link">
+        <input
+          type="url"
+          inputmode="url"
+          aria-label=${t("theme.add_link")}
+          placeholder=${t("theme.link_hint")}
+          .value=${this._themeLink}
+          @input=${(e: Event) => {
+            this._themeLink = (e.target as HTMLInputElement).value;
+            this._themeLinkMsg = undefined;
+          }}
+          @keydown=${(e: KeyboardEvent) => e.key === "Enter" && void this._addThemeLink(false)}
+        />
+        <button class="pill" ?disabled=${this._themeLinkBusy || !this._themeLink.trim()} @click=${() => void this._addThemeLink(false)}>
+          ${t("theme.add")}
+        </button>
+      </div>
+      ${msg
+        ? html`<div class="hint">
+            ${msg.text}
+            ${msg.replace ? html`<button class="pill" ?disabled=${this._themeLinkBusy} @click=${() => void this._addThemeLink(true)}>${t("theme.replace")}</button>` : nothing}
+          </div>`
+        : nothing}`;
+  }
+
+  private async _addThemeLink(replace: boolean): Promise<void> {
+    const url = this._themeLink.trim();
+    const send = this.hass?.connection.sendMessagePromise;
+    if (!url || !send || this._themeLinkBusy) return;
+    this._themeLinkBusy = true;
+    this.requestUpdate();
+    let r: { id?: string; name?: string; error?: string } = {};
+    try {
+      r = (await send.call(this.hass!.connection, { type: "room_tiles/theme_add", url, replace })) as typeof r;
+    } catch {
+      r = { error: "download_failed" };
+    }
+    this._themeLinkBusy = false;
+    const name = r.name ?? "";
+    if (r.error) {
+      const known = ["not_https", "not_found", "too_big", "not_a_theme", "exists", "exists_folder"].includes(r.error);
+      this._themeLinkMsg = { text: t(`theme.err.${known ? r.error : "download_failed"}`, { name }), replace: r.error === "exists" };
+    } else {
+      this._themeLinkMsg = { text: t("theme.added", { name }) };
+      this._themeLink = "";
+    }
+    this.requestUpdate();
+  }
+
+  /** Under the Theme setting: installed themes getting ready, or that can't
+   *  be used (Repairs has why). */
+  private _themeNotes(): TemplateResult | typeof nothing {
+    const st = this._doc?.themes;
+    if (!st) return nothing;
+    const ready = st.building.join(", ");
+    const broken = st.problems.map((p) => p.theme.replace(/\.zip$/i, "")).join(", ");
+    if (!ready && !broken) return nothing;
+    return html`${ready ? html`<div class="hint">${t("theme.getting_ready", { names: ready })}</div>` : nothing}
+      ${broken ? html`<div class="hint">${t("theme.cant_use", { names: broken })}</div>` : nothing}`;
+  }
+
   /** The installed themes changed (or arrived): the lists take them; this
    *  device's theme drawn again - or the default, when its theme is gone. */
   private _installedThemes(list: InstalledTheme[]): void {
@@ -2886,6 +2955,8 @@ export class RoomTilesPanel extends LitElement {
             )}
           </select>
         </div>
+        ${this._themeNotes()}
+        ${this.hass?.user?.is_admin ? this._themeLinkRow() : nothing}
         <div class="setting">
           <span class="label">${t("menu.cover")}</span>
           ${toggle(this._cover, (on) => this._setCover(on), t("menu.cover"), this.theme)}
@@ -3404,6 +3475,23 @@ export class RoomTilesPanel extends LitElement {
       font-size: 0.82rem;
       color: var(--rt-text-secondary);
       margin-top: -4px;
+    }
+    .menu .theme-link {
+      gap: 8px;
+    }
+    .menu .theme-link input {
+      flex: 1;
+      min-width: 0;
+      font: inherit;
+      font-size: 0.9rem;
+      color: var(--rt-text);
+      background: var(--rt-button);
+      border: 1px solid var(--rt-tile-border);
+      border-radius: 8px;
+      padding: 6px 8px;
+    }
+    .menu .hint .pill {
+      margin-left: 6px;
     }
     .menu {
       top: 60px;

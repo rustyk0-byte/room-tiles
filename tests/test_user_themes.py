@@ -150,3 +150,45 @@ def test_the_example_theme_builds(tmp_path):
     assert built.ok, built.problems
     assert "icon_light" in built.off_art  # (its own light icon's off picture: generated)
 
+
+
+def _zip_bytes(files: dict) -> bytes:
+    import io
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for name, data in files.items():
+            zf.writestr(name, data)
+    return buf.getvalue()
+
+
+async def test_add_a_theme_from_a_link(hass: HomeAssistant, entry, aioclient_mock) -> None:
+    """The dashboard's "Add from link": a zip, or a GitHub repository's latest
+    release - looked at, then kept in the themes folder and built."""
+    themes = entry.runtime_data.user_themes
+    mint = _zip_bytes({"mint/theme.json": json.dumps({"format": 1, "id": "mint", "name": {"en": "Mint"}})})
+    aioclient_mock.get("https://example.com/mint.zip", content=mint)
+    assert await themes.async_add_from_link("http://example.com/mint.zip") == {"error": "not_https"}
+    assert await themes.async_add_from_link("https://example.com/mint.zip") == {"id": "user:mint", "name": "Mint"}
+    assert (Path(hass.config.path("room_tiles_themes")) / "mint.zip").exists()
+    await hass.async_block_till_done()
+    await themes.async_check()
+    assert "user:mint" in panels.all_themes()
+    # again: it's there already (unless replacing)
+    assert (await themes.async_add_from_link("https://example.com/mint.zip"))["error"] == "exists"
+    assert "error" not in await themes.async_add_from_link("https://example.com/mint.zip", replace=True)
+    # a GitHub repository: its latest release's zip
+    berry = _zip_bytes({"theme.json": json.dumps({"format": 1, "id": "berry", "name": {"en": "Berry"}})})
+    aioclient_mock.get(
+        "https://api.github.com/repos/someone/berry-theme/releases/latest",
+        json={"assets": [{"name": "berry.zip", "browser_download_url": "https://github.com/someone/berry-theme/releases/download/v1/berry.zip"}]},
+    )
+    aioclient_mock.get("https://github.com/someone/berry-theme/releases/download/v1/berry.zip", content=berry)
+    assert (await themes.async_add_from_link("https://github.com/someone/berry-theme"))["id"] == "user:berry"
+    # not a theme, nothing there
+    aioclient_mock.get("https://example.com/notes.zip", content=_zip_bytes({"notes.txt": "hi"}))
+    assert await themes.async_add_from_link("https://example.com/notes.zip") == {"error": "not_a_theme"}
+    aioclient_mock.get("https://example.com/gone.zip", status=404)
+    assert await themes.async_add_from_link("https://example.com/gone.zip") == {"error": "not_found"}
+    assert not (Path(hass.config.path("room_tiles_themes")) / "notes.zip").exists()
+    await hass.async_block_till_done()

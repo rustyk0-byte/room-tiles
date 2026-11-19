@@ -164,6 +164,105 @@ class UserThemes:
         if self.root.is_dir() or self._sig != ((), ()):  # (a folder now, or themes before it went)
             self.check_soon()
 
+    # ---- adding one from a link ------------------------------------------------------
+
+    async def async_add_from_link(self, url: str, replace: bool = False) -> dict[str, Any]:
+        """Download a theme into the themes folder (the dashboard's "Add from
+        link"): a theme zip (https), or a GitHub repository - its latest
+        release's zip, else the repository itself. Looked at before it's kept
+        (theme.json; Repairs gets the rest, as for any theme). Returns
+        {"id", "name"} or {"error": a code the dashboard words}."""
+        import tempfile
+
+        from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+        from .themes import fmt, installed
+
+        url = url.strip()
+        if not url.lower().startswith("https://"):
+            return {"error": "not_https"}
+        session = async_get_clientsession(self.hass)
+        try:
+            zip_url = await self._zip_url(session, url)
+        except LinkError as err:
+            return {"error": err.code}
+        try:
+            async with session.get(zip_url, timeout=aiohttp_timeout(180)) as resp:
+                if resp.status == 404:
+                    return {"error": "not_found"}
+                if resp.status != 200:
+                    return {"error": "download_failed"}
+                if (getattr(resp, "content_length", None) or 0) > installed.ZIP_MAX_BYTES:
+                    return {"error": "too_big"}
+                data = bytearray()
+                async for chunk in resp.content.iter_chunked(1 << 16):
+                    data += chunk
+                    if len(data) > installed.ZIP_MAX_BYTES:
+                        return {"error": "too_big"}
+        except Exception:  # noqa: BLE001 - any network failure is the same to the user
+            return {"error": "download_failed"}
+
+        def keep() -> dict[str, Any]:
+            self.cache.mkdir(parents=True, exist_ok=True)
+            with tempfile.TemporaryDirectory(dir=self.cache, prefix=".link-") as tmp:
+                zpath = Path(tmp) / "theme.zip"
+                zpath.write_bytes(bytes(data))
+                try:
+                    doc = installed.check_zip(zpath, Path(tmp) / "check")
+                except fmt.ThemeError:
+                    return {"error": "not_a_theme"}
+                theme_id = doc["id"]
+                self.root.mkdir(parents=True, exist_ok=True)
+                target = self.root / f"{theme_id}.zip"
+                if not replace and (target.exists() or (self.root / theme_id).exists()):
+                    return {"error": "exists", "id": f"{installed.PREFIX}{theme_id}", "name": fmt.name(doc, "en")}
+                if (self.root / theme_id).is_dir():
+                    return {"error": "exists_folder", "id": f"{installed.PREFIX}{theme_id}", "name": fmt.name(doc, "en")}
+                part = self.root / f".{theme_id}.zip.part"
+                part.write_bytes(bytes(data))
+                part.replace(target)
+                return {"id": f"{installed.PREFIX}{theme_id}", "name": fmt.name(doc, "en")}
+
+        result = await self.hass.async_add_executor_job(keep)
+        if "error" not in result:
+            self.check_soon()
+        return result
+
+    async def _zip_url(self, session: Any, url: str) -> str:
+        """The zip to download for a link: a GitHub repository's latest
+        release zip (else its own zip), or the link itself."""
+        import re
+
+        m = re.fullmatch(r"https://github\.com/([\w.-]+)/([\w.-]+?)(?:\.git)?/?(?:releases(?:/latest|/tag/([^/?#]+))?/?)?", url)
+        if m is None:
+            return url
+        owner, repo, tag = m.group(1), m.group(2), m.group(3)
+        api = f"https://api.github.com/repos/{owner}/{repo}/releases/" + (f"tags/{tag}" if tag else "latest")
+        headers = {"Accept": "application/vnd.github+json", "User-Agent": "room-tiles"}
+        try:
+            async with session.get(api, headers=headers, timeout=aiohttp_timeout(20)) as resp:
+                if resp.status == 200:
+                    rel = await resp.json()
+                    for asset in rel.get("assets") or []:
+                        if str(asset.get("name", "")).lower().endswith(".zip"):
+                            return str(asset["browser_download_url"])
+                    if rel.get("zipball_url"):
+                        return str(rel["zipball_url"])
+                elif resp.status != 404:
+                    raise LinkError("download_failed")
+            # (no release: the repository as it is)
+            async with session.get(f"https://api.github.com/repos/{owner}/{repo}", headers=headers, timeout=aiohttp_timeout(20)) as resp:
+                if resp.status == 404:
+                    raise LinkError("not_found")
+                if resp.status != 200:
+                    raise LinkError("download_failed")
+                info = await resp.json()
+            return f"https://api.github.com/repos/{owner}/{repo}/zipball/{info.get('default_branch') or 'main'}"
+        except LinkError:
+            raise
+        except Exception:  # noqa: BLE001
+            raise LinkError("download_failed") from None
+
     # ---- what they give -----------------------------------------------------------
 
     def names(self) -> dict[str, dict[str, str]]:
@@ -205,6 +304,20 @@ class UserThemes:
             "building": sorted(self.building),
             "problems": [{"theme": b.source, "problems": b.problems} for b in self.broken],
         }
+
+
+class LinkError(Exception):
+    """A link that leads to no theme zip (`code`: the dashboard's words)."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+def aiohttp_timeout(seconds: float) -> Any:
+    import aiohttp
+
+    return aiohttp.ClientTimeout(total=seconds)
 
 
 def default_theme(pack_dir: Path) -> dict:
