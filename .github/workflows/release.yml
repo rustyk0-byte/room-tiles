@@ -7,6 +7,8 @@ name: Release
 #   one install / update brings the panels' firmware with it
 #   (tools/make_release_zip.py; manifest.json's version = the tag);
 # - each board's factory image (the first USB install, by hand).
+# - candy.zip - the example theme (examples/themes/candy), ready for the
+#   dashboard's "Add a theme from a link" (releases/latest/download/candy.zip).
 # Then the GitHub Pages site (site.yml): the landing page, the demo, the
 # gallery and the install page (Settings > Pages > Source "GitHub Actions").
 on:
@@ -42,10 +44,12 @@ jobs:
           path: dashboard
       - name: The HACS zip
         run: python3 tools/make_release_zip.py images dashboard "${{ github.event.release.tag_name }}" room_tiles.zip
+      - name: The example theme
+        run: (cd examples/themes && zip -qr ../../candy.zip candy)
       - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" room_tiles.zip images/*.factory.bin --repo "${{ github.repository }}" --clobber
+        run: gh release upload "${{ github.event.release.tag_name }}" room_tiles.zip candy.zip images/*.factory.bin --repo "${{ github.repository }}" --clobber
 
   # the GitHub Pages site - the landing page, the demo, the gallery and the
   # install page with this release's factory images (site.yml)
