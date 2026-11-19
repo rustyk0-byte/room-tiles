@@ -181,8 +181,9 @@ touchscreen:
   on_touch:
     - lambda: "id(rt_last_touch_ms) = millis();"
 
-# the knob: a turn scrolls the strip half a tile a click, a press taps the
-# centered tile (room_tiles.cpp knob_turn / knob_press)
+# the knob: a turn scrolls the strip half a tile a click (more a click when
+# turned fast), a press taps the centered tile (room_tiles.cpp knob_turn /
+# knob_press)
 sensor:
   - platform: rotary_encoder
     id: rt_knob

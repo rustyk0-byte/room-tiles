@@ -99,8 +99,9 @@ class Board {
   /// horizontal strip, one tile wide - set once, before the first build.
   void set_strip(bool strip) { this->strip_ = strip; }
   bool strip() const { return this->strip_; }
-  /// The knob (round panel): a click = half a tile along the strip.
-  bool knob_turn(int clicks);  // (false: no strip showing - nothing moved)
+  /// The knob (round panel): a click = half a tile along the strip; `again`:
+  /// the knob's last click was just now (its move may still be running).
+  bool knob_turn(int clicks, bool again);  // (false: no strip showing - nothing moved)
   /// The knob's press: a tap on the centered tile (nothing at a split).
   void knob_press();
   /// A tile in view is animating (an appliance running) - the idle clock
@@ -130,6 +131,7 @@ class Board {
   lv_obj_t *strip_cont_{nullptr};
   std::vector<lv_obj_t *> strip_dots_;
   int strip_shown_{-1};  // (the snap point the dots show: 2 x tile, odd = a split)
+  int knob_point_{0};  // (where the knob last sent the strip)
   int strip_settings_y_{-1};  // (the settings page drawn again: where it was scrolled to)
   void build_strip_(const PanelModel &model, const AreaSpec *area);
   int strip_step_() const;

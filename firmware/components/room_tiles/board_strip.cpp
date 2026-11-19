@@ -169,10 +169,14 @@ bool Board::visible_animating() const {
          (p % 2 == 1 && i + 1 < (int) this->tiles_.size() && anim(this->tiles_[i + 1]));
 }
 
-bool Board::knob_turn(int clicks) {
+bool Board::knob_turn(int clicks, bool again) {
   if (!this->strip_ || this->strip_cont_ == nullptr || this->scrim_ != nullptr)
     return false;
-  this->strip_go_(this->strip_point_() + clicks, true);
+  // (a click while the last one still moves it: on from where that one goes)
+  const bool moving = again && lv_anim_get(this->strip_cont_, nullptr) != nullptr;
+  const int from = moving ? this->knob_point_ : this->strip_point_();
+  this->knob_point_ = std::clamp(from + clicks, 0, std::max(0, this->strip_points_() - 1));
+  this->strip_go_(this->knob_point_, true);
   return true;
 }
 

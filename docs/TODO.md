@@ -341,8 +341,9 @@ while a theme or a firmware is written) (all fixed; the X came with the
 idle). Then found: a room picked while HA was restarting came back as the
 old one after a restart (a settings send HA can't take was dropped - now
 every pick on any panel is kept and sent again until HA's data has it),
-and the knob only moved the strip (now it scrolls lists too). Both not yet
-on the panel. Next: try every screen on the hardware (strip, knob,
+and the knob only moved the strip (now it scrolls lists too). Both on the
+panel since 0.1.1. The knob was slow through a long strip or list: a fast
+turn now goes further a click (not yet on the panel). Next: try every screen on the hardware (strip, knob,
 settings, color picker, idle clock).
 
 A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
@@ -354,8 +355,8 @@ A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
   split down the middle, page dots; each room opens where it was left (kept
   on the panel, across restarts). Touch first; the knob: a turn = half a
   step along the strip - or, wherever a list scrolls (a page, the color
-  picker, the language list), about a row of it; a press = tap the
-  centered tile. Keeps themes, area switching (tap
+  picker, the language list), about a row of it; turned fast, more a
+  click (up to 4 steps); a press = tap the centered tile. Keeps themes, area switching (tap
   the area's name), settings, the color picker (round layout),
   "Connecting to Home Assistant…", When idle (starts on the digital clock
   after 30 s). Drops the map, the vacuum view and tile editing (edit on the

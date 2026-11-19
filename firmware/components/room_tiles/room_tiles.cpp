@@ -51,6 +51,18 @@ static const uint32_t PICK_RESEND_MS = 15 * 1000;
 // long, then the screen goes dark (idle_loop_)
 static const uint32_t OFFLINE_DARK_MS = 10 * 60 * 1000;
 static const int KNOB_SCROLL_PX = 64;  // (a knob click in a list: about one row)
+static const uint32_t KNOB_AGAIN_MS = 500;  // (longer than a scroll animation runs)
+// a fast turn goes further a click: the time since the last click the same
+// way picks how many steps this one makes (slow = 1 step, as always)
+static int knob_steps(uint32_t gap_ms) {
+  if (gap_ms < 50)
+    return 4;
+  if (gap_ms < 90)
+    return 3;
+  if (gap_ms < 150)
+    return 2;
+  return 1;
+}
 // back from HA's absence on a screen it darkened: this long for the tiles'
 // states to show an animation (or the clock to come) before it stays dark
 static const uint32_t RESUME_WINDOW_MS = 15 * 1000;
@@ -562,16 +574,30 @@ void RoomTiles::knob_turn(int clicks) {
     this->wake_();
     return;
   }
+  const uint32_t now = millis();
+  const int dir = clicks > 0 ? 1 : -1;
+  const bool again = now - this->knob_ms_ < KNOB_AGAIN_MS;  // (its scroll may still run)
+  if (dir == this->knob_dir_)
+    clicks *= knob_steps(now - this->knob_ms_);
+  this->knob_dir_ = dir;
+  this->knob_ms_ = now;
   // wherever touch can scroll, the knob scrolls too: a page or dialog on
   // top (its list), else the strip, else a list on the screen (the
   // language picker); clockwise = down the list
   lv_obj_t *list = vertical_scroller(lv_layer_top());
-  if (list == nullptr && this->board_.knob_turn(clicks))
+  if (list == nullptr && this->board_.knob_turn(clicks, again))
     return;
   if (list == nullptr)
     list = vertical_scroller(lv_screen_active());
-  if (list != nullptr)
-    lv_obj_scroll_by_bounded(list, 0, -clicks * KNOB_SCROLL_PX, LV_ANIM_ON);
+  if (list == nullptr)
+    return;
+  // (a click while the last one still scrolls: on from where that one goes)
+  const int32_t y = lv_obj_get_scroll_y(list);
+  const int32_t from = again && list == this->knob_list_ && lv_anim_get(list, nullptr) != nullptr ? this->knob_y_ : y;
+  this->knob_y_ = std::clamp<int32_t>(from + clicks * KNOB_SCROLL_PX, y - lv_obj_get_scroll_top(list),
+                                      y + lv_obj_get_scroll_bottom(list));
+  this->knob_list_ = list;
+  lv_obj_scroll_to_y(list, this->knob_y_, LV_ANIM_ON);
 }
 
 void RoomTiles::knob_press() {

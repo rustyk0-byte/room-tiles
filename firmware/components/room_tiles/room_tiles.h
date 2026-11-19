@@ -409,6 +409,11 @@ class RoomTiles : public Component {
   uint32_t boot_pictures_at_{0};  // (the boot screen waits for the maps' pictures: maybe_show_board_)  // (the last restart was out of memory: logged again once connected)
   light::LightState *backlight_{nullptr};
   bool asleep_{false};
+  // the knob: its last click (when, which way) and where its list scroll goes
+  uint32_t knob_ms_{0};
+  int knob_dir_{0};
+  lv_obj_t *knob_list_{nullptr};  // (only compared: never used)
+  int32_t knob_y_{0};
   // the screen went dark only because HA was gone (the Connecting screen):
   // when the board is back, the idle rules decide again, as if untouched all
   // along - an animation keeps it up dimmed, a clock comes - for a while
