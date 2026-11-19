@@ -72,7 +72,7 @@
       "fields": {
         "file": {
           "name": "Bestand",
-          "description": "Bestandsnaam, relatief ten opzichte van de configuratiemap."
+          "description": "Naam van een .json-bestand, relatief ten opzichte van de configuratiemap."
         }
       }
     },
@@ -82,7 +82,7 @@
       "fields": {
         "file": {
           "name": "Bestand",
-          "description": "Bestandsnaam, relatief ten opzichte van de configuratiemap."
+          "description": "Naam van een .json-bestand, relatief ten opzichte van de configuratiemap."
         }
       }
     },

@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.service import async_register_admin_service
 
 from . import defaults, ops
 from .appliances_ha import found_appliances
@@ -44,6 +45,15 @@ def _config_file(hass: HomeAssistant, name: str) -> Path:
     return path
 
 
+def _json_file(hass: HomeAssistant, name: str) -> Path:
+    """Export / import: a .json file inside the config folder - nothing else
+    (HA's own files can't be overwritten)."""
+    path = _config_file(hass, name)
+    if path.suffix.lower() != ".json":
+        raise ServiceValidationError(f"'{name}' must be a .json file")
+    return path
+
+
 def _write_json(path: Path, doc: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
@@ -61,7 +71,7 @@ def _store(hass: HomeAssistant):
 async def _export(call: ServiceCall) -> dict[str, Any]:
     hass = call.hass
     store = _store(hass)
-    path = _config_file(hass, call.data["file"])
+    path = _json_file(hass, call.data["file"])
     await hass.async_add_executor_job(_write_json, path, store.data.as_dict())
     return {"file": str(path)}
 
@@ -72,7 +82,7 @@ async def _import(call: ServiceCall) -> dict[str, Any]:
     nothing."""
     hass = call.hass
     store = _store(hass)
-    path = _config_file(hass, call.data["file"])
+    path = _json_file(hass, call.data["file"])
 
     def read() -> Any:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -814,9 +824,11 @@ def async_register_services(hass: HomeAssistant) -> None:
     if hass.services.has_service(DOMAIN, SERVICE_EXPORT):
         return
     optional = SupportsResponse.OPTIONAL
+    # export / import write and replace files: admins only (the setup edits
+    # below are every user's, as on the dashboard)
+    for name, handler in ((SERVICE_EXPORT, _export), (SERVICE_IMPORT, _import)):
+        async_register_admin_service(hass, DOMAIN, name, handler, _SCHEMA, optional)
     for name, handler, schema, response in (
-        (SERVICE_EXPORT, _export, _SCHEMA, optional),
-        (SERVICE_IMPORT, _import, _SCHEMA, optional),
         ("set_tile", _set_tile, SET_TILE_SCHEMA, SupportsResponse.NONE),
         ("clear_tile", _clear_tile, CLEAR_TILE_SCHEMA, SupportsResponse.NONE),
         ("move_tile", _move_tile, MOVE_TILE_SCHEMA, SupportsResponse.NONE),

@@ -119,3 +119,26 @@ async def test_backups_keep_the_newest_few(hass: HomeAssistant, entry) -> None:
     assert len([n for n in names if n.startswith("before-import-")]) == 2
     assert "mine.json" in names
     shutil.rmtree(folder, ignore_errors=True)
+
+
+async def test_export_and_import_are_for_admins_only(hass: HomeAssistant, entry, hass_read_only_user) -> None:
+    """They write and replace files in the config folder."""
+    from homeassistant.core import Context
+    from homeassistant.exceptions import Unauthorized
+
+    for service in ("export_data", "import_data"):
+        with pytest.raises(Unauthorized):
+            await hass.services.async_call(
+                DOMAIN, service, {"file": "admins-only.json"}, blocking=True, return_response=True,
+                context=Context(user_id=hass_read_only_user.id),
+            )
+    assert not Path(hass.config.path("admins-only.json")).exists()
+
+
+async def test_only_json_files(hass: HomeAssistant, entry) -> None:
+    """HA's own files (configuration.yaml...) can't be overwritten."""
+    Path(hass.config.path("configuration.yaml")).write_text("homeassistant:\n")
+    for name in ("configuration.yaml", "secrets.yaml", "rt"):
+        with pytest.raises(ServiceValidationError, match="must be a .json file"):
+            await _call(hass, "export_data", file=name)
+    assert Path(hass.config.path("configuration.yaml")).read_text() == "homeassistant:\n"

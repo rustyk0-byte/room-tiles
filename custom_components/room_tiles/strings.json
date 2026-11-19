@@ -28,7 +28,7 @@
       "fields": {
         "file": {
           "name": "File",
-          "description": "File name, relative to the config folder."
+          "description": "A .json file name, relative to the config folder."
         }
       }
     },
@@ -38,7 +38,7 @@
       "fields": {
         "file": {
           "name": "File",
-          "description": "File name, relative to the config folder."
+          "description": "A .json file name, relative to the config folder."
         }
       }
     },

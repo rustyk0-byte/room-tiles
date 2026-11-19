@@ -72,7 +72,7 @@
       "fields": {
         "file": {
           "name": "Archivo",
-          "description": "Nombre del archivo, relativo a la carpeta de configuración."
+          "description": "Nombre de un archivo .json, relativo a la carpeta de configuración."
         }
       }
     },
@@ -82,7 +82,7 @@
       "fields": {
         "file": {
           "name": "Archivo",
-          "description": "Nombre del archivo, relativo a la carpeta de configuración."
+          "description": "Nombre de un archivo .json, relativo a la carpeta de configuración."
         }
       }
     },
