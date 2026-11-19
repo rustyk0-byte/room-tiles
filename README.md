@@ -22,7 +22,7 @@ shows the same things where they are.
 
 ## Install
 
-[![Open Room Tiles in your Home Assistant's Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rustyk0-byte&repository=room-tiles&category=integration)
+[![Open Room Tiles in your Home Assistant's Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=rustyk0-byte&repository=room-tiles&category=integration)
 
 1. Click the button above - it opens Room Tiles in your Home Assistant's
    Marketplace. (Or: Settings › **Marketplace** › **Add from link**, and
