@@ -1716,11 +1716,17 @@ void RoomTiles::finish_payload_() {
         for (auto it = this->picked_.begin(); it != this->picked_.end();) {
           const std::string &key = it->first, &want = it->second;
           const std::string &has = key == "area" ? m.area : key == "layout" ? m.layout : key == "theme" ? m.theme : m.language;
-          bool gone = false;  // (an area removed meanwhile: HA's stands)
+          // (an area, theme or language gone meanwhile - an installed theme
+          // removed, say: HA can never take it, so HA's stands)
+          bool gone = false;
           if (key == "area") {
             gone = true;
             for (auto &a : m.areas)
               gone = gone && a.id != want;
+          } else if (key == "theme" && !want.empty()) {
+            gone = std::find(m.themes.begin(), m.themes.end(), want) == m.themes.end();
+          } else if (key == "language" && !want.empty()) {
+            gone = m.languages.count(want) == 0;
           }
           if (has == want || gone) {
             it = this->picked_.erase(it);

@@ -133,6 +133,25 @@ class UserThemes:
             ir.async_delete_issue(self.hass, DOMAIN, gone)
         self._issues = now
 
+    async def async_load_cached(self) -> None:
+        """At setup: the themes built before and unchanged since, ready at once
+        - a panel asking for its theme right after a restart gets it, not the
+        default first. What needs building is built in the background (start)."""
+        from .themes import installed
+
+        def load() -> list:
+            if not self.root.is_dir():
+                return []
+            found, _ = installed.scan(self.root)
+            return [(f, installed.cached(f, self.base, self.cache)) for f in found]
+
+        for found, built in await self.hass.async_add_executor_job(load):
+            if built is not None:
+                self.themes[built.key] = built
+                self._stamps[found.id] = found.stamp
+        if self.themes:
+            self._changed()
+
     @callback
     def start(self) -> Callable[[], None]:
         """Look now (in the background) and every few minutes; returns the stop."""

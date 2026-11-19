@@ -164,7 +164,9 @@ export function assetUrl(base: string, name: string, theme: ThemeName = DEFAULT_
   // changes with their content - no version needed)
   const own = INSTALLED_BASE[theme];
   if (own) return `${own}/${name}`;
-  return `${base}/${theme}/${name}${VERSION}`;
+  // a theme this dashboard doesn't know (an installed one not listed yet, or
+  // gone): the default's pictures, as its colours (themeCss)
+  return `${base}/${THEMES[theme] ? theme : DEFAULT_THEME}/${name}${VERSION}`;
 }
 
 /** The installed themes from Room Tiles' feed: into the lists above (their

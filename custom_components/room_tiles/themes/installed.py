@@ -159,32 +159,45 @@ def _art_lists(ui: Path) -> tuple[list[str], list[str]]:
     return off_art, [b for b in BUTTONS if f"{b}.png" in files]
 
 
+def _key(found: Found, base: dict) -> str:
+    return hashlib.sha256(f"{found.id}:{found.stamp}:{packager_stamp()}:{json.dumps(base.get('colors', {}), sort_keys=True)}".encode()).hexdigest()[:24]
+
+
+def cached(found: Found, base: dict, cache: Path) -> Built | None:
+    """`found` as built before, unchanged since (None: it needs a build) - quick."""
+    done = cache / _key(found, base)
+    meta_file = done / "meta.json"
+    if not meta_file.exists():
+        return None
+    try:
+        meta = json.loads(meta_file.read_text(encoding="utf-8"))
+        return Built(
+            found.id,
+            found.path.name,
+            doc=meta["doc"],
+            colours=meta["colours"],
+            off_art=meta["off_art"],
+            button_art=meta["button_art"],
+            version=meta["version"],
+            packs={"": (done / "theme.rtp").read_bytes(), "-round": (done / "theme-round.rtp").read_bytes()},
+            web=done / "web",
+            coarse=meta.get("coarse", False),
+        )
+    except (OSError, ValueError, KeyError):
+        shutil.rmtree(done, ignore_errors=True)  # (a broken cache entry: build again)
+        return None
+
+
 def build(found: Found, base: dict, cache: Path) -> Built:
     """`found` checked and built (or its problems): its packs and pictures in
     `cache`/<key>/, reused when nothing changed. `base`: the default theme's
     theme.json (the colours a theme leaves out)."""
     from . import off, panel, web
 
-    key = hashlib.sha256(f"{found.id}:{found.stamp}:{packager_stamp()}:{json.dumps(base.get('colors', {}), sort_keys=True)}".encode()).hexdigest()[:24]
+    if (ready := cached(found, base, cache)) is not None:
+        return ready
+    key = _key(found, base)
     done = cache / key
-    meta_file = done / "meta.json"
-    if meta_file.exists():
-        try:
-            meta = json.loads(meta_file.read_text(encoding="utf-8"))
-            return Built(
-                found.id,
-                found.path.name,
-                doc=meta["doc"],
-                colours=meta["colours"],
-                off_art=meta["off_art"],
-                button_art=meta["button_art"],
-                version=meta["version"],
-                packs={"": (done / "theme.rtp").read_bytes(), "-round": (done / "theme-round.rtp").read_bytes()},
-                web=done / "web",
-                coarse=meta.get("coarse", False),
-            )
-        except (OSError, ValueError, KeyError):
-            shutil.rmtree(done, ignore_errors=True)  # (a broken cache entry: build again)
     work = cache / f".{key}.tmp"
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True)
@@ -251,7 +264,7 @@ def build(found: Found, base: dict, cache: Path) -> Built:
     except Exception as err:  # noqa: BLE001 - a theme's file can break the build any way; say so, never crash
         shutil.rmtree(work, ignore_errors=True)
         return Built(found.id, found.path.name, problems=[f"{found.path.name}: couldn't be built ({type(err).__name__}: {err})"])
-    return build(found, base, cache)  # (read back from the cache: one way in)
+    return cached(found, base, cache) or Built(found.id, found.path.name, problems=[f"{found.path.name}: couldn't be read back after building"])
 
 
 def prune(cache: Path, keep: set[str]) -> None:

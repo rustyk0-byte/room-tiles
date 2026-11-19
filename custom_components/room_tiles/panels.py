@@ -734,7 +734,10 @@ def payload(
         # each theme's name in the panel's language (its theme.json - a theme
         # the wording doesn't know, e.g. one installed later, still has one)
         "theme_names": {t: theme_name(t, settings["language"]) for t in all_themes()},
-        "own": {"language": panel.language, "theme": panel.theme},
+        # (its own theme while it's there: one gone - an installed theme
+        # removed or broken - shows as the default it falls back to; the
+        # choice itself is kept and used again when the theme comes back)
+        "own": {"language": panel.language, "theme": panel.theme if panel.theme in all_themes() else None},
         # devices Room Tiles found that aren't set up yet: the panel says so
         # (setting them up is on the dashboard)
         "found": found,

@@ -69,6 +69,20 @@ async def test_an_installed_theme_reaches_panels_and_dashboards(hass: HomeAssist
     assert store.user_themes.themes["user:candy"].version == before
 
 
+async def test_a_built_theme_is_there_right_after_a_restart(hass: HomeAssistant, entry) -> None:
+    """Built before and unchanged: ready during setup - a panel asking for
+    its theme straight after a restart gets it, not the default first."""
+    root = Path(hass.config.path("room_tiles_themes"))
+    _candy(root)
+    await entry.runtime_data.user_themes.async_check()
+    assert "user:candy" in panels.all_themes()
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    # (no waiting for the background look: setup itself had it)
+    assert "user:candy" in panels.all_themes()
+    assert "theme-user:candy" in entry.runtime_data.all_packs()
+    await hass.async_block_till_done()
+
+
 async def test_a_broken_theme_is_reported_and_left_out(hass: HomeAssistant, entry) -> None:
     store = entry.runtime_data
     root = Path(hass.config.path("room_tiles_themes"))

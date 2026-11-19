@@ -52,6 +52,9 @@ describe("installed themes (Room Tiles' feed)", () => {
     expect(th.assetUrl("/x", "ui/icon_fan.png", "dark")).toMatch(/^\/x\/dark\/ui\/icon_fan\.png/);
     // removed: gone from every list
     th.setInstalledThemes([]);
+    // a theme it doesn't know (gone, or not listed yet): the default's pictures and colours
+    expect(th.assetUrl("/x", "ui/icon_fan.png", "user:candy")).toMatch(/^\/x\/dark\/ui\/icon_fan\.png/);
+    expect(th.themeCss("user:candy")).toBe(th.themeCss("dark"));
     expect(th.themeNames()).toEqual([...THEME_NAMES]);
     expect(THEMES["user:candy"]).toBeUndefined();
     expect(th.isInstalledId("user:candy") && !th.isInstalledId("christmas")).toBe(true);

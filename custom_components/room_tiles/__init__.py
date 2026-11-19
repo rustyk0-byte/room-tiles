@@ -107,6 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoomTilesConfigEntry) ->
             [StaticPathConfig(THEMES_URL, str(store.user_themes.cache), cache_headers=False)]
         )
         hass.data[f"{DOMAIN}_theme_static"] = True
+    await store.user_themes.async_load_cached()  # (built before: ready now)
     entry.async_on_unload(store.user_themes.start())
     entry.async_on_unload(lambda: panels.set_installed({}))
     # developing (running from the Room Tiles source - never a released
