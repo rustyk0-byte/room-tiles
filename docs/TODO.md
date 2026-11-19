@@ -3,11 +3,12 @@
 Open work in priority order. Decisions and rules live in DESIGN.md / UI.md;
 this is only the list. Remove an item when it's built.
 
-Order: **1. Installing and updating panels**, then **2. Before the public
-release**. After those, sort what must be done before going public from what
-can wait.
+Public since 2026-11-18 (v0.1.2 out). Next: the 0.1.3 release, then
+**Your own themes** (section 6 - the landing page says "coming soon"), then
+**Reports: what's left** (section 2). Section 1's rest waits on beta testers
+or the first users.
 
-## 1. Installing and updating panels (current)
+## 1. Installing and updating panels
 
 Goal: nobody compiles anything. A first install is a browser and a USB
 cable; after that, panels update with Room Tiles itself.
@@ -82,20 +83,6 @@ Upload firmware), one image per board in the folder.
   there - no USB needed); the round one untested (section 3). (The
   reset screen's tiles flashing for its 1.5 s: fixed, not built yet -
   hold_boot_screen_.)
-- **E. Updates, the rest:**
-  - The release zip carries every board's update image - written
-    2026-11-16, not yet run: a published release (`release.yml`) builds
-    every board and the dashboard, `tools/make_release_zip.py` packs the
-    integration + dashboard + each board's `.ota.bin` into `firmware_images/`
-    (only generic images in this panel format, each under its own board's
-    name), manifest.json's version from the tag; HACS `zip_release`
-    (`room_tiles.zip`). 17 images: ~22 MB to download, ~36 MB installed.
-  - Test the whole path with a real HACS update of a pre-release (the
-    restart prompt is built: UI.md "An update HA hasn't restarted for").
-  - An automatic update while a panel is dark keeps it dark: the install
-    runs behind the dark screen and the new firmware goes dark again as
-    it starts (written 2026-11-15, not yet tried; the backlight is still
-    on for the first seconds of the start - ALWAYS_ON in the board file).
 - **F. Safety - proven 2026-11-17 on a 7" V1.0:** an image that crashes 10 s
   after starting (a throwaway branch), installed through Room Tiles'
   automatic update, came back on the old build both times (ESP-IDF
@@ -107,29 +94,18 @@ Upload firmware), one image per board in the folder.
   builds still offered). Left (cosmetic): the crashing build briefly checks
   in before it crashes, so its update card flips to "installed" for a few
   seconds.
-- **G. The Wi-Fi chip's firmware - written 2026-11-17; built and proven
-  2026-11-18 on a 7" V1.0** (2.12.12 -> 2.12.13: "Updating the Wi-Fi chip…",
-  one restart, HA shows 2.12.13). Left: the other boards (a 7" V1.2 and a
-  10.1" V1.2 of the maintainer's test panels) on the new build
-  (DESIGN.md "The Wi-Fi chip"): every image carries ESPHome's
-  `network_adapter` 2.12.13 (= the ESP-Hosted library of ESPHome 2026.10.2)
-  and brings an older chip up to it once, at startup, before Wi-Fi. Left:
-  - The next build: the image grows by 1.2 MB (to ~3.4 MB of a 5 MB slot -
-    the size check in CI); the boards' current chips (2.12.12) are older,
-    so **every panel updates its chip on its first start** - start with
-    ONE panel (build one board, watch its log), then the rest.
+- **G. The Wi-Fi chip's firmware** (DESIGN.md "The Wi-Fi chip"): every
+  image carries ESPHome's `network_adapter` 2.12.13 and brings an older
+  chip up to it once, at startup - all the maintainer's panels are on
+  2.12.13 (2026-11-18). Left:
   - A board straight from the box (2.3.0 / 2.12.3): never tried - verify
     on the next new board (or users report it). The 2.3.0 path (no
     "activate", restart after 25 s) rests on the 2026-10-12 V1.0 update.
   - Keep in step: an ESPHome upgrade that moves ESP-Hosted needs the
     matching image (firmware/wifi_chip/README.md).
 
-## 2. Before the public release
+## 2. Early users
 
-- **Desk stand - done 2026-11-18** (`hardware/desk-stand/`: the 7" and
-  10.1" frame, cover and stand, STLs + OpenSCAD sources). Panels may stand
-  on a desk or hang on a wall - docs say "ESP32 panels" (a tablet is a
-  touch panel too), never assume a wall.
 - **Full localization with a string table** (a release gate). No
   user-facing text hard-coded anywhere - dashboard, panel firmware,
   notifications, Repairs, config flow, help pages: every string comes from
@@ -263,88 +239,25 @@ Upload firmware), one image per board in the folder.
   model, link to the SUPPORTED.md row).
   Reports feed docs/SUPPORTED.md: a confirmed model moves to "Confirmed
   models", its ? marks to ✓ / ✗.
-- **Landing page + browser demo** (started 2026-11-18) - before inviting
-  anyone: a "what is Room Tiles" page with pictures on GitHub Pages, panels
-  first (a panel on its desk stand, then the dashboard on a phone / tablet).
-  No picture of a real house: everything comes from a made-up demo home.
-  1. **Demo home** (`tools/demo/`): a script runs the real integration in
-     HA's test harness with made-up floors, areas, devices and states and
-     writes what the dashboard is sent (the feed, the states, the entity
-     and device lists) as JSON - the demo always matches what Room Tiles
-     really sends.
-  2. **Browser demo:** the real dashboard bundle with a stand-in `hass`
-     that replays those files - taps change states in the page, edits
-     aren't saved. Doubles as "Try it in your browser" on the landing page.
-  3. **Screenshots:** the dashboard from the demo; the panels later, from
-     a developer-only demo mode that serves the same home to one panel.
-  4. **The page:** GitHub Pages next to the install page (built by
-     tools/make_install_site.py in release.yml).
-- **The name:** check "Room Tiles" is free (USPTO search, app stores,
-  GitHub) before going public - renaming after release breaks every install;
-  file the trademark (intent to use, class 9) shortly before going public.
-- **Marketplace install - tried 2026-11-18 with 0.1.0b1 (works):** "Add
-  from link", Install, restart: the zip's integration + dashboard ran (not a
-  developer build), and within 3 minutes of the restart all four test panels
-  had installed the zip's firmware and their Wi-Fi chips were on 2.12.13.
-  Found on the way: with only a pre-release out, the Marketplace installs
-  the `main` branch (404: no zip there); after the release was marked
-  stable, it still used `main` until "Refresh information" on the repo's
-  page (a repo object made before the release keeps its old ref);
-  `hide_default_branch` is read from hacs.json but not acted on (2026.11.2
-  source); Room Tiles' own restart repair now steps aside for the
-  Marketplace's (`restart_required_<repo>_<version>`), as it did for
-  HACS's. Next: the UPDATE path (the next stable release through the
-  update entity). Found with 0.1.0: the Marketplace takes the FIRST stable
-  release in GitHub's release list as the newest, and GitHub listed
-  v0.1.0b1 ahead of v0.1.0 - so 0.1.0 wasn't offered until b1 was marked a
-  pre-release. Keep the release list to stable versions in order.
-- **Before inviting anyone: the Marketplace's main Install button must
-  work.** With only a pre-release out, it installed from the `main` branch,
-  which has no zip (404 - 0.1.0b1 test, 2026-11-18). `hacs.json`
-  `hide_default_branch` is set (HACS's option - the Marketplace doesn't act
-  on it), and a stable release must be out before anyone is invited.
-  **Releases are stable only - no GitHub pre-releases** (2026-11-18: the
-  Marketplace only offers them behind a per-repo switch, a barrier for
-  people trying it); "early" shows in the 0.x version instead. Retest: a
-  fresh "Add from link" + Install with nothing chosen.
-- **Going public - the repo is public since 2026-11-18** (a fresh one: one
-  clean first commit; the history before it stays private). Done: the main
-  branch rule (`tools/github/protect-main.sh`), the report labels, the
-  Marketplace install, the install page on GitHub Pages, firmware CI per
-  board. `tools/github/protect-main.sh <owner>/<repo>`: main
-  changes only through pull requests the code owner approved; outside
-  contributors' workflows wait for approval (both need a public repo).
-
+- **Marketplace:** releases are stable only - no GitHub pre-releases (the
+  Marketplace offers them only behind a per-repo switch, and takes the
+  FIRST stable release in GitHub's list as the newest - keep the list in
+  order). Retest once: a fresh "Add from link" + Install with nothing
+  chosen picks the latest stable. Later: ask to be listed in the
+  Marketplace's main catalog (found without a link).
+- **Panel screenshots for the landing page:** today's pictures are the
+  dashboard (the demo home) and photos; panel screenshots need a
+  developer-only demo mode that serves the demo home to one panel.
 ## 3. Round panel
 
-Its board can be tried again (2026-11-18). Its code first compiled in the
-0.1.0b1 release run (`room-tiles-elecrow-s3-round-2.1.factory.bin`); its
-first install is over USB (a new flash layout: no update from the old
-firmware), then updates come like every other panel's.
-
-**First install done 2026-11-18** through the browser install page (ESP Web
-Tools, 0.1.0b1): flashed, language, Wi-Fi, added in HA. Found: the page
-asks for the USB port again after flashing (the S3's own USB re-enumerates
-for Improv); a board that ran ESPHome before is recognized by HA, which
-offers Reconfigure on the old device - the panel then never connects (HA's
-ESPHome update entity trips on the old dashboard config) until the old
-device is deleted and the panel is Added fresh (both now in the README and
-the install page). Tried after it (2026-11-18): a theme change ran out of
-memory (the download buffer doubled to read the end - fixed for every
-panel; the round panel's own theme packs added); its settings jumped back
-to the top after a change and had no close (now the color picker's X,
-same place); the strip forgot each room's place; the picture broke up
-while a theme was saved (the wording pack was still mapped from flash, so
-each erase stopped the screen's refill - now nothing of flash stays mapped
-while a theme or a firmware is written) (all fixed; the X came with the
-0.1.0 update - 2026-11-18, it installed by itself once the panel was left
-idle). Then found: a room picked while HA was restarting came back as the
-old one after a restart (a settings send HA can't take was dropped - now
-every pick on any panel is kept and sent again until HA's data has it),
-and the knob only moved the strip (now it scrolls lists too). Both on the
-panel since 0.1.1. The knob was slow through a long strip or list: a fast
-turn now goes further a click (not yet on the panel). Next: try every screen on the hardware (strip, knob,
-settings, color picker, idle clock).
+Installed 2026-11-18 through the browser install page and updated through
+the Marketplace since (0.1.0 - 0.1.2). Found and fixed on the way: theme
+changes out of memory, settings without a close (now the color picker's X),
+the strip forgetting each room's place, the picture breaking up while a
+theme was saved, a room pick lost while HA restarted, the knob moving only
+the strip. Not on the panel yet: a fast knob turn goes further a click.
+Next: try every screen on the hardware (strip, knob, settings, color
+picker, idle clock).
 
 A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
 480x480, 8 MB PSRAM, 16 MB flash, CST826 touch, a rotary knob with a press).
@@ -356,27 +269,17 @@ A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
   on the panel, across restarts). Touch first; the knob: a turn = half a
   step along the strip - or, wherever a list scrolls (a page, the color
   picker, the language list), about a row of it; turned fast, more a
-  click (up to 4 steps); a press = tap the centered tile. Keeps themes, area switching (tap
-  the area's name), settings, the color picker (round layout),
+  click (up to 4 steps); a press = tap the centered tile. Keeps themes,
+  area switching (tap the area's name), settings, the color picker (round layout),
   "Connecting to Home Assistant…", When idle (starts on the digital clock
   after 30 s). Drops the map, the vacuum view and tile editing (edit on the
   dashboard).
-- **Compiles (2026-11-15):** 2.0 MiB, 50.6% of its 4 MiB slot, no
-  warnings.
-- **Built, not flashed yet:** the board file
-  (`boards/elecrow-s3-round-2.1.yaml`) and S3 flash layout;
-  `room_tiles: layout: strip, map: false` (map off = a runtime switch, its
-  code still built in); the strip with half-tile snapping and page dots;
-  knob turn / press; the round area list and settings page; the round color
-  picker; the configs validate.
 - **Left:**
-  - Board bring-up: screen init, touch, knob. Start with a bare test build -
-    this display had a black-screen crash in an older project.
-  - The firmware builds without the map / vacuum code (one switch).
+  - The firmware builds without the map / vacuum code (one switch; today
+    it's built in and switched off at run time).
   - Change Wi-Fi in its settings page.
-  - The integration knows a round panel: 5x2 only, no map data, idle
+  - Check the dashboard for a round panel: 5x2 only, no map data, idle
     settings on the dashboard, Help text to match.
-  - Installed and updated like the other panels.
 
 ## 4. Panels - smaller items
 
