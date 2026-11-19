@@ -93,6 +93,7 @@ room_tiles:
   on_status:
     - lambda: |-
         lv_label_set_text(id(boot_status), id(rt).status().c_str());
+        lv_label_set_text(id(boot_version), id(rt).version_text().c_str());
         // "Add this panel in Home Assistant": its name as HA lists it, and where
         const std::string name = id(rt).setup_name();
         if (name.empty()) {
@@ -339,6 +340,18 @@ lvgl:
             y: 50
             text_font: rt_font_title
             text_color: 0xFFFFFF
+        # the firmware's release ("v0.1.4"), small, at the name's bottom right
+        # (none on a build that isn't a release, nor on the round panel)
+        - label:
+            id: boot_version
+            text: " "
+            align_to:
+              id: boot_title
+              align: OUT_RIGHT_BOTTOM
+              x: 10
+              y: -6
+            text_font: rt_font_name_s
+            text_color: 0x9E9E9E
         - label:
             id: boot_status
             text: "Connecting to Home Assistant…"

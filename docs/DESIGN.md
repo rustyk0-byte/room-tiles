@@ -851,7 +851,9 @@ show and use what the integration holds; nothing about a house is compiled in.
   device setup and short names are dashboard-only; the panel says when there
   is something to set up there.
 - **Boot screen:** the Room Tiles icon on black (built into the firmware,
-  so it shows before any download).
+  so it shows before any download), the name, and - small and dim at the
+  name's bottom right - the firmware's release ("v0.1.4"; none on a build
+  that isn't a release, nor on the round panel).
   - **Factory reset** (the panel's HA button "Factory Reset", disabled by
     default - never pressed or voice-exposed by accident): Room Tiles is told
     to forget the panel's settings (area, layout, theme, language), the

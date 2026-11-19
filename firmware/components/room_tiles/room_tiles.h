@@ -147,6 +147,12 @@ class RoomTiles : public Component {
   void knob_press();
   /// The round panel (480x480, the strip layout): dialogs lay out for a circle.
   bool round() const { return this->strip_; }
+  /// The startup screen's version beside the name: "v0.1.4" on a release's
+  /// build - "" on any other build, and on the round panel (no room beside
+  /// the name in its circle).
+  std::string version_text() const {
+    return (*this->release_ && !this->strip_) ? std::string("v") + this->release_ : std::string();
+  }
   /// Built from the installer's generic image (its Wi-Fi set on its hotspot).
   bool generic() const { return this->generic_; }
   /// Forget the Wi-Fi network set on the hotspot and restart: the hotspot
