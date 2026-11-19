@@ -11,6 +11,7 @@ from typing import Any
 
 from . import wording
 from .appliance_detect import Dev, Ent
+from .wording import w as _w_note
 
 
 def _iaqualink(ents: list[Ent], devs: dict[str, Dev]) -> list[dict[str, Any]]:
@@ -152,9 +153,7 @@ def _omnilogic(ents: list[Ent], devs: dict[str, Dev]) -> list[dict[str, Any]]:
                 "layout": "separate" if len(has) == 2 else has[0],
                 "spa_heater_follows": True,
                 **sys_,
-                "_notes": [
-                    "Heating isn't available for Hayward: the tiles show the temperature and run the pumps.",
-                ],
+                "_notes": [_w_note("setup_note.hayward_heat")],
             }
         )
     return out
@@ -175,12 +174,10 @@ def find_pools(ents: list[Ent], devs: dict[str, Dev], known: set[str], taken_ids
             sug["notes"] = list(sug.pop("_notes", None) or [])
             # no heater found for a body (common) - unless the brand's own
             # note already says heating isn't available
-            if not any("Heating isn't available" in n for n in sug["notes"]):
+            if _w_note("setup_note.hayward_heat") not in sug["notes"]:
                 for b in ("pool", "spa"):
                     if sug.get(b) and not sug[b].get("heater"):
-                        sug["notes"].append(
-                            f"No heater found for the {b}. Pick one below if it has one."
-                        )
+                        sug["notes"].append(_w_note(f"setup_note.no_heater_{b}"))
             out.append(sug)
     taken = set(taken_ids)
     for sug in out:

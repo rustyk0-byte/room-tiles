@@ -14,6 +14,7 @@ from typing import Any
 
 from .appliance_detect import Dev
 from .robot import CLEAN_AREA
+from .wording import w as _w_note
 
 @dataclass(frozen=True)
 class Vac:
@@ -43,15 +44,10 @@ def find_robots(
             n += 1
             rid = f"{base}_{n}"
         taken.add(rid)
-        notes = []
-        if v.supported_features & CLEAN_AREA:
-            notes.append("Room cleaning is supported.")
-        else:
-            notes.append(
-                "Room cleaning isn't supported by this vacuum yet."
-            )
+        # (words: each dashboard says them in its own language)
+        notes = [_w_note("setup_note.rooms_yes" if v.supported_features & CLEAN_AREA else "setup_note.rooms_no")]
         if error:
-            notes.append("It alerts you when it needs you (refill, empty, put back) and on faults.")
+            notes.append(_w_note("setup_note.alerts"))
         out.append(
             {
                 "id": rid,

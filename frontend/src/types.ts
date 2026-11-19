@@ -5,6 +5,10 @@ import type { InstalledTheme } from "./theme";
 
 export const PAYLOAD_SCHEMA = 1;
 
+/** A setup note on a found device: a word (custom_components/room_tiles/
+ *  wording.py - words.ts wordText puts it in this dashboard's language). */
+export type SetupNote = string | { k: string; p?: Record<string, unknown> } | unknown[];
+
 export type Layout = "5x2" | "6x3";
 export const LAYOUT_COLUMNS: Record<Layout, number> = { "5x2": 5, "6x3": 6 };
 
@@ -85,23 +89,23 @@ export interface RoomTilesDoc {
   /** appliance profiles (integration: model.Appliance) */
   appliances?: ApplianceProfile[];
   /** supported appliances found in HA, not set up yet - same shape + notes */
-  appliance_found?: (ApplianceProfile & { notes: string[] })[];
+  appliance_found?: (ApplianceProfile & { notes: SetupNote[] })[];
   /** appliance id -> what setup would make of its hardware now (Set up again) */
-  appliance_again?: Record<string, ApplianceProfile & { notes: string[] }>;
+  appliance_again?: Record<string, ApplianceProfile & { notes: SetupNote[] }>;
   /** pool / spa systems (integration: model.PoolSystem) */
   pools?: PoolProfile[];
   /** pool / spa systems found in HA, not set up yet - same shape + notes */
-  pool_found?: (PoolProfile & { notes: string[] })[];
+  pool_found?: (PoolProfile & { notes: SetupNote[] })[];
   /** robot vacuum profiles (integration: model.RobotProfile) */
   robots?: RobotProfile[];
   /** vacuums found in HA, not set up yet - same shape + notes, clean_area */
-  robot_found?: (RobotProfile & { notes: string[]; clean_area: boolean })[];
+  robot_found?: (RobotProfile & { notes: SetupNote[]; clean_area: boolean })[];
   /** found but ignored by the user (Ignore) - listed at the bottom of the
    *  Appliances page, never counted by the dot */
   ignored_found?: {
-    appliances: (ApplianceProfile & { notes: string[] })[];
-    pools: (PoolProfile & { notes: string[] })[];
-    robots: (RobotProfile & { notes: string[]; clean_area: boolean })[];
+    appliances: (ApplianceProfile & { notes: SetupNote[] })[];
+    pools: (PoolProfile & { notes: SetupNote[] })[];
+    robots: (RobotProfile & { notes: SetupNote[]; clean_area: boolean })[];
   };
   /** the brand presets setup can pick from */
   appliance_presets?: AppliancePreset[];

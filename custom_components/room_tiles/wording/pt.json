@@ -104,6 +104,14 @@
     "recording.ready_title": "Room Tiles: a gravação de {name} está pronta",
     "recording.ready_message": "A gravação está pronta para rever e enviar. **[Abrir Eletrodomésticos]({url})**",
     "recording.none_title": "Room Tiles: nenhum ciclo gravado",
-    "recording.none_message": "{name} não arrancou dentro de uma semana, por isso a gravação parou. **[Abrir Eletrodomésticos]({url})**"
+    "recording.none_message": "{name} não arrancou dentro de uma semana, por isso a gravação parou. **[Abrir Eletrodomésticos]({url})**",
+    "setup_note.beta": "{unit}: beta - {model} ainda não está confirmado com o Room Tiles. Deve funcionar - depois de configurado, conte-nos como foi com Contar como foi no seu cartão.",
+    "setup_note.this_model": "este modelo",
+    "setup_note.rooms_yes": "A limpeza por divisões é suportada.",
+    "setup_note.rooms_no": "Este aspirador ainda não suporta limpeza por divisões.",
+    "setup_note.alerts": "Avisa quando precisa de si (encher, esvaziar, recolocar) e em caso de avaria.",
+    "setup_note.hayward_heat": "O aquecimento não está disponível para a Hayward: os mosaicos mostram a temperatura e ligam as bombas.",
+    "setup_note.no_heater_pool": "Nenhum aquecedor encontrado para a piscina. Escolha um abaixo se tiver.",
+    "setup_note.no_heater_spa": "Nenhum aquecedor encontrado para o spa. Escolha um abaixo se tiver."
   }
 }

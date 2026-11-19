@@ -104,6 +104,14 @@
     "recording.ready_title": "Room Tiles: Aufzeichnung von {name} ist fertig",
     "recording.ready_message": "Die Aufzeichnung ist bereit zum Prüfen und Senden. **[Geräte öffnen]({url})**",
     "recording.none_title": "Room Tiles: kein Programm aufgezeichnet",
-    "recording.none_message": "{name} ist innerhalb einer Woche nicht gestartet, daher wurde die Aufzeichnung beendet. **[Geräte öffnen]({url})**"
+    "recording.none_message": "{name} ist innerhalb einer Woche nicht gestartet, daher wurde die Aufzeichnung beendet. **[Geräte öffnen]({url})**",
+    "setup_note.beta": "{unit}: Beta - {model} ist mit Room Tiles noch nicht bestätigt. Es sollte funktionieren - sobald es eingerichtet ist, sag uns mit „Bericht, wie es lief“ auf seiner Karte, wie es geht.",
+    "setup_note.this_model": "dieses Modell",
+    "setup_note.rooms_yes": "Raumreinigung wird unterstützt.",
+    "setup_note.rooms_no": "Raumreinigung wird von diesem Sauger noch nicht unterstützt.",
+    "setup_note.alerts": "Er meldet sich, wenn er dich braucht (auffüllen, leeren, zurückstellen), und bei Fehlern.",
+    "setup_note.hayward_heat": "Heizen ist bei Hayward nicht verfügbar: Die Kacheln zeigen die Temperatur und schalten die Pumpen.",
+    "setup_note.no_heater_pool": "Keine Heizung für den Pool gefunden. Wähle unten eine aus, falls er eine hat.",
+    "setup_note.no_heater_spa": "Keine Heizung für den Spa gefunden. Wähle unten eine aus, falls er eine hat."
   }
 }

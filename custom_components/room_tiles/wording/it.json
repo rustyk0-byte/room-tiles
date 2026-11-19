@@ -104,6 +104,14 @@
     "recording.ready_title": "Room Tiles: la registrazione di {name} è pronta",
     "recording.ready_message": "La registrazione è pronta da controllare e inviare. **[Apri Elettrodomestici]({url})**",
     "recording.none_title": "Room Tiles: nessun ciclo registrato",
-    "recording.none_message": "{name} non si è avviato entro una settimana, quindi la registrazione si è fermata. **[Apri Elettrodomestici]({url})**"
+    "recording.none_message": "{name} non si è avviato entro una settimana, quindi la registrazione si è fermata. **[Apri Elettrodomestici]({url})**",
+    "setup_note.beta": "{unit}: beta - {model} non è ancora confermato con Room Tiles. Dovrebbe funzionare: una volta configurato, raccontaci com'è andata con Racconta com'è andata sulla sua scheda.",
+    "setup_note.this_model": "questo modello",
+    "setup_note.rooms_yes": "La pulizia per stanze è supportata.",
+    "setup_note.rooms_no": "Questo robot non supporta ancora la pulizia per stanze.",
+    "setup_note.alerts": "Avvisa quando ha bisogno di te (riempire, svuotare, rimettere a posto) e in caso di guasti.",
+    "setup_note.hayward_heat": "Il riscaldamento non è disponibile per Hayward: i riquadri mostrano la temperatura e azionano le pompe.",
+    "setup_note.no_heater_pool": "Nessun riscaldatore trovato per la piscina. Scegline uno qui sotto se ce l'ha.",
+    "setup_note.no_heater_spa": "Nessun riscaldatore trovato per la spa. Scegline uno qui sotto se ce l'ha."
   }
 }

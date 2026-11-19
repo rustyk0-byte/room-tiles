@@ -70,7 +70,11 @@ def test_ge_single_dishwasher():
     ]
     [s] = find_appliances(ents, devs, set())
     [u] = s["units"]
-    assert s["notes"] == ["Dishwasher: beta - GDT isn't confirmed with Room Tiles yet. It should work; please report how it goes."]
+    assert s["notes"] == [{"k": "setup_note.beta", "p": {"unit": "Dishwasher", "model": "GDT"}}]
+    from custom_components.room_tiles.wording import render
+
+    assert render(s["notes"][0], "en").startswith("Dishwasher: beta - GDT isn't confirmed with Room Tiles yet.")
+    assert "Report how it went" in render(s["notes"][0], "en")
     assert (u["id"], u["label"], u["preset"], u["drawer"], u["door"]) == (
         "dishwasher",
         "Dishwasher",
@@ -97,9 +101,7 @@ def test_nothing_found_without_supported_integrations():
 def test_an_unconfirmed_model_of_a_verified_brand_is_beta():
     devs = {**LG_DEVS, "w": Dev("w", "Washer", "LGE", "WM4000HWA (DEVICE_WASHER)")}
     [s] = find_appliances(LG, devs, set())
-    assert s["notes"] == [
-        "Washer: beta - WM4000HWA isn't confirmed with Room Tiles yet. It should work; please report how it goes."
-    ]
+    assert s["notes"] == [{"k": "setup_note.beta", "p": {"unit": "Washer", "model": "WM4000HWA"}}]
 
 
 def test_found_ids_avoid_appliances_already_set_up():

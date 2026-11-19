@@ -117,6 +117,14 @@
     "recording.ready_title": "Room Tiles: the recording of {name} is ready",
     "recording.ready_message": "The recording is ready to review and send. **[Open Appliances]({url})**",
     "recording.none_title": "Room Tiles: no cycle recorded",
-    "recording.none_message": "{name} didn't start within a week, so the recording stopped. **[Open Appliances]({url})**"
+    "recording.none_message": "{name} didn't start within a week, so the recording stopped. **[Open Appliances]({url})**",
+    "setup_note.beta": "{unit}: beta - {model} isn't confirmed with Room Tiles yet. It should work - once it's set up, tell us how it went with Report how it went on its card.",
+    "setup_note.this_model": "this model",
+    "setup_note.rooms_yes": "Room cleaning is supported.",
+    "setup_note.rooms_no": "Room cleaning isn't supported by this vacuum yet.",
+    "setup_note.alerts": "It alerts you when it needs you (refill, empty, put back) and on faults.",
+    "setup_note.hayward_heat": "Heating isn't available for Hayward: the tiles show the temperature and run the pumps.",
+    "setup_note.no_heater_pool": "No heater found for the pool. Pick one below if it has one.",
+    "setup_note.no_heater_spa": "No heater found for the spa. Pick one below if it has one."
   }
 }

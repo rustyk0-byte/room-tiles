@@ -104,6 +104,14 @@
     "recording.ready_title": "Room Tiles : l'enregistrement de {name} est prêt",
     "recording.ready_message": "L'enregistrement est prêt à être vérifié et envoyé. **[Ouvrir Appareils]({url})**",
     "recording.none_title": "Room Tiles : aucun cycle enregistré",
-    "recording.none_message": "{name} n'a pas démarré en une semaine, l'enregistrement s'est donc arrêté. **[Ouvrir Appareils]({url})**"
+    "recording.none_message": "{name} n'a pas démarré en une semaine, l'enregistrement s'est donc arrêté. **[Ouvrir Appareils]({url})**",
+    "setup_note.beta": "{unit} : bêta - {model} n'est pas encore confirmé avec Room Tiles. Cela devrait marcher - une fois configuré, dites-nous comment ça s'est passé avec Raconter comment ça s'est passé sur sa carte.",
+    "setup_note.this_model": "ce modèle",
+    "setup_note.rooms_yes": "Le nettoyage par pièce est pris en charge.",
+    "setup_note.rooms_no": "Ce robot ne prend pas encore en charge le nettoyage par pièce.",
+    "setup_note.alerts": "Il prévient quand il a besoin de vous (remplir, vider, remettre en place) et en cas de panne.",
+    "setup_note.hayward_heat": "Le chauffage n'est pas disponible pour Hayward : les tuiles affichent la température et pilotent les pompes.",
+    "setup_note.no_heater_pool": "Aucun chauffage trouvé pour la piscine. Choisissez-en un ci-dessous s'il y en a un.",
+    "setup_note.no_heater_spa": "Aucun chauffage trouvé pour le spa. Choisissez-en un ci-dessous s'il y en a un."
   }
 }

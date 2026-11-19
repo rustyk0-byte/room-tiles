@@ -1,5 +1,6 @@
 """Finding pool / spa systems (pool_detect.py)."""
 
+from custom_components.room_tiles.wording import render
 from custom_components.room_tiles.appliance_detect import Ent
 from custom_components.room_tiles.pool_detect import find_pools
 
@@ -29,7 +30,7 @@ def test_jandy_combo_is_shared():
         "heater_switch": "switch.pool_heater",  # kept off the tiles (the thermostat does it)
     }
     assert (s["spa"]["heater"], s["spa"]["heater_switch"]) == ("climate.spa", "switch.spa_heater")
-    assert not any("Beta" in n for n in s["notes"])
+    assert not any("Beta" in render(n, "en") for n in s["notes"])
 
 
 def test_pool_only():
@@ -60,7 +61,7 @@ def test_pentair_screenlogic_combo_is_shared_and_reads_through_the_heaters():
     assert (s["preset"], s["layout"], s["spa_mode"], s["pump"]) == ("screenlogic", "shared", "switch.spa", "switch.pool")
     assert s["pool"] == {"temp": None, "heater": "climate.pool_heat", "pump": None, "pump_with_heater": True}
     assert s["spa"]["heater"] == "climate.spa_heat"
-    assert not any("Beta" in n for n in s["notes"])
+    assert not any("Beta" in render(n, "en") for n in s["notes"])
     # set up (known by its heater): not offered again
     assert find_pools(PENTAIR, {}, {"climate.pool_heat"}, set()) == []
 
@@ -90,7 +91,7 @@ def test_hayward_omnilogic_separate_bodies_without_heaters():
         "pump_with_heater": True,
     }
     assert s["spa"]["pump"] == "switch.backyard_spa_filter_pump"
-    assert any("Heating isn't available" in n for n in s["notes"])
+    assert any("Heating isn't available" in render(n, "en") for n in s["notes"])
 
 
 
@@ -98,8 +99,8 @@ def test_a_body_without_a_heater_is_noted():
     no_heater = [e for e in JANDY if "set_point" not in e.unique_id]
     [s] = find_pools(no_heater, {}, set(), set())
     assert s["pool"]["heater"] is None
-    assert any("No heater found for the pool" in n for n in s["notes"])
-    assert any("No heater found for the spa" in n for n in s["notes"])
+    assert any("No heater found for the pool" in render(n, "en") for n in s["notes"])
+    assert any("No heater found for the spa" in render(n, "en") for n in s["notes"])
     # with heaters: no such note
     [s] = find_pools(JANDY, {}, set(), set())
-    assert not any("No heater" in n for n in s["notes"])
+    assert not any("No heater" in render(n, "en") for n in s["notes"])

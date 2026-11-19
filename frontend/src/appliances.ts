@@ -16,6 +16,7 @@ import type {
   HassEntity,
   HomeAssistant,
   RoomTilesDoc,
+  SetupNote,
 } from "./types";
 import { dialogStyles, noSelectStyles, rowStyles, groupStyles, setUpDevice, ScrollFades } from "./ui";
 import "./unsaved";
@@ -26,7 +27,7 @@ import { problemText, type ProblemSubject } from "./problem";
 import "./model-report";
 import { bodiesOf, tilesOf } from "./pools";
 import { listOf, num, t, th } from "./i18n";
-import { localText } from "./words";
+import { localText, wordText } from "./words";
 
 const MAX_SHORT = 15;
 /** The full supported-devices page (docs/SUPPORTED.md): brands, models, features by model. */
@@ -34,7 +35,7 @@ export const SUPPORTED_URL = "https://github.com/rustyk0-byte/room-tiles/blob/ma
 /** A phase's word when the sensor has no status line (appliances.phase_*). */
 const phaseText = (phase: string): string => t(`appliances.phase_${phase}`);
 
-const plain = (p: ApplianceProfile & { notes?: string[] }): ApplianceProfile => ({ id: p.id, name: p.name, units: p.units });
+const plain = (p: ApplianceProfile & { notes?: SetupNote[] }): ApplianceProfile => ({ id: p.id, name: p.name, units: p.units });
 const friendly = (hass: HomeAssistant | undefined, e: string | null) =>
   (e && (hass?.states[e]?.attributes.friendly_name as string | undefined)) || e || "";
 
@@ -271,7 +272,7 @@ export class RtAppliances extends LitElement {
     return [typeof temp === "number" ? `${num(temp)}°` : "", localText(st.attributes.status_word, st.attributes.status)].filter(Boolean).join(" · ");
   }
 
-  private _poolCards(found: (PoolProfile & { notes: string[] })[], set: PoolProfile[]) {
+  private _poolCards(found: (PoolProfile & { notes: SetupNote[] })[], set: PoolProfile[]) {
     const layout = (p: PoolProfile) => t(`appliances.pool_${p.layout}`);
     return {
       found: found.map(
@@ -279,7 +280,7 @@ export class RtAppliances extends LitElement {
           <div class="grow">
             <div class="name">${f.name}</div>
             <div class="sub">${layout(f)} · ${t("appliances.tiles", { list: listOf(tilesOf(f.layout)) })}</div>
-            ${f.notes.map((n) => html`<div class="note">${n}</div>`)}
+            ${f.notes.map((n) => html`<div class="note">${wordText(n)}</div>`)}
           </div>
           <div class="btns">
             <button class="plain" @click=${() => this._ignore("pool", { ...f, notes: undefined } as unknown as PoolProfile)}>${t("common.ignore")}</button>
@@ -315,7 +316,9 @@ export class RtAppliances extends LitElement {
           <div class="grow">
             <div class="name">${f.name}</div>
             <div class="sub">${[t("robot.title"), f.error ? t("appliances.matter_alerts") : "", f.clean_area ? t("appliances.room_cleaning") : ""].filter(Boolean).join(" · ")}</div>
-            ${f.notes.filter((n) => n.includes("isn't supported")).map((n) => html`<div class="note">${n}</div>`)}
+            ${f.notes
+              .filter((n) => typeof n === "object" && n !== null && (n as { k?: string }).k === "setup_note.rooms_no")
+              .map((n) => html`<div class="note">${wordText(n)}</div>`)}
           </div>
           <div class="btns">
             <button class="plain" @click=${() => this._ignore("robot", { id: f.id, name: f.name, vacuum: f.vacuum, error: f.error, preset: f.preset })}>
@@ -374,7 +377,7 @@ export class RtAppliances extends LitElement {
                     <div class="grow">
                       <div class="name">${f.name}</div>
                       <div class="sub">${f.units.map((u) => `${u.label} (${this._presetName(u.preset)})`).join(" · ")}</div>
-                      ${f.notes.map((n) => html`<div class="note">${n}</div>`)}
+                      ${f.notes.map((n) => html`<div class="note">${wordText(n)}</div>`)}
                     </div>
                     <div class="btns">
                       <button class="plain" @click=${() => this._ignore("appliance", plain(f))}>${t("common.ignore")}</button>

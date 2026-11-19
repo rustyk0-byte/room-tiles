@@ -18,6 +18,7 @@ from typing import Any
 from .appliance import confirmed
 from .appliance_presets import PRESETS
 from . import wording
+from .wording import w as _w_note
 
 
 @dataclass(frozen=True)
@@ -349,10 +350,9 @@ def find_appliances(
         for u in sug["units"]:
             model = u.pop("_model", "")
             if not confirmed(PRESETS[u["preset"]], model):
-                sug["notes"].append(
-                    f"{u['label']}: beta - {model.split(' (')[0].strip() or 'this model'} isn't confirmed "
-                    "with Room Tiles yet. It should work; please report how it goes."
-                )
+                # (a word: each dashboard says it in its own language)
+                plain_model = model.split(" (")[0].strip()
+                sug["notes"].append(_w_note("setup_note.beta", unit=u["label"], model=plain_model or _w_note("setup_note.this_model")))
         out.append(sug)
     taken: set[str] = set(taken_ids)
     for sug in out:

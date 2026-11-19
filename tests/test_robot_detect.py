@@ -18,8 +18,10 @@ def test_every_vacuum_is_offered_with_what_it_can_do():
         True,
     )
     assert (roomba["preset"], roomba["error"], roomba["clean_area"]) == ("vacuum", None, False)
-    assert any("isn't supported" in n for n in roomba["notes"])
-    assert not any("Beta" in n for n in roomba["notes"] + matic["notes"])  # brand status: SUPPORTED.md
+    from custom_components.room_tiles.wording import render
+
+    assert any("isn't supported" in render(n, "en") for n in roomba["notes"])
+    assert not any("Beta" in render(n, "en") for n in roomba["notes"] + matic["notes"])  # brand status: SUPPORTED.md
 
 
 def test_set_up_vacuums_are_not_offered_and_ids_stay_unique():

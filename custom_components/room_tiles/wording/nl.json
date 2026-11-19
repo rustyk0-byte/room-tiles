@@ -104,6 +104,14 @@
     "recording.ready_title": "Room Tiles: de opname van {name} is klaar",
     "recording.ready_message": "De opname is klaar om te bekijken en te versturen. **[Apparaten openen]({url})**",
     "recording.none_title": "Room Tiles: geen programma opgenomen",
-    "recording.none_message": "{name} is binnen een week niet gestart, dus de opname is gestopt. **[Apparaten openen]({url})**"
+    "recording.none_message": "{name} is binnen een week niet gestart, dus de opname is gestopt. **[Apparaten openen]({url})**",
+    "setup_note.beta": "{unit}: bèta - {model} is nog niet bevestigd met Room Tiles. Het zou moeten werken - laat ons zodra het is ingesteld weten hoe het ging met Laat weten hoe het ging op de kaart.",
+    "setup_note.this_model": "dit model",
+    "setup_note.rooms_yes": "Schoonmaken per kamer wordt ondersteund.",
+    "setup_note.rooms_no": "Schoonmaken per kamer wordt nog niet ondersteund door deze stofzuiger.",
+    "setup_note.alerts": "Hij meldt zich als hij je nodig heeft (bijvullen, legen, terugzetten) en bij storingen.",
+    "setup_note.hayward_heat": "Verwarmen is niet beschikbaar voor Hayward: de tegels tonen de temperatuur en schakelen de pompen.",
+    "setup_note.no_heater_pool": "Geen verwarming gevonden voor het zwembad. Kies er hieronder een als het er een heeft.",
+    "setup_note.no_heater_spa": "Geen verwarming gevonden voor de spa. Kies er hieronder een als die er een heeft."
   }
 }
