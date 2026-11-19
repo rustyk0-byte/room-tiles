@@ -10,8 +10,8 @@ cd "$(dirname "$0")/../frontend"
 [ -d node_modules ] || npm install --no-audit --no-fund
 npm run --silent typecheck
 [ "$1" = "--quick" ] || npm test --silent
-# colorpicker.ts computes the LIGHT's colours (data, not theme)
-if grep -nE "#[0-9a-fA-F]{3,8}\b|rgba?\(|var\(--(primary|secondary|card|state|ha-|paper)" src/*.ts | grep -v "^src/theme.ts:" | grep -v "^src/colorpicker.ts:"; then
+# colorpicker.ts computes the LIGHT's colours (data, not theme); tests may name colours
+if grep -nE "#[0-9a-fA-F]{3,8}\b|rgba?\(|var\(--(primary|secondary|card|state|ha-|paper)" src/*.ts | grep -v "^src/theme.ts:" | grep -v "^src/colorpicker.ts:" | grep -v "\.test\.ts:"; then
   echo "Hard-coded colour or HA theme variable outside src/theme.ts" && exit 1
 fi
 npm run --silent build
