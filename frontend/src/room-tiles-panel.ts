@@ -106,6 +106,8 @@ const UPDATED = "updated"; // _error: the integration sends newer data than this
 const RUN_FLASH_MS = 1500; // a scene / script button lights this long after a tap
 // a newer dashboard: how often to look, and the quiet before reloading by itself
 const VERSION_CHECK_MS = 60_000;
+const VERSION_RETRY_MS = 5_000; // (after a reconnect, until HA serves version.json)
+const VERSION_RETRY_TRIES = 24; // (two minutes)
 const RELOAD_QUIET_MS = 30_000;
 const RELOAD_RETRY_MS = 5_000;
 const STORE_RELOADED_FOR = "room-tiles:reloaded-for"; // (session) the build an auto reload went for
@@ -394,6 +396,7 @@ export class RoomTilesPanel extends LitElement {
   private _restartAsk = false; // the Restart bar's confirm is open
   private _restarting = false; // Restart pressed: reload as soon as HA is back
   private _newBuild?: string; // ...that build
+  private _versionTries?: number; // (after a reconnect: version.json asked again till HA serves it)
   private _lastInput = Date.now(); // the last touch / click / key (auto reload waits for quiet)
   // when the page / a linked dialog was shown: no input since = nothing to lose
   private _shownAt = Date.now();
@@ -645,7 +648,10 @@ export class RoomTilesPanel extends LitElement {
       return;
     }
     this._error = undefined;
-    if (msg.type === "full") void this._checkVersion(); // (re)connected: maybe HA was restarted / updated
+    if (msg.type === "full") {
+      this._versionTries = 0;
+      void this._checkVersion(true); // (re)connected: maybe HA was restarted / updated
+    }
     this._doc = msg.type === "full" ? msg.data : ({ ...this._doc, ...msg.data } as RoomTilesDoc);
     if (msg.data.themes) this._installedThemes(msg.data.themes.themes);
     // back after the Restart bar's restart: onto the new dashboard
@@ -672,17 +678,28 @@ export class RoomTilesPanel extends LitElement {
 
   /** Is a newer dashboard installed than this page is running? (An open page
    *  keeps its code across HA restarts and updates.) */
-  private async _checkVersion(): Promise<void> {
+  private async _checkVersion(retry = false): Promise<void> {
+    // (just reconnected - HA restarting, an update: it may not serve the
+    // file yet; asked again every few seconds until it does, so the bar
+    // shows within seconds of HA being back, not a minute later)
+    const again = () => {
+      if (retry && (this._versionTries = (this._versionTries ?? 0) + 1) <= VERSION_RETRY_TRIES)
+        window.setTimeout(() => void this._checkVersion(true), VERSION_RETRY_MS);
+    };
     try {
       const r = await fetch(`${STATIC_BASE}/version.json`, { cache: "no-store" });
-      if (!r.ok) return;
+      if (!r.ok) {
+        again();
+        return;
+      }
+      this._versionTries = 0;
       const { build } = await r.json();
       this._outdated = typeof BUILD_ID !== "undefined" && !!build && build !== BUILD_ID;
       this._newBuild = this._outdated ? build : undefined;
       // (HA still runs the old backend: stay on this page until it restarts)
       if (this._outdated && !this._doc?.restart_needed) this._autoReload();
     } catch {
-      /* offline etc.: try again next time */
+      again(); // (offline etc.: the minute's check tries again too)
     }
   }
 
