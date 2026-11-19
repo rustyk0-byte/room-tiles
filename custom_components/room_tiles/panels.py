@@ -38,7 +38,7 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 
-from .const import DOMAIN, LAYOUTS, PANEL_SCHEMA
+from .const import DOMAIN, LAYOUTS, NO_ENTITY_KINDS, PANEL_SCHEMA
 from .model import Panel, RoomTilesData
 
 PANEL_MANUFACTURER = "room-tiles"
@@ -382,7 +382,19 @@ def check_action(
         area = data.area(str(extra.get("area") or ""))
         if area is None or area.hidden:
             return f"no area {extra.get('area')}"
-        return domain, name, entity, {k: v for k, v in extra.items() if k in EDIT_SERVICES[name]}
+        edit = {k: v for k, v in extra.items() if k in EDIT_SERVICES[name]}
+        if name == "set_tile":
+            # only what the panel's tile picker offers: a catalog entry (its
+            # kind the catalog's), or a tile without an entity (Map, blank) -
+            # else a placed tile would open any entity to the panel's actions
+            if edit.get("entity"):
+                entry = data.catalog.get(str(edit["entity"]))
+                if entry is None:
+                    return f"{edit['entity']} isn't in the tile list"
+                edit["kind"] = entry.kind
+            elif edit.get("kind") not in (None, *NO_ENTITY_KINDS):
+                return f"a '{edit.get('kind')}' tile needs an entity"
+        return domain, name, entity, edit
     if domain == "room_tiles" and name == "area_lights":
         # the top bar's area lights button: a shown area's lights
         area = data.area(str(extra.get("area") or ""))

@@ -197,6 +197,24 @@ def test_a_marker_entity_may_be_acted_on():
     assert isinstance(check_action(data, {"service": "fan.toggle", "entity": "fan.attic"}), str)
 
 
+def test_a_panel_places_only_what_its_tile_picker_offers():
+    """A panel's set_tile: a catalog entity (with the catalog's kind) or a
+    tile without an entity - never any entity (it would then be allowed)."""
+    data = RoomTilesData.from_dict(
+        {
+            "areas": [{"id": "kitchen", "name": "Kitchen"}],
+            "catalog": {"entries": [{"entity": "light.counter", "kind": "dimmable_light", "short_name": "Counter"}]},
+        }
+    )
+    edit = lambda **d: check_action(data, {"service": "room_tiles.set_tile", "data": {"area": "kitchen", "layout": "5x2", "slot": 0, **d}})
+    ok = edit(entity="light.counter", kind="lock")
+    assert ok[3]["entity"] == "light.counter" and ok[3]["kind"] == "dimmable_light"  # (the catalog's kind)
+    assert "isn't in the tile list" in edit(entity="lock.front_door", kind="lock")
+    assert edit(kind="map")[3]["kind"] == "map"
+    assert edit()[1] == "set_tile"  # (no entity, no kind: cleared)
+    assert isinstance(edit(kind="lock"), str)
+
+
 async def test_room_lights_are_the_device_areas_area_lights(hass: HomeAssistant) -> None:
     """Screen off when the following area lights are off: the area lights entity of the room
     the panel is in (its HA device's area), whatever area it shows."""
