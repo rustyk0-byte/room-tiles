@@ -492,6 +492,11 @@ async def test_panel_taps_reach_ha(hass: HomeAssistant, hass_client_no_auth) -> 
     assert len(calls) == 1 and calls[0].data["entity_id"] == "light.counter"
     # the same request again (a replay) is refused
     assert (await client.post(ACTION_URL, params=q, data=raw)).status == 409
+    # ... its signature in other letter cases too (the same signature)
+    assert (await client.post(ACTION_URL, params={**q, "sig": q["sig"].upper()}, data=raw)).status == 409
+    mixed = "".join(c.upper() if i % 2 else c for i, c in enumerate(q["sig"]))
+    assert (await client.post(ACTION_URL, params={**q, "sig": mixed}, data=raw)).status == 409
+    assert len(calls) == 1
     # a body that isn't the one signed is refused
     _raw, q2 = signed({"service": "light.toggle", "entity": "light.counter"}, int(time.time()) - 1)
     tampered = json.dumps({"service": "light.toggle", "entity": "light.other"}).encode()

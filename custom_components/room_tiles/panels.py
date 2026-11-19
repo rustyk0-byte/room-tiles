@@ -580,6 +580,8 @@ class _Replays:
         self._seen: dict[str, float] = {}
 
     def first_time(self, sig: str, now: float) -> bool:
+        # (as checked: hex in any case is the same signature - one use)
+        sig = sig.lower()
         self._seen = {s: t for s, t in self._seen.items() if now - t < 2 * MAX_SKEW_S}
         if sig in self._seen:
             return False
