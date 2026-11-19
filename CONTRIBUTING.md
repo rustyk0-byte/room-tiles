@@ -30,6 +30,16 @@ before you put the work in.
   `esphome compile room-tiles-<board>.yaml` (ESPHome version: see
   `.github/workflows/firmware.yml`).
 
+## Reports as tests
+
+A model report or problem report on GitHub carries a recorded cycle. To keep
+it as evidence (and to make sure a fix stays fixed):
+`python3 tools/report_to_test.py <issue number>` replays it through today's
+logic, prints what the tile shows step by step, and saves it in
+`tests/reports/`. Check the steps, then commit the case with the change -
+`tests/test_reports.py` replays every case from then on. Washers, dryers,
+dishwashers and vacuums so far.
+
 ## Guidelines
 
 - **Text:** everything the user reads comes from the wording files

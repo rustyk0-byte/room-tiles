@@ -158,9 +158,9 @@ Upload firmware), one image per board in the folder.
 - **Reports: what's left** (after panel facts in panel bugs, the
   dashboard's recent errors in dashboard bugs, and HA's Download
   diagnostics - 2026-11-18):
-  - **Report to test** (maintainer tool): turn a model report's or a
-    problem report's issue into a CI test that replays its cycle through
-    the preset (step 3 of clearing a beta flag below).
+  - **Report to test** for pools: `tools/report_to_test.py` replays
+    appliances' and vacuums' reports (tests/reports/); a pool's pump runs
+    and heating aren't replayed yet.
   - Later (the repo public, or a GitHub sign-in): send reports from inside
     the app (device flow); show open issues for a model before a duplicate
     goes out; tell the reporter when their fix is released; a QR code on
