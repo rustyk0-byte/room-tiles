@@ -185,6 +185,22 @@ async def test_add_a_theme_from_a_link(hass: HomeAssistant, entry, aioclient_moc
     )
     aioclient_mock.get("https://github.com/someone/berry-theme/releases/download/v1/berry.zip", content=berry)
     assert (await themes.async_add_from_link("https://github.com/someone/berry-theme"))["id"] == "user:berry"
+    # a folder in a repository (/tree/<branch>/<folder>): just that folder
+    repo = _zip_bytes(
+        {
+            "room-tiles-main/README.md": "the repository",
+            "room-tiles-main/examples/themes/candy/theme.json": json.dumps({"format": 1, "id": "candy", "name": {"en": "Candy"}}),
+            "room-tiles-main/examples/themes/candy/README.md": "an example",
+        }
+    )
+    aioclient_mock.get("https://codeload.github.com/someone/room-tiles/zip/main", content=repo)
+    assert await themes.async_add_from_link("https://github.com/someone/room-tiles/tree/main/examples/themes/candy") == {
+        "id": "user:candy",
+        "name": "Candy",
+    }
+    with zipfile.ZipFile(Path(hass.config.path("room_tiles_themes")) / "candy.zip") as zf:
+        assert sorted(zf.namelist()) == ["candy/README.md", "candy/theme.json"]  # (nothing else of the repository)
+    assert (await themes.async_add_from_link("https://github.com/someone/room-tiles/tree/main/docs"))["error"] == "not_a_theme"
     # not a theme, nothing there
     aioclient_mock.get("https://example.com/notes.zip", content=_zip_bytes({"notes.txt": "hi"}))
     assert await themes.async_add_from_link("https://example.com/notes.zip") == {"error": "not_a_theme"}

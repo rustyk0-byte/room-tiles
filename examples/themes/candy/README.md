@@ -15,10 +15,11 @@ brings them down to size. Everything else comes from the default art.
 
 ## Try it
 
-Copy the `candy` folder into `/config/room_tiles_themes/` in Home
-Assistant (make that folder if it isn't there), then open the settings menu
-on the Room Tiles dashboard (or wait a few minutes): Candy shows up in the
-theme lists of your dashboards and panels.
+On the Room Tiles dashboard, open the settings menu and, under Theme, paste
+this folder's link into **Add a theme from a link**. Or copy the `candy`
+folder into `/config/room_tiles_themes/` in Home Assistant (make that folder
+if it isn't there). Either way, Candy shows up in the theme lists of your
+dashboards and panels.
 
 ## Make it yours
 

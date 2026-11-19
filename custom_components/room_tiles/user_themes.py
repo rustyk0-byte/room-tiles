@@ -183,7 +183,7 @@ class UserThemes:
             return {"error": "not_https"}
         session = async_get_clientsession(self.hass)
         try:
-            zip_url = await self._zip_url(session, url)
+            zip_url, folder = await self._zip_url(session, url)
         except LinkError as err:
             return {"error": err.code}
         try:
@@ -208,6 +208,9 @@ class UserThemes:
                 zpath = Path(tmp) / "theme.zip"
                 zpath.write_bytes(bytes(data))
                 try:
+                    if folder:  # (a folder of a repository: just that folder, as its own zip)
+                        data[:] = installed.zip_folder(zpath, folder)
+                        zpath.write_bytes(bytes(data))
                     doc = installed.check_zip(zpath, Path(tmp) / "check")
                 except fmt.ThemeError:
                     return {"error": "not_a_theme"}
@@ -228,14 +231,21 @@ class UserThemes:
             self.check_soon()
         return result
 
-    async def _zip_url(self, session: Any, url: str) -> str:
-        """The zip to download for a link: a GitHub repository's latest
-        release zip (else its own zip), or the link itself."""
+    async def _zip_url(self, session: Any, url: str) -> tuple[str, str]:
+        """The zip to download for a link, and the theme's folder in it ("":
+        the zip is the theme): a GitHub folder (/tree/<branch>/<folder>) -
+        its repository's zip at that branch; a GitHub repository - its
+        latest release's zip, else its own zip; else the link itself."""
         import re
+
+        f = re.fullmatch(r"https://github\.com/([\w.-]+)/([\w.-]+)/tree/([^/?#]+)/([^?#]+?)/?", url)
+        if f is not None:
+            owner, repo, ref, folder = f.groups()
+            return f"https://codeload.github.com/{owner}/{repo}/zip/{ref}", folder
 
         m = re.fullmatch(r"https://github\.com/([\w.-]+)/([\w.-]+?)(?:\.git)?/?(?:releases(?:/latest|/tag/([^/?#]+))?/?)?", url)
         if m is None:
-            return url
+            return url, ""
         owner, repo, tag = m.group(1), m.group(2), m.group(3)
         api = f"https://api.github.com/repos/{owner}/{repo}/releases/" + (f"tags/{tag}" if tag else "latest")
         headers = {"Accept": "application/vnd.github+json", "User-Agent": "room-tiles"}
@@ -245,9 +255,9 @@ class UserThemes:
                     rel = await resp.json()
                     for asset in rel.get("assets") or []:
                         if str(asset.get("name", "")).lower().endswith(".zip"):
-                            return str(asset["browser_download_url"])
+                            return str(asset["browser_download_url"]), ""
                     if rel.get("zipball_url"):
-                        return str(rel["zipball_url"])
+                        return str(rel["zipball_url"]), ""
                 elif resp.status != 404:
                     raise LinkError("download_failed")
             # (no release: the repository as it is)
@@ -257,7 +267,7 @@ class UserThemes:
                 if resp.status != 200:
                     raise LinkError("download_failed")
                 info = await resp.json()
-            return f"https://api.github.com/repos/{owner}/{repo}/zipball/{info.get('default_branch') or 'main'}"
+            return f"https://api.github.com/repos/{owner}/{repo}/zipball/{info.get('default_branch') or 'main'}", ""
         except LinkError:
             raise
         except Exception:  # noqa: BLE001

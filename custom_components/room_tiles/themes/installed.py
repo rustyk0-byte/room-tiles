@@ -153,6 +153,32 @@ def _unzip(zpath: Path, dest: Path) -> Path:
     return folder
 
 
+def zip_folder(zpath: Path, folder: str) -> bytes:
+    """One folder of a repository's zip (GitHub's: everything in one top
+    folder) as a zip of its own - the theme a folder link points at."""
+    import io
+
+    folder = folder.strip("/")
+    try:
+        zf = zipfile.ZipFile(zpath)
+    except (OSError, zipfile.BadZipFile) as err:
+        raise fmt.ThemeError(f"not a readable zip ({err})") from None
+    with zf:
+        infos = [i for i in zf.infolist() if not i.is_dir()]
+        tops = {i.filename.split("/", 1)[0] for i in infos}
+        top = next(iter(tops)) + "/" if len(tops) == 1 else ""
+        base = f"{top}{folder}/"
+        picked = [i for i in infos if i.filename.startswith(base)]
+        if not picked or sum(i.file_size for i in picked) > ZIP_MAX_BYTES or len(picked) > ZIP_MAX_FILES:
+            raise fmt.ThemeError(f"{folder}: no theme there")
+        out = io.BytesIO()
+        name = folder.rsplit("/", 1)[-1]
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as dst:
+            for i in picked:
+                dst.writestr(f"{name}/{i.filename[len(base):]}", zf.read(i))
+        return out.getvalue()
+
+
 def check_zip(zpath: Path, work: Path) -> dict:
     """A downloaded theme zip, looked at before it's kept: its theme.json
     (ThemeError when it isn't a theme this Room Tiles reads)."""
