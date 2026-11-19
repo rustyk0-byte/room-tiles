@@ -94,6 +94,14 @@ room_tiles:
     - lambda: |-
         lv_label_set_text(id(boot_status), id(rt).status().c_str());
         lv_label_set_text(id(boot_version), id(rt).version_text().c_str());
+        {
+          // on the name's baseline: the boxes' bottoms lined up, then lifted
+          // by how much deeper the title's descent is than the small font's
+          const lv_font_t *big = lv_obj_get_style_text_font(id(boot_title), LV_PART_MAIN);
+          const lv_font_t *small = lv_obj_get_style_text_font(id(boot_version), LV_PART_MAIN);
+          const int lift = (big != nullptr && small != nullptr) ? big->base_line - small->base_line : 0;
+          lv_obj_align_to(id(boot_version), id(boot_title), LV_ALIGN_OUT_RIGHT_BOTTOM, 10, -lift);
+        }
         // "Add this panel in Home Assistant": its name as HA lists it, and where
         const std::string name = id(rt).setup_name();
         if (name.empty()) {
@@ -345,11 +353,10 @@ lvgl:
         - label:
             id: boot_version
             text: " "
-            align_to:
+            align_to:  # (lifted onto the name's baseline in on_status)
               id: boot_title
               align: OUT_RIGHT_BOTTOM
               x: 10
-              y: -6
             text_font: rt_font_name_s
             text_color: 0x9E9E9E
         - label:
