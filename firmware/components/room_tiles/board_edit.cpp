@@ -354,7 +354,9 @@ void Board::open_help(const std::string &mode) {
     title = "help.title.view";
     page = {{"help.section.markers", MARKER_ROWS, HELP_N(MARKER_ROWS), "help.view_hint", nullptr, 0},
             {"help.section.moving", MOVING_ROWS, HELP_N(MOVING_ROWS), nullptr, nullptr, 0},
-            {"help.section.buttons", nullptr, 0, nullptr, VIEW_BTNS, HELP_N(VIEW_BTNS)}};
+            {"help.section.buttons", nullptr, 0, nullptr, VIEW_BTNS, HELP_N(VIEW_BTNS)},
+            // (maps are changed on the dashboard - the panel only shows them)
+            {"help.section.changing_map", nullptr, 0, "help.view_edit_panel", nullptr, 0}};
   } else if (mode == "queue") {
     title = "help.title.queue";
     page = {{"help.section.picking_rooms", QUEUE_ROWS, HELP_N(QUEUE_ROWS), "help.queue_hint", nullptr, 0},

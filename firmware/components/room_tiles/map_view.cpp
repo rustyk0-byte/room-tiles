@@ -513,6 +513,19 @@ void MapView::build_bar_() {
     lv_obj_set_ext_click_area(title, 12);
     lv_obj_update_layout(title);
     title_end = title_x + lv_obj_get_width(title);
+    // the map groups start after the WIDEST map name, not this one's: picking
+    // another map never moves the pills under the finger (a room's own view,
+    // with its back button and name, keeps its own)
+    if (zone == nullptr && this->model_ != nullptr) {
+      const int tri_w = this->fonts_->menu != nullptr ? lv_font_get_glyph_width(this->fonts_->menu, 0xF035D, 0) + 2 : 0;
+      int widest = 0;
+      for (auto &m : this->model_->maps) {
+        lv_point_t sz;
+        lv_text_get_size(&sz, m->name.c_str(), this->fonts_->bar, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+        widest = std::max<int>(widest, sz.x);
+      }
+      title_end = std::max(title_end, title_x + std::min(title_cap - title_x, widest + tri_w));
+    }
     lv_obj_add_event_cb(
         title,
         [](lv_event_t *e) {
