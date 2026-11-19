@@ -47,6 +47,9 @@ static const uint32_t FIRMWARE_RETRY_MS = 10 * 60 * 1000;
 // the clock, dimmed) - or this long untouched when it never goes idle
 static const uint32_t AUTO_UPDATE_UNTOUCHED_MS = 10 * 60 * 1000;
 static const uint32_t PICK_RESEND_MS = 15 * 1000;
+// HA gone while a panel is idle on its clock: "Connecting…" shows dimmed this
+// long, then the screen goes dark (idle_loop_)
+static const uint32_t OFFLINE_DARK_MS = 10 * 60 * 1000;
 static const int KNOB_SCROLL_PX = 64;  // (a knob click in a list: about one row)
 // back from HA's absence on a screen it darkened: this long for the tiles'
 // states to show an animation (or the clock to come) before it stays dark
@@ -499,11 +502,16 @@ void RoomTiles::idle_loop_() {
   }
   if (this->idle_.mode == IDLE_OFF || dark || !this->main_shown_) {
     this->clock_.hide();
+    // HA gone while idle on the clock (not dark by choice): "Connecting to
+    // Home Assistant…" at the idle brightness for OFFLINE_DARK_MS - an HA
+    // restart passes lit - then dark: if HA stays away, say overnight, a
+    // dark screen keeps nobody awake
+    const bool waiting = !this->main_shown_ && this->offline_ && this->idle_.mode != IDLE_OFF && !this->asleep_ &&
+                         this->offline_since_ != 0 && millis() - this->offline_since_ < OFFLINE_DARK_MS;
     // an animation keeps the board up, dimmed; else the screen goes dark
-    // (also on the boot screen while HA is gone: "Connecting…" goes dark too
-    // - if HA stays away, say overnight, a dark screen keeps nobody awake)
-    this->dim_(idle && keep);
-    if (idle && !keep && (this->main_shown_ || this->offline_) && !this->asleep_) {
+    // (also on the boot screen while HA is gone, once that's past)
+    this->dim_(idle && (keep || waiting));
+    if (idle && !keep && !waiting && (this->main_shown_ || this->offline_) && !this->asleep_) {
       this->sleep_();
       this->offline_slept_ = !this->main_shown_;  // (HA's absence did it: undone when it's back)
       this->lights_slept_ = dark;                 // (the lights did it: undone when they come on)

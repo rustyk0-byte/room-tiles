@@ -304,8 +304,10 @@ started, a touch doesn't stop it. A panel whose screen is off when its
 update starts (its idle setting, or the room's lights off) stays dark.
 
 While Home Assistant restarts (after updating Room Tiles, say), an idle
-panel's screen goes off. It lights up again for its own update, or goes
-back to its clock once Home Assistant is back.
+panel shows "Connecting to Home Assistant…", dimmed, and is back on its
+clock once Home Assistant is - or lights up for its own update. If Home
+Assistant is still away after 10 minutes, the screen goes dark until it's
+back.
 
 To update a panel now, while it's in use, press **Install** - on the
 Panels page, or on its card under Settings › **Updates** - it starts right

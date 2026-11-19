@@ -887,8 +887,12 @@ show and use what the integration holds; nothing about a house is compiled in.
  Home Assistant gone for 10 s (a restart, the
   router, an outage - HA's own connection, not a log viewer) takes the
   board down to it: "Connecting to Home Assistant…" (old states shown as
-  current would be worse); the board comes back once HA is. The screen
-  still goes dark after the sleep time there; when that darkness was only
+  current would be worse); the board comes back once HA is. A panel idle
+  when HA goes (its clock, or a board an animation keeps up - not one dark
+  by choice) shows "Connecting…" at the idle brightness for 10 minutes
+  (OFFLINE_DARK_MS: an HA restart passes lit), then goes dark - if HA stays
+  away, say overnight, a dark screen keeps nobody awake. A touch then wakes
+  it for the usual sleep time, not another 10 minutes. When that darkness was only
   HA's doing (the screen was up, dimmed or the clock before), the board's
   return wakes it into what the idle rules want then, as if untouched all
   along - an animation keeps it up dimmed, the clock comes back - never full
