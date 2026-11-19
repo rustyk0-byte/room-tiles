@@ -1084,6 +1084,20 @@ show and use what the integration holds; nothing about a house is compiled in.
   - Behaviour from the YAML Matic queue: the next room starts only after the
     last finished cleanly; an error pauses on that room; adding rooms never
     resumes a paused vacuum; a long error (12 h) cancels and clears.
+  - **Taken over = let go:** while a room of the queue is in progress,
+    something else controlling the vacuum (its own app, HA's vacuum card, a
+    voice assistant, another automation) stops and clears the queue - its
+    command stands, nothing more is sent. The status line says "Queue
+    cleared - used elsewhere" (tile and queue bar) until the vacuum docks or
+    the queue is used again. Seen as: a vacuum command through HA that isn't
+    Room Tiles' own (its commands carry their own HA context) - any vacuum;
+    and, for makers tested to work this way (robot.py IDLE_IS_A_STOP: Matic),
+    the vacuum turning idle when Room Tiles didn't ask (a stop or a "go
+    home" from its app goes idle first; a finished room goes straight from
+    cleaning to returning). Pause never counts (the queue waits). Other
+    makers: idle still counts as a finished room until someone checks theirs.
+    The queue only moves on from a room of its own: a job something else
+    started never starts or advances it.
 - **No vacuum is assumed**: no vacuum, any brand, any number. Vacuums come
   only from HA (those with a segment-to-area mapping, plus any that already
   have vacuum zones); no vacuum = no vacuum button, nothing vacuum-related
@@ -1093,8 +1107,8 @@ show and use what the integration holds; nothing about a house is compiled in.
   `vacuum.clean_area` (HA 2026.3+: Matter, Ecovacs, Roborock so far), one area
   at a time. Requirement = the vacuum supports `clean_area` + has a segment
   mapping, never a brand. **Matter vacuums are supported** (the current
-  Matic queue is the reference: room done = back to docked / idle with no
-  error); Matter-only extras (the RVC operational state / error sensors for
+  Matic queue is the reference: room done = returning, or docked, with no
+  error - idle too for makers not known to turn idle when stopped); Matter-only extras (the RVC operational state / error sensors for
   "interrupted vs finished", "needs you") are used when present, else plain
   vacuum states. Other integrations (e.g. iRobot / Roomba without
   `clean_area`): unknown - check what they offer when we get there. Cleaning

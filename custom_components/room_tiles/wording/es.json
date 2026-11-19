@@ -52,6 +52,7 @@
     "pool.short.chilling": "Enfriando",
     "pool.short.idle": "En espera",
     "robot.idle": "En espera",
+    "robot.queue_taken_over": "Cola vaciada - usado en otro sitio",
     "pool.short.heater_off": "Calentador apagado",
     "pool.short.switching": "Cam\u00adbian\u00addo...",
     "pool.short.waiting_for_pump": "Esperando la bomba",

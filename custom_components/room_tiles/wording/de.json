@@ -52,6 +52,7 @@
     "pool.short.chilling": "Kühlt",
     "pool.short.idle": "Bereit",
     "robot.idle": "Bereit",
+    "robot.queue_taken_over": "Warteschlange geleert - anderswo bedient",
     "pool.short.heater_off": "Heizung aus",
     "pool.short.switching": "Wechselt...",
     "pool.short.waiting_for_pump": "Wartet auf Pumpe",

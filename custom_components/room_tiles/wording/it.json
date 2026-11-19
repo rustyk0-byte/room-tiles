@@ -52,6 +52,7 @@
     "pool.short.chilling": "Raffredda",
     "pool.short.idle": "In attesa",
     "robot.idle": "In attesa",
+    "robot.queue_taken_over": "Coda svuotata - usato altrove",
     "pool.short.heater_off": "Riscaldatore spento",
     "pool.short.switching": "Cambio...",
     "pool.short.waiting_for_pump": "Attende la pompa",

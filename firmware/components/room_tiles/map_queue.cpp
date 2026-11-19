@@ -338,8 +338,8 @@ void MapView::build_queue_bar_() {
   lv_obj_remove_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
 
   this->q_status_ = lv_label_create(bar);
-  lv_label_set_long_mode(this->q_status_, LV_LABEL_LONG_MODE_DOTS);
-  lv_obj_set_width(this->q_status_, 240);
+  lv_label_set_long_mode(this->q_status_, LV_LABEL_LONG_MODE_CLIP);  // (paint_queue_bar_ fits it)
+  lv_obj_set_width(this->q_status_, Q_STATUS_W);
   lv_obj_set_style_text_font(this->q_status_, this->fonts_->name, 0);
   lv_obj_align(this->q_status_, LV_ALIGN_LEFT_MID, 20, 0);
 
@@ -444,7 +444,13 @@ void MapView::paint_queue_bar_() {
                           : c == "attention" ? this->rt_->color("vacAttention", 0xFF6D00)
                           : c == "error"     ? this->rt_->color("vacError", 0xF44336)
                                              : this->rt_->color("textSecondary", 0x9E9E9E);
-  lv_label_set_text(this->q_status_, this->q_text_.c_str());
+  // one line - or, when it's longer (the queue cleared because something
+  // else took the vacuum over...), two in the smaller font
+  const std::string one = fit_lines(this->q_text_, this->fonts_->name, Q_STATUS_W);
+  const bool two = one.find('\n') != std::string::npos;
+  lv_obj_set_style_text_font(this->q_status_, two ? this->fonts_->name_s : this->fonts_->name, 0);
+  lv_label_set_text(this->q_status_, two ? fit_lines(this->q_text_, this->fonts_->name_s, Q_STATUS_W).c_str() : one.c_str());
+  lv_obj_align(this->q_status_, LV_ALIGN_LEFT_MID, 20, 0);
   lv_obj_set_style_text_color(this->q_status_, lv_color_hex(colour), 0);
   lv_label_set_text(this->q_start_text_, this->rt_->t(paused ? "queue.resume" : "queue.start").c_str());
   auto enable = [](lv_obj_t *b, bool on) {

@@ -64,6 +64,7 @@
     "robot.returning": "Returning to dock",
     "robot.docked": "Docked",
     "robot.idle": "Idle",
+    "robot.queue_taken_over": "Queue cleared - used elsewhere",
     "robot.offline": "Offline",
     "robot.error": "Error",
     "robot.error_text": "Error: {text}",

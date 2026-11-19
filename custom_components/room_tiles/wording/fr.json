@@ -52,6 +52,7 @@
     "pool.short.chilling": "Refroidit",
     "pool.short.idle": "En attente",
     "robot.idle": "En attente",
+    "robot.queue_taken_over": "File vidée - utilisé ailleurs",
     "pool.short.heater_off": "Chauffage éteint",
     "pool.short.switching": "Chan\u00adge\u00adment...",
     "pool.short.waiting_for_pump": "Attente pompe",

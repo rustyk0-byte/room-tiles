@@ -200,6 +200,7 @@ class MapView {
   lv_obj_t *q_pause_{nullptr}, *q_skip_{nullptr}, *q_stop_{nullptr}, *q_clear_{nullptr};
   lv_obj_t *q_auto_{nullptr};  // "Start queue automatically"'s switch
   static constexpr int QBAR_H = 60;
+  static constexpr int Q_STATUS_W = 240;  // (the queue bar's status, left of Start)
   void queue_read_();
   void queue_restyle_();
   void build_badges_();

@@ -194,7 +194,7 @@ its own cleaning zones drawn on the house map.
 
 | Brand | Integration | Status | Confirmed models | Based on |
 |---|---|---|---|---|
-| Matic | Matter (`matter`) | Verified (tile + alerts; room queue pending the add-on) | Matic robot | Owner testing |
+| Matic | Matter (`matter`) | Verified (tile, alerts, room queue) | Matic robot | Owner testing |
 | Other Matter vacuums | Matter (`matter`) | Beta | none yet | The Matter standard; HA's Matter integration |
 | Roborock | Roborock (`roborock`, built into HA) | Beta | none yet | HA 2026.3 release notes (`clean_area` support) |
 | Ecovacs | Ecovacs (`ecovacs`, built into HA) | Beta | none yet | HA 2026.3 release notes (`clean_area` support) |
@@ -207,6 +207,8 @@ its own cleaning zones drawn on the house map.
 | Vacuum tile (state, start / dock) | ✓ | ? | ? | ? | ? |
 | Clean chosen rooms (`clean_area`) | ✓ | ~ ¹ | ? | ? | ✗ ² |
 | Room queue | ✓ | ~ ¹ | ? | ? | ✗ ² |
+| Queue lets go when HA controls the vacuum | ✓ | ~ ¹ | ? | ? | ✗ ² |
+| Queue lets go when the vacuum's own app controls it | ✓ | ? ⁴ | ? ⁴ | ? ⁴ | ✗ ² |
 | Cleaning zones on the map | ✓ | ~ ¹ | ? | ? | ✗ ² |
 | "Needs you" alerts | ✓ | ~ ³ | ✗ | ✗ | ✗ |
 | Interrupted vs finished | ✓ | ~ ³ | ✗ | ✗ | ✗ |
@@ -218,6 +220,11 @@ its own cleaning zones drawn on the house map.
    2026-11). Room cleaning turns on by itself if it adds it.
 3. **Matter extras:** used when the robot reports Matter's operational state
    and error details.
+4. **The vacuum's own app:** Room Tiles has to tell "stopped from the app"
+   from "finished the room" by the vacuum's states alone. Matic turns idle
+   first when stopped or sent home from its app; other brands are untested,
+   so their queue still treats idle as a finished room. A report with a
+   recent clean helps add a brand.
 
 ## Pools and spas
 

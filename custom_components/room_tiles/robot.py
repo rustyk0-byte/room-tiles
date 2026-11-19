@@ -57,8 +57,9 @@ def alert_of(code: str | None) -> tuple[str, str]:
     return alert, render(word)
 
 
-def view(vacuum_state: str | None, error_code: str | None = None, room: str = "") -> RobotView:
-    """The tile's class and status line."""
+def view(vacuum_state: str | None, error_code: str | None = None, room: str = "", taken_over: bool = False) -> RobotView:
+    """The tile's class and status line (`taken_over`: the room queue was
+    cleared because something else took the vacuum over - RoomQueue.let_go)."""
     vs = (vacuum_state or "").lower()
     alert, text = alert_word_of(error_code)
     if vs in ("unavailable", "unknown", ""):
@@ -76,6 +77,8 @@ def view(vacuum_state: str | None, error_code: str | None = None, room: str = ""
         status = text
     elif cls == "error":
         status = w("robot.error_text", text=text) if text else w("robot.error")
+    elif taken_over and cls in ("cleaning", "paused", "returning", "idle"):
+        status = w("robot.queue_taken_over")
     elif cls == "cleaning":
         status = w("robot.cleaning_room", room=room) if room else w("robot.cleaning")
     elif cls == "paused":
@@ -110,7 +113,8 @@ def tile_words_of(v: RobotView) -> str:
 # - a room is done when the vacuum turns to RETURNING with no alert - the
 #   next room goes out at once (it never docks in between; a return trip
 #   that fails can't stop the queue). A vacuum that skips "returning" and
-#   goes straight from cleaning to docked / idle counts too.
+#   goes straight from cleaning to docked counts too - and to idle, except
+#   for the makers in IDLE_IS_A_STOP (below).
 # - clean_area is sent BEFORE a room is taken off the queue: a refused
 #   command (stale segments...) leaves the queue as it was.
 # - Start: paused -> resume; an alert with a room in progress -> send that
@@ -122,8 +126,35 @@ def tile_words_of(v: RobotView) -> str:
 #   cleaned isn't queued again; one already queued moves to the end.
 # - an alert (attention / error) while a room is in progress pauses the
 #   queue on that room - no advancing; 12 h unresolved: cancel and clear.
+# - something else taking the vacuum over while a room is in progress (its
+#   own app, HA's vacuum card, a voice assistant, another automation) stops
+#   and clears the queue, and the status says so until the vacuum docks
+#   (`let_go`). Seen as: a vacuum command through HA that isn't Room Tiles'
+#   own (sensor.py - any vacuum), or, for the makers in IDLE_IS_A_STOP, the
+#   vacuum turning idle by itself. A vacuum that blips idle while it takes
+#   Room Tiles' own next room isn't taken over (`ours`: just after a command
+#   of ours).
+# - the queue only moves on from a room of its own: a job something else
+#   started never starts or advances it.
 
 QUEUE_GIVE_UP_S = 12 * 3600
+# Makers whose vacuum, stopped or sent home from its own app, turns IDLE
+# first, while a room it finished goes straight from cleaning to returning
+# (Matic, tested 2026-11). For them an idle Room Tiles didn't cause = taken
+# over. Any other vacuum: idle still counts as a finished room (untested -
+# it may finish that way), and only commands through HA are seen.
+IDLE_IS_A_STOP = ("matic robots",)
+
+
+def idle_is_a_stop(manufacturer: str | None) -> bool:
+    """Does this maker's vacuum turn idle when stopped from elsewhere (see IDLE_IS_A_STOP)?"""
+    m = (manufacturer or "").strip().lower()
+    return any(m.startswith(k) for k in IDLE_IS_A_STOP)
+
+
+# after a command of Room Tiles' own, the vacuum's moves this long are its
+# answer to it (a blip of idle while it switches rooms - not a takeover)
+OURS_S = 20
 
 # How a queued room is cleaned: vacuum / mop / both. For now every room is
 # cleaned with both (per-room choices come later).
@@ -159,6 +190,7 @@ class RoomQueue:
     queue: list[str]
     current: str | None = None
     error_since: float | None = None
+    taken_over: bool = False  # (cleared by something else; shown until it docks)
 
     def add(self, area: str) -> None:
         if area == self.current:
@@ -195,20 +227,38 @@ class RoomQueue:
     def skip(self) -> QueueStep:
         return QueueStep("dock")  # back to base: "returning" moves on to the next room
 
+    def let_go(self) -> None:
+        """Something else took the vacuum over: stop and clear the queue (its
+        command stands - nothing is sent)."""
+        self.queue = []
+        self.current = None
+        self.error_since = None
+        self.taken_over = True
+
     def stop_and_clear(self) -> QueueStep:
         self.queue = []
         self.current = None
         self.error_since = None
         return QueueStep("dock")
 
-    def on_state(self, before: str | None, after: str | None, alert: str) -> QueueStep | None:
+    def on_state(
+        self, before: str | None, after: str | None, alert: str, ours: bool = False, idle_stops: bool = False
+    ) -> QueueStep | None:
         """The vacuum's state changed: a room finished cleanly -> the next one
-        (or the queue is done)."""
+        (or the queue is done); turned idle by something else -> let go (a
+        maker in IDLE_IS_A_STOP: `idle_stops`). `ours`: just after a command of
+        Room Tiles' own."""
         b = (before or "").lower()
         a = (after or "").lower()
-        done = alert == "none" and (
-            (a == "returning" and b != "returning") or (b in ("cleaning",) and a in ("docked", "idle"))
-        )
+        if a == "docked":
+            self.taken_over = False  # (home again: the note has done its job)
+        if not self.current:
+            return None  # no room of ours in progress: nothing to move on from
+        if idle_stops and a == "idle" and b in ("cleaning", "paused") and alert == "none" and not ours:
+            self.let_go()  # stopped or sent home from elsewhere
+            return None
+        ends = ("docked",) if idle_stops else ("docked", "idle")
+        done = alert == "none" and ((a == "returning" and b != "returning") or (b == "cleaning" and a in ends))
         if not done:
             return None
         if self.queue:

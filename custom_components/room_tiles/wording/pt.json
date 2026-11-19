@@ -52,6 +52,7 @@
     "pool.short.chilling": "Resfriando",
     "pool.short.idle": "Em espera",
     "robot.idle": "Em espera",
+    "robot.queue_taken_over": "Fila limpa - usado em outro lugar",
     "pool.short.heater_off": "Aquecedor desligado",
     "pool.short.switching": "Mudando...",
     "pool.short.waiting_for_pump": "Aguardando bomba",

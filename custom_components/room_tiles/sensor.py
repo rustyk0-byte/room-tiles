@@ -9,12 +9,16 @@ A finished unit (done / waiting) survives HA restarts.
 
 from __future__ import annotations
 
+import time
+from collections import deque
 from datetime import timedelta
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, State, callback
+from homeassistant.const import EVENT_CALL_SERVICE
+from homeassistant.core import Context, Event, EventStateChangedData, HomeAssistant, State, callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
@@ -29,7 +33,7 @@ from .appliance_presets import PRESETS
 from .model import Appliance, ApplianceUnit
 from .ops import SECTION_APPLIANCES, SECTION_POOLS, SECTION_ROBOTS
 from .panels import LINK_ENTITY
-from .robot import CLEAN_AREA, QueueStep, RoomQueue, alert_of, mode_option, tile_text, tile_words_of, view as robot_view
+from .robot import CLEAN_AREA, OURS_S, QueueStep, RoomQueue, idle_is_a_stop, alert_of, mode_option, tile_text, tile_words_of, view as robot_view
 from .wording import minutes, tile_words, word_json
 from .wording import t as words
 from .pool import tile_name
@@ -488,6 +492,11 @@ class PoolSensor(SensorEntity, RestoreEntity):
         return v
 
 
+@callback
+def _vacuum_call(data) -> bool:
+    return data.get("domain") == "vacuum"
+
+
 class RobotSensor(SensorEntity, RestoreEntity):
     """A robot vacuum's tile sensor (robot.py): state = the tile's class
     (attention / error / cleaning / paused / returning / docked / idle /
@@ -508,6 +517,10 @@ class RobotSensor(SensorEntity, RestoreEntity):
         self._unsub = None
         self.rq = RoomQueue(queue=[])
         self._alert = "none"  # the alert last seen (an episode starts on a change from none)
+        self._unsub_calls = None
+        # Room Tiles' own commands to the vacuum: their contexts, the last one's time
+        self._ours: deque[str] = deque(maxlen=20)
+        self._sent_at = 0.0
         self._attr_unique_id = f"robot_{rb.id}"
         self.entity_id = f"sensor.room_tiles_{rb.id}"
         self._attr_name = rb.name
@@ -526,6 +539,8 @@ class RobotSensor(SensorEntity, RestoreEntity):
         if self._unsub:
             self._unsub()
         self._unsub = async_track_state_change_event(self.hass, self._rb.entities(), self._changed)
+        if self._unsub_calls is None:
+            self._unsub_calls = self.hass.bus.async_listen(EVENT_CALL_SERVICE, self._call, event_filter=_vacuum_call)
 
     async def async_added_to_hass(self) -> None:
         own_defaults(self.hass, self.entity_id, getattr(self, "_rt_fresh", False))  # voice.py
@@ -535,6 +550,7 @@ class RobotSensor(SensorEntity, RestoreEntity):
             queue = [x for x in (a.get("queue") or []) if isinstance(x, str)]
             cur = a.get("current")
             self.rq = RoomQueue(queue=queue, current=cur if isinstance(cur, str) and cur else None)
+            self.rq.taken_over = a.get("taken_over") is True
             since = a.get("queue_error_since")
             self.rq.error_since = float(since) if isinstance(since, (int, float)) else None
         self._alert = self._view()[0].alert
@@ -544,6 +560,9 @@ class RobotSensor(SensorEntity, RestoreEntity):
         if self._unsub:
             self._unsub()
             self._unsub = None
+        if self._unsub_calls:
+            self._unsub_calls()
+            self._unsub_calls = None
 
     @callback
     def _changed(self, event) -> None:
@@ -552,11 +571,68 @@ class RobotSensor(SensorEntity, RestoreEntity):
         v, vac = self._view()
         if event.data.get("entity_id") == self._rb.vacuum:
             old = event.data.get("old_state")
-            step = self.rq.on_state(old.state if old else None, vac.state if vac else None, v.alert)
+            ours = event.context.id in self._ours or time.monotonic() - self._sent_at < OURS_S
+            step = self.rq.on_state(
+                old.state if old else None, vac.state if vac else None, v.alert, ours, idle_is_a_stop(self._maker())
+            )
             if step is not None:
                 self.hass.async_create_task(self._do(step))
         self._watch_alert(v)
         self.async_write_ha_state()
+
+    # vacuum commands that take it over from the queue (pause doesn't: the
+    # queue waits; start doesn't while paused: that's a resume)
+    TAKEOVER = frozenset({"start", "stop", "return_to_base", "clean_area", "clean_spot", "send_command"})
+
+    @callback
+    def _call(self, event) -> None:
+        """A vacuum command through HA (its vacuum card, a voice assistant,
+        an automation) that isn't Room Tiles' own, while a room of the queue
+        is in progress: something else took the vacuum over - let go."""
+        if not self.rq.current or event.context.id in self._ours:
+            return
+        service = event.data.get("service")
+        if service not in self.TAKEOVER or not self._targets_vacuum(event.data.get("service_data") or {}):
+            return
+        vac = self.hass.states.get(self._rb.vacuum)
+        if service == "start" and vac is not None and vac.state == "paused":
+            return
+        self.rq.let_go()
+        self.async_write_ha_state()
+
+    def _maker(self) -> str | None:
+        """The vacuum's manufacturer (its HA device)."""
+        reg = er.async_get(self.hass).async_get(self._rb.vacuum)
+        if reg is None or not reg.device_id:
+            return None
+        dev = dr.async_get(self.hass).async_get(reg.device_id)
+        return dev.manufacturer if dev else None
+
+    def _targets_vacuum(self, data: dict) -> bool:
+        """Does a service call's data name this vacuum (its entity, device or area)?"""
+
+        def ids(key: str) -> list[str]:
+            v = data.get(key)
+            if isinstance(v, str):
+                return [x.strip() for x in v.split(",")]
+            return [x for x in v if isinstance(x, str)] if isinstance(v, list) else []
+
+        entities = ids("entity_id")
+        if self._rb.vacuum in entities or "all" in entities:
+            return True
+        reg = er.async_get(self.hass).async_get(self._rb.vacuum)
+        if reg is None:
+            return False
+        if reg.device_id and reg.device_id in ids("device_id"):
+            return True
+        areas = ids("area_id")
+        if not areas:
+            return False
+        area = reg.area_id
+        if area is None and reg.device_id:
+            dev = dr.async_get(self.hass).async_get(reg.device_id)
+            area = dev.area_id if dev else None
+        return area is not None and area in areas
 
     @callback
     def _watch_alert(self, v) -> None:
@@ -612,14 +688,22 @@ class RobotSensor(SensorEntity, RestoreEntity):
         """Send the queue's step to the vacuum. clean_area goes out BEFORE the
         room leaves the queue: a refused command leaves the queue as it was."""
         target = {"entity_id": self._rb.vacuum}
+        # (its own context: a command of ours is never taken for a takeover)
+        ctx = Context()
+        self._ours.append(ctx.id)
+        self._sent_at = time.monotonic()
         if step.action == "clean" and step.area:
-            await self._set_clean_mode(step.mode)
-            await self.hass.services.async_call("vacuum", "clean_area", {**target, "cleaning_area_id": [step.area]}, blocking=True)
+            await self._set_clean_mode(step.mode, ctx)
+            await self.hass.services.async_call(
+                "vacuum", "clean_area", {**target, "cleaning_area_id": [step.area]}, blocking=True, context=ctx
+            )
             self.rq.sent(step.area)
         elif step.action in ("resume", "pause"):
-            await self.hass.services.async_call("vacuum", "start" if step.action == "resume" else "pause", target, blocking=True)
+            await self.hass.services.async_call(
+                "vacuum", "start" if step.action == "resume" else "pause", target, blocking=True, context=ctx
+            )
         elif step.action == "dock":
-            await self.hass.services.async_call("vacuum", "return_to_base", target, blocking=True)
+            await self.hass.services.async_call("vacuum", "return_to_base", target, blocking=True, context=ctx)
         self.async_write_ha_state()
 
     def _clean_mode_select(self) -> str | None:
@@ -636,20 +720,23 @@ class RobotSensor(SensorEntity, RestoreEntity):
                 return e.entity_id
         return None
 
-    async def _set_clean_mode(self, mode: str) -> None:
+    async def _set_clean_mode(self, mode: str, ctx: Context | None = None) -> None:
         """Before a room: the vacuum's clean mode for it (vacuum / mop / both),
         when it has one and an option for that mode."""
         sel = self._clean_mode_select()
         st = self.hass.states.get(sel) if sel else None
         option = mode_option(list(st.attributes.get("options") or []), mode) if st else None
         if option and st.state != option:
-            await self.hass.services.async_call("select", "select_option", {"entity_id": sel, "option": option}, blocking=True)
+            await self.hass.services.async_call(
+                "select", "select_option", {"entity_id": sel, "option": option}, blocking=True, context=ctx
+            )
 
     async def queue_action(self, action: str, area: str | None = None, index: int | None = None, start: bool = False) -> None:
         """The room queue's service (services.py vacuum_queue)."""
         v, vac = self._view()
         state = vac.state if vac else None
         step: QueueStep | None = None
+        self.rq.taken_over = False  # (the queue is in use again: the note goes)
         if action == "add" and area:
             self.rq.add(area)
             # adding never resumes a paused vacuum; it starts only an idle queue
@@ -677,7 +764,7 @@ class RobotSensor(SensorEntity, RestoreEntity):
         vac = self.hass.states.get(self._rb.vacuum) if self.hass else None
         err = self.hass.states.get(self._rb.error) if (self.hass and self._rb.error) else None
         room = self._area_name(self.rq.current) if self.hass else ""
-        return robot_view(vac.state if vac else None, err.state if err else None, room), vac
+        return robot_view(vac.state if vac else None, err.state if err else None, room, self.rq.taken_over), vac
 
     @property
     def native_value(self) -> str:
@@ -701,6 +788,8 @@ class RobotSensor(SensorEntity, RestoreEntity):
             "queue": list(self.rq.queue),
             "current": self.rq.current,
             "queue_error_since": self.rq.error_since,
+            # cleared because something else took the vacuum over (shown until it docks)
+            "taken_over": self.rq.taken_over,
             "tile": tile_text(v, self.rq.current or "", self.rq.queue),
             # its words, for each display to put in its own language
             "tile_words": tile_words_of(v),

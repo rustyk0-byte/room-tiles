@@ -139,3 +139,88 @@ async def test_room_queue_runs_like_the_matic_queue(hass: HomeAssistant, entry) 
     await _call(hass, "vacuum_queue", robot="matic", action="add", area="bedroom")
     await _call(hass, "vacuum_queue", robot="matic", action="stop")
     assert sent[-1] == ("return_to_base", None) and q()["queue"] == []
+
+
+async def test_room_queue_lets_go_of_a_vacuum_taken_over(hass: HomeAssistant, entry) -> None:
+    """A vacuum command through HA that isn't Room Tiles' own (its vacuum card,
+    a voice assistant) while a room is in progress: the queue is cleared and
+    the status says so until the vacuum docks; Room Tiles' own commands and a
+    pause never count."""
+    sent: list = []
+
+    async def record(call):
+        sent.append((call.service, dict(call.data)))
+
+    for name in ("clean_area", "start", "pause", "return_to_base"):
+        hass.services.async_register("vacuum", name, record)
+    hass.states.async_set("vacuum.matic", "docked", {"supported_features": 29212})
+    await _call(hass, "set_robot", robot={"id": "matic", "name": "Matic", "vacuum": "vacuum.matic", "preset": "vacuum"})
+    await hass.async_block_till_done()
+    q = lambda: hass.states.get("sensor.room_tiles_matic").attributes  # noqa: E731
+
+    for area in ("kitchen", "hall"):
+        await _call(hass, "vacuum_queue", robot="matic", action="add", area=area)
+    await _call(hass, "vacuum_queue", robot="matic", action="start")
+    await hass.async_block_till_done()
+    assert sent[-1][0] == "clean_area" and (q()["current"], q()["queue"]) == ("kitchen", ["hall"])
+    hass.states.async_set("vacuum.matic", "cleaning", {"supported_features": 29212})
+    await hass.async_block_till_done()
+
+    # a pause through HA: the queue waits
+    await hass.services.async_call("vacuum", "pause", {"entity_id": "vacuum.matic"}, blocking=True)
+    await hass.async_block_till_done()
+    assert (q()["current"], q()["taken_over"]) == ("kitchen", False)
+    # someone else's command for ANOTHER vacuum: nothing
+    await hass.services.async_call("vacuum", "return_to_base", {"entity_id": "vacuum.other"}, blocking=True)
+    await hass.async_block_till_done()
+    assert q()["current"] == "kitchen"
+    # HA's vacuum card sends it home: let go
+    await hass.services.async_call("vacuum", "return_to_base", {"entity_id": "vacuum.matic"}, blocking=True)
+    await hass.async_block_till_done()
+    assert (q()["current"], q()["queue"], q()["taken_over"]) == (None, [], True)
+    hass.states.async_set("vacuum.matic", "returning", {"supported_features": 29212})
+    await hass.async_block_till_done()
+    assert "Queue cleared" in q()["status"] and sent[-1][0] == "return_to_base"  # (nothing of ours went out)
+    hass.states.async_set("vacuum.matic", "docked", {"supported_features": 29212})
+    await hass.async_block_till_done()
+    assert q()["taken_over"] is False and q()["status"] == "Docked"
+
+
+
+async def test_matic_turning_idle_by_itself_lets_go(hass: HomeAssistant, entry, monkeypatch) -> None:
+    """A Matic (its HA device's maker) turning idle when Room Tiles didn't
+    ask - a stop or a "go home" from its own app: the queue is cleared."""
+    from homeassistant.helpers import device_registry as dr, entity_registry as er
+
+    import custom_components.room_tiles.sensor as sensor_mod
+
+    other = MockConfigEntry(domain="matter")
+    other.add_to_hass(hass)
+    dev = dr.async_get(hass).async_get_or_create(
+        config_entry_id=other.entry_id, identifiers={("matter", "matic")}, manufacturer="Matic Robots, Inc", model="Matic"
+    )
+    er.async_get(hass).async_get_or_create("vacuum", "matter", "matic", suggested_object_id="matic", device_id=dev.id)
+
+    async def record(call):
+        pass
+
+    hass.services.async_register("vacuum", "clean_area", record)
+    hass.states.async_set("vacuum.matic", "docked", {"supported_features": 29212})
+    await _call(hass, "set_robot", robot={"id": "matic", "name": "Matic", "vacuum": "vacuum.matic", "preset": "vacuum"})
+    await hass.async_block_till_done()
+    q = lambda: hass.states.get("sensor.room_tiles_matic").attributes  # noqa: E731
+    for area in ("kitchen", "hall"):
+        await _call(hass, "vacuum_queue", robot="matic", action="add", area=area)
+    await _call(hass, "vacuum_queue", robot="matic", action="start")
+    hass.states.async_set("vacuum.matic", "cleaning", {"supported_features": 29212})
+    await hass.async_block_till_done()
+    # just after Room Tiles' own command: an idle blip is its answer, not a takeover
+    hass.states.async_set("vacuum.matic", "idle", {"supported_features": 29212})
+    await hass.async_block_till_done()
+    assert q()["current"] == "kitchen"
+    hass.states.async_set("vacuum.matic", "cleaning", {"supported_features": 29212})
+    await hass.async_block_till_done()
+    monkeypatch.setattr(sensor_mod, "OURS_S", 0)  # (long after it)
+    hass.states.async_set("vacuum.matic", "idle", {"supported_features": 29212})
+    await hass.async_block_till_done()
+    assert (q()["current"], q()["queue"], q()["taken_over"]) == (None, [], True)

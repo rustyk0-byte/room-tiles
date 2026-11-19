@@ -52,6 +52,7 @@
     "pool.short.chilling": "Koelt",
     "pool.short.idle": "Stand-by",
     "robot.idle": "Stand-by",
+    "robot.queue_taken_over": "Wachtrij leeg - elders bediend",
     "pool.short.heater_off": "Verwarming uit",
     "pool.short.switching": "Wisselt...",
     "pool.short.waiting_for_pump": "Wacht op pomp",
