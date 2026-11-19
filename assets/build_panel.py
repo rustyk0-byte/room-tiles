@@ -11,7 +11,7 @@ Writes:
             only what the round panel draws (panel.ROUND_SKIP: no 6x3 sizes, map
             markers, tile picker icons or large clock - its memory is small)
   custom_components/room_tiles/panel_packs/strings-<lang>.rtp.gz  wording
-  custom_components/room_tiles/panel_packs/themes.json  the themes, in order
+  custom_components/room_tiles/panel_packs/themes.json  the themes, in order (names, colours)
   (gzip in the repo - the theme is ~2.5 MB raw, ~230 KB packed; HA unpacks
   them once and serves them raw)
   firmware/components/room_tiles/rt_assets.h                   image slot ids
@@ -172,9 +172,11 @@ def main() -> int:
             old.unlink()  # (a theme / language that's gone)
     write_header(names)
     # the themes the integration offers (its order: the default first)
+    # (and their colours: an installed theme takes the default's for any it leaves out)
     themes_json = json.dumps(
         [{"id": t, "name": {"en": theme_format.name(t, "en"), **{
-            lang: theme_format.name(t, lang) for lang in sorted(p.stem for p in I18N.glob("*.json"))}}} for t in THEMES],
+            lang: theme_format.name(t, lang) for lang in sorted(p.stem for p in I18N.glob("*.json"))}},
+          "colors": theme_colours(t)} for t in THEMES],
         ensure_ascii=False, separators=(",", ":")).encode() + b"\n"
     if not (OUT / "themes.json").exists() or (OUT / "themes.json").read_bytes() != themes_json:
         (OUT / "themes.json").write_bytes(themes_json)

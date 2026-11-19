@@ -63,7 +63,7 @@ async def test_websocket_feed(hass: HomeAssistant, entry, hass_ws_client) -> Non
     msg = await client.receive_json()
     assert msg["event"]["type"] == "full"
     assert msg["event"]["schema"] == 1
-    assert set(msg["event"]["data"]) == {"areas", "maps", "markers", "catalog", "settings", "area_lights", "disabled", "vacuums", "appliances", "appliance_found", "appliance_again", "appliance_presets", "pools", "pool_found", "robots", "robot_found", "ignored", "ignored_found", "restart_needed", "version", "dev_build", "panels", "panel_firmware", "recordings", "beta"}
+    assert set(msg["event"]["data"]) == {"areas", "maps", "markers", "catalog", "settings", "area_lights", "disabled", "vacuums", "appliances", "appliance_found", "appliance_again", "appliance_presets", "pools", "pool_found", "robots", "robot_found", "ignored", "ignored_found", "restart_needed", "version", "dev_build", "panels", "panel_firmware", "recordings", "beta", "themes"}
 
     area_id = msg["event"]["data"]["areas"][0]["id"]
     await _call(hass, "set_tile", area=area_id, layout="5x2", slot=2, kind="map")

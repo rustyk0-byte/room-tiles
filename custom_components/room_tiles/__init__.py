@@ -87,6 +87,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoomTilesConfigEntry) ->
     await store.recordings.async_load(store.data, time.time(), ha_starting=not hass.is_running)
 
     store.panel_packs = await hass.async_add_executor_job(panels.load_packs)
+    # the themes the user installed (user_themes.py): looked for now and every
+    # few minutes, built in the background; panels and dashboards told when
+    # the list changes
+    from .user_themes import URL as THEMES_URL, UserThemes, default_theme
+
+    @callback
+    def themes_changed() -> None:
+        panels.set_installed(store.user_themes.names())
+        store.panel_link.bump()
+        store.async_notify(("themes",))
+
+    store.user_themes = UserThemes(hass, entry, await hass.async_add_executor_job(default_theme, panels.PACK_DIR), themes_changed)
+    if getattr(hass, "http", None) is not None and not hass.data.get(f"{DOMAIN}_theme_static"):
+        from homeassistant.components.http import StaticPathConfig
+
+        await hass.async_add_executor_job(lambda: store.user_themes.cache.mkdir(parents=True, exist_ok=True))
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig(THEMES_URL, str(store.user_themes.cache), cache_headers=False)]
+        )
+        hass.data[f"{DOMAIN}_theme_static"] = True
+    entry.async_on_unload(store.user_themes.start())
+    entry.async_on_unload(lambda: panels.set_installed({}))
     # developing (running from the Room Tiles source - never a released
     # install): packs rebuilt on disk are served live, no restart - checked
     # every few seconds, loaded once settled, panels told when one changed

@@ -28,6 +28,7 @@ TYPE_SUBSCRIBE = f"{DOMAIN}/subscribe"
 TYPE_REPORT_PREVIEW = f"{DOMAIN}/report_preview"
 TYPE_PROBLEM_CYCLES = f"{DOMAIN}/problem_cycles"
 TYPE_RECORDING = f"{DOMAIN}/recording"
+TYPE_THEMES_CHECK = f"{DOMAIN}/themes_check"
 
 
 @callback
@@ -36,6 +37,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_report_preview)
     websocket_api.async_register_command(hass, ws_problem_cycles)
     websocket_api.async_register_command(hass, ws_recording)
+    websocket_api.async_register_command(hass, ws_themes_check)
 
 
 def _store(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg_id: int) -> Any:
@@ -235,6 +237,19 @@ async def ws_report_preview(
             "warnings": description_warnings(str(done.doc.get("description") or ""), secrets),
         },
     )
+
+
+@websocket_api.websocket_command({vol.Required("type"): TYPE_THEMES_CHECK})
+@callback
+def ws_themes_check(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """A theme list opened: look for new or changed installed themes now (the
+    feed's "themes" section follows when something changed)."""
+    store = _store(hass, connection, msg["id"])
+    if store is None:
+        return
+    if store.user_themes is not None:
+        store.user_themes.check_soon()
+    connection.send_result(msg["id"])
 
 
 @websocket_api.websocket_command({vol.Required("type"): TYPE_SUBSCRIBE})

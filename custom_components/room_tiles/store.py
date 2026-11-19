@@ -107,6 +107,7 @@ class RoomTilesStore:
 
         self.panel_link = PanelLink()
         self.panel_packs: dict = {}  # theme packs + wording, loaded at setup (panels.load_packs)
+        self.user_themes: Any = None  # the installed themes (user_themes.UserThemes), set at setup
         # panel firmware (firmware.py): the newest image per board, what each
         # panel reports it runs (device id -> PanelFirmware), the installs
         # asked for (device id -> build) - which of them Room Tiles asked for
@@ -160,6 +161,13 @@ class RoomTilesStore:
         )
 
     @callback
+    def all_packs(self) -> dict:
+        """Every pack a panel may get: the bundled themes and wording, and the
+        installed themes' (user_themes.py)."""
+        if self.user_themes is None:
+            return self.panel_packs
+        return {**self.panel_packs, **self.user_themes.packs()}
+
     def async_changed(self, sections: tuple[str, ...] = ALL_SECTIONS) -> None:
         """Call after changing self.data: validates, schedules a save and
         tells listeners which document sections changed."""
@@ -291,6 +299,8 @@ class RoomTilesStore:
             "recordings": self.recordings.doc,
             # what's beta ("Report how it went"): "<kind>:<id>" -> its beta units
             "beta": beta_units(self.hass, self.data),
+            # the installed themes (user_themes.py): ready ones, getting ready, can't be used
+            "themes": self.user_themes.for_dashboard() if self.user_themes is not None else {"themes": [], "building": [], "problems": []},
         }
 
     async def async_save_now(self) -> None:

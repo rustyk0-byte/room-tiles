@@ -1,0 +1,198 @@
+"""Installed themes in Home Assistant (docs/THEMES.md "Installed themes").
+
+Themes the user puts in /config/room_tiles_themes/ (a folder or a zip) are
+checked and built by themes/installed.py - in the executor, one at a time,
+never holding up Home Assistant. Built themes are kept in HA's cache folder
+(/config/.cache/room_tiles/themes/, not in backups: rebuilt when needed).
+
+Room Tiles looks again (quick: file names, sizes, times) at setup, whenever
+a dashboard asks for the theme list, and every few minutes - a new, changed
+or removed theme needs no button and no restart. A theme that can't be used
+gets a Repairs notice saying why; whatever used it shows the default theme.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import struct
+from collections.abc import Callable
+from datetime import timedelta
+from pathlib import Path
+from typing import Any
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.event import async_track_time_interval
+
+from .const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
+
+THEMES_DIR = "room_tiles_themes"  # in HA's config folder
+URL = "/room_tiles_themes"  # the built themes' dashboard pictures (no login: <img> can't send one)
+CHECK_EVERY = timedelta(minutes=5)
+ISSUE = "theme_problem"  # + "_<its file>"
+
+
+class UserThemes:
+    """The installed themes: built ones (by key, "my-<id>"), and the ones
+    that can't be used (with why)."""
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, base: dict, changed: Callable[[], None]) -> None:
+        self.hass = hass
+        self.entry = entry  # (its background looks end when Room Tiles unloads)
+        self.root = Path(hass.config.path(THEMES_DIR))
+        self.cache = Path(hass.config.cache_path(DOMAIN, "themes"))
+        self.base = base  # the default theme (its colours fill what a theme leaves out)
+        self._changed = changed
+        self.themes: dict[str, Any] = {}  # key -> installed.Built (ok)
+        self.broken: list[Any] = []  # installed.Built with problems
+        self.building: set[str] = set()  # ids being built now
+        self._stamps: dict[str, str] = {}  # id -> the stamp it was built from
+        self._lock = asyncio.Lock()
+        self._issues: set[str] = set()
+        self._sig: tuple = ((), ())  # the folder as last looked at (none: no themes)
+        self._queued = False  # a look asked for, not started yet
+        self._warned_coarse = False
+
+    # ---- looking for changes ---------------------------------------------------
+
+    @callback
+    def check_soon(self) -> None:
+        """Look again, in the background (a dashboard opened its theme list...):
+        after the look that's running, if one is - asked for twice, once."""
+        if self._queued:
+            return
+        self._queued = True
+        self.entry.async_create_background_task(self.hass, self.async_check(), f"{DOMAIN} themes")
+
+    async def async_check(self) -> None:
+        """Look at the folder (one look at a time) and build what changed."""
+        async with self._lock:
+            self._queued = False
+            from .themes import installed
+
+            if self._sig == ((), ()) and not self.root.is_dir():
+                return  # (no themes folder, as before: nothing to look at - one stat)
+            found, scan_broken = await self.hass.async_add_executor_job(installed.scan, self.root)
+            sig = (tuple(sorted((f.id, f.stamp) for f in found)), tuple(sorted(b.source for b in scan_broken)))
+            if sig == self._sig:
+                return  # nothing changed
+            before = {b.id: b for b in [*self.themes.values(), *self.broken]}
+            todo = [f for f in found if self._stamps.get(f.id) != f.stamp or f.id not in before]
+            results = {f.id: before[f.id] for f in found if f not in todo}
+            if todo:
+                # (the list says they're getting ready; a changed theme stays
+                # in use as it was until its new build is done)
+                self.building = {f.id for f in todo}
+                self._announce()
+            for f in todo:
+                built = await self.hass.async_add_executor_job(installed.build, f, self.base, self.cache)
+                self.building.discard(f.id)
+                self._stamps[f.id] = f.stamp
+                results[f.id] = built
+                if not built.ok:
+                    _LOGGER.warning("Room Tiles theme %s can't be used: %s", f.path.name, "; ".join(built.problems))
+                elif built.coarse and not self._warned_coarse:
+                    self._warned_coarse = True
+                    _LOGGER.info(
+                        "This Home Assistant's Pillow has no libimagequant: installed themes' soft edges are a little coarser on the panels"
+                    )
+            self._stamps = {i: st for i, st in self._stamps.items() if i in results}
+            self.themes = {b.key: b for b in results.values() if b.ok}
+            self.broken = [b for b in results.values() if not b.ok] + scan_broken
+            self._sig = sig
+            keep = {b.web.parent.name for b in self.themes.values() if b.web is not None}
+            await self.hass.async_add_executor_job(installed.prune, self.cache, keep)
+            self._announce()
+
+    @callback
+    def _announce(self) -> None:
+        self._report_issues()
+        self._changed()
+
+    @callback
+    def _report_issues(self) -> None:
+        now = set()
+        for b in self.broken:
+            issue_id = f"{ISSUE}_{b.source}"
+            now.add(issue_id)
+            ir.async_create_issue(
+                self.hass,
+                DOMAIN,
+                issue_id,
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key=ISSUE,
+                translation_placeholders={"theme": b.source, "problems": "\n".join(f"- {p}" for p in b.problems)},
+            )
+        for gone in self._issues - now:
+            ir.async_delete_issue(self.hass, DOMAIN, gone)
+        self._issues = now
+
+    @callback
+    def start(self) -> Callable[[], None]:
+        """Look now (in the background) and every few minutes; returns the stop."""
+        if self.root.is_dir():  # (a stat; most homes have no themes folder)
+            self.check_soon()
+        return async_track_time_interval(self.hass, self._tick, CHECK_EVERY)
+
+    @callback
+    def _tick(self, _now: Any) -> None:
+        if self.root.is_dir() or self._sig != ((), ()):  # (a folder now, or themes before it went)
+            self.check_soon()
+
+    # ---- what they give -----------------------------------------------------------
+
+    def names(self) -> dict[str, dict[str, str]]:
+        """Each usable theme's names per language, by key - in their order."""
+        ordered = sorted(self.themes.values(), key=lambda b: (b.doc.get("order", 100), b.id))
+        return {b.key: dict(b.doc["name"]) for b in ordered}
+
+    def packs(self) -> dict[str, Any]:
+        """Their panel packs, as panels.load_packs gives the bundled ones."""
+        from .panels import Pack
+
+        out: dict[str, Any] = {}
+        for b in self.themes.values():
+            for cut, data in b.packs.items():
+                ident = struct.unpack_from("<32s", data, 16)[0].rstrip(b"\0").decode()
+                out[f"theme-{b.key}{cut}"] = Pack(ident, data)
+        return out
+
+    def for_dashboard(self) -> dict[str, Any]:
+        """The dashboard's list (room_tiles/themes): the usable ones as the
+        bundled themes are described (frontend/src/theme.ts), where their
+        pictures are, and what's getting ready or can't be used."""
+        themes = []
+        for key, names in self.names().items():
+            b = self.themes[key]
+            themes.append(
+                {
+                    "id": key,
+                    "name": names,
+                    "order": b.doc.get("order", 100),
+                    "colors": b.colours,
+                    "offArt": b.off_art,
+                    "buttonArt": b.button_art,
+                    "base": f"{URL}/{b.web.parent.name}/web",
+                }
+            )
+        return {
+            "themes": themes,
+            "building": sorted(self.building),
+            "problems": [{"theme": b.source, "problems": b.problems} for b in self.broken],
+        }
+
+
+def default_theme(pack_dir: Path) -> dict:
+    """The default theme as its theme.json (id, names, colours): the first
+    in panel_packs/themes.json (assets/build_panel.py)."""
+    try:
+        first = json.loads((pack_dir / "themes.json").read_text(encoding="utf-8"))[0]
+        return {"id": first["id"], "name": first["name"], "colors": dict(first.get("colors") or {})}
+    except (OSError, ValueError, KeyError, IndexError, TypeError):
+        return {"id": "dark", "name": {"en": "Dark"}, "colors": {}}

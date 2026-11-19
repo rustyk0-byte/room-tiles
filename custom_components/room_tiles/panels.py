@@ -65,12 +65,27 @@ def _themes(folder: Path = PACK_DIR) -> dict[str, dict[str, str]]:
 
 
 _THEME_INFO = _themes()
-THEMES = tuple(_THEME_INFO)  # the first is the default (panels mark it "(Default)")
+THEMES = tuple(_THEME_INFO)  # the bundled ones; the first is the default (panels mark it "(Default)")
+# themes the user installed, ready to use (user_themes.py keeps this current):
+# key ("my-<id>") -> its names per language
+_INSTALLED: dict[str, dict[str, str]] = {}
+
+
+def set_installed(names: dict[str, dict[str, str]]) -> None:
+    """The installed themes ready to use, in their order (user_themes.py)."""
+    _INSTALLED.clear()
+    _INSTALLED.update(names)
+
+
+def all_themes() -> tuple[str, ...]:
+    """Every theme a panel can pick: the bundled ones (the default first),
+    then the installed ones."""
+    return THEMES + tuple(k for k in _INSTALLED if k not in _THEME_INFO)
 
 
 def theme_name(theme: str, language: str) -> str:
     """A theme's name in that language (its theme.json), else English, else its id."""
-    names = _THEME_INFO.get(theme) or {}
+    names = _THEME_INFO.get(theme) or _INSTALLED.get(theme) or {}
     return names.get(language) or names.get("en") or theme
 # each language's own name (frontend/src/i18n.ts LANG_NAMES - a test keeps them the same)
 LANG_NAMES = {
@@ -551,7 +566,7 @@ def apply_settings(data: RoomTilesData, panel: Panel, body: Any) -> str | None:
             return f"no area {value}"
         elif key == "layout" and value not in LAYOUTS:
             return f"no layout {value}"
-        elif key == "theme" and value not in THEMES:
+        elif key == "theme" and value not in all_themes():
             return f"no theme {value}"
         else:
             setattr(panel, key, str(value))
@@ -635,7 +650,7 @@ def resolve(data: RoomTilesData, panel: Panel, dev: PanelDevice, ha_language: st
         "area": area.id if area else None,
         "area_set": area_set,
         "layout": layout if layout in LAYOUTS else "5x2",
-        "theme": panel.theme if panel.theme in THEMES else THEMES[0],
+        "theme": panel.theme if panel.theme in all_themes() else THEMES[0],
         "language": (panel.language or ha_language or "en").replace("_", "-").split("-")[0].lower(),
     }
 
@@ -715,10 +730,10 @@ def payload(
             code: LANG_NAMES.get(code, code)
             for code in sorted(k.split("-", 1)[1] for k in (packs or {}) if k.startswith("strings-"))
         },
-        "themes": list(THEMES),
+        "themes": list(all_themes()),
         # each theme's name in the panel's language (its theme.json - a theme
         # the wording doesn't know, e.g. one installed later, still has one)
-        "theme_names": {t: theme_name(t, settings["language"]) for t in THEMES},
+        "theme_names": {t: theme_name(t, settings["language"]) for t in all_themes()},
         "own": {"language": panel.language, "theme": panel.theme},
         # devices Room Tiles found that aren't set up yet: the panel says so
         # (setting them up is on the dashboard)
@@ -807,7 +822,7 @@ class PanelView(_PanelRequest):
             dev,
             str(store.panel_link.revision),
             hass.config.language,
-            store.panel_packs,
+            store.all_packs(),
             tile_icons(hass, store.data),
             picker_extras(hass, store.data),
             popup_lists(hass.states.async_all(), store.data),
@@ -860,7 +875,7 @@ class PanelPackView(_PanelRequest):
         hass: HomeAssistant = request.app["hass"]
         settings = resolve(store.data, panel, dev, hass.config.language)
         settings["round"] = is_round(store, dev.device_id)
-        pack = pack_for(store.panel_packs, request.query.get("pack", ""), settings)
+        pack = pack_for(store.all_packs(), request.query.get("pack", ""), settings)
         if pack is None:
             return web.Response(status=404)
         return web.Response(

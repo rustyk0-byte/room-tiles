@@ -52,6 +52,10 @@
     "panel_needs_integration": {
       "title": "Atualize o Room Tiles para {name}",
       "description": "{name} tem um firmware do Room Tiles mais novo que esta versão do Room Tiles, então ele só mostra um aviso de atualização. Atualize o Room Tiles no Home Assistant."
+    },
+    "theme_problem": {
+      "title": "O Room Tiles não pode usar o tema {theme}",
+      "description": "Corrija-o na pasta room_tiles_themes:\n\n{problems}"
     }
   },
   "entity": {

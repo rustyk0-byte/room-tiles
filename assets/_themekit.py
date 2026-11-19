@@ -18,6 +18,6 @@ if "room_tiles" not in sys.modules:
     _pkg.__path__ = [str(INTEGRATION)]
     sys.modules["room_tiles"] = _pkg
 
-from room_tiles.themes import fmt, panel, web  # noqa: E402
+from room_tiles.themes import fmt, off, panel, web  # noqa: E402
 
-__all__ = ["ROOT", "INTEGRATION", "THEME_ART", "fmt", "panel", "web"]
+__all__ = ["ROOT", "INTEGRATION", "THEME_ART", "fmt", "off", "panel", "web"]
