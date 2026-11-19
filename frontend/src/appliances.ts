@@ -35,6 +35,10 @@ export const SUPPORTED_URL = "https://github.com/rustyk0-byte/room-tiles/blob/ma
 /** A phase's word when the sensor has no status line (appliances.phase_*). */
 const phaseText = (phase: string): string => t(`appliances.phase_${phase}`);
 
+/** An answer to tell Room Tiles about: an appliance unit's state, or a
+ *  vacuum's error code (`robot`). */
+type Told = { appliance?: string; unit?: string; robot?: string; state: string; answer: string; name: string };
+
 const plain = (p: ApplianceProfile & { notes?: SetupNote[] }): ApplianceProfile => ({ id: p.id, name: p.name, units: p.units });
 const friendly = (hass: HomeAssistant | undefined, e: string | null) =>
   (e && (hass?.states[e]?.attributes.friendly_name as string | undefined)) || e || "";
@@ -87,9 +91,9 @@ export class RtAppliances extends LitElement {
   hass?: HomeAssistant;
   doc?: RoomTilesDoc;
   /** an unknown state just answered: "Also tell Room Tiles?" on its card */
-  private _told?: { appliance: string; unit: string; state: string; answer: string; name: string };
+  private _told?: Told;
   /** that report's steps open (report.ts) */
-  private _report?: { appliance: string; unit: string; state: string; answer: string; name: string };
+  private _report?: Told;
   /** "Report a problem" open for an appliance / pool / vacuum (problem.ts) */
   private _problem?: { subject: ProblemSubject; id: string; name: string; units: { id: string; label: string }[] };
   /** Report how it went: a beta one (its beta units) */
@@ -133,6 +137,29 @@ export class RtAppliances extends LitElement {
           <button class="plain" @click=${() => answer("paused")}>${t("appliances.answer_paused")}</button>
           <button class="plain" @click=${() => answer("off")}>${t("appliances.answer_off")}</button>
           <button class="plain" @click=${() => answer("error")}>${t("appliances.answer_error")}</button>
+        </div>
+      </div>`;
+    });
+  }
+
+  /** Error codes a vacuum reported that Room Tiles has no words for: asked
+   *  once, the answer saved on the vacuum (its overrides) - then it shows
+   *  as a "needs you", a fault or nothing. */
+  private _robotQuestions(r: RobotProfile) {
+    const sensor = Object.values(this.hass?.states ?? {}).find((st) => st.entity_id.startsWith("sensor.") && st.attributes.robot === r.id);
+    const qs = (sensor?.attributes.questions ?? []) as { code: string }[];
+    return qs.map((q) => {
+      const answer = (said: string) => {
+        const robot = { ...r, overrides: { ...(r.overrides ?? {}), [q.code]: said } };
+        void this.hass?.callService("room_tiles", "set_robot", { robot });
+        this._told = { robot: r.id, state: q.code, answer: said, name: r.name };
+      };
+      return html`<div class="question">
+        <div>${th("appliances.question", { name: r.name, state: html`<b>“${q.code}”</b>` })}</div>
+        <div class="answers">
+          <button class="plain" @click=${() => answer("attention")}>${t("appliances.answer_needs_you")}</button>
+          <button class="plain" @click=${() => answer("error")}>${t("appliances.answer_fault")}</button>
+          <button class="plain" @click=${() => answer("none")}>${t("appliances.answer_nothing")}</button>
         </div>
       </div>`;
     });
@@ -338,6 +365,7 @@ export class RtAppliances extends LitElement {
           <div class="grow">
             <div class="name">${r.name}</div>
             <div class="sub">${status(r.id)}</div>
+            ${this._robotQuestions(r)} ${this._told?.robot === r.id ? this._tellOffer(this._told) : nothing}
             ${this._betaRow("robot", r.id, r.name)} ${this._problemRow("robot", r.id, r.name)}
           </div>
           <button class="pencil" aria-label=${t("common.edit_name", { name: r.name })} title=${t("common.edit")} @click=${() => (this._robotEdit = r.id)}>
@@ -438,7 +466,9 @@ export class RtAppliances extends LitElement {
         ? html`<rt-report
             .hass=${this.hass}
             kind="unknown_state"
-            .draft=${{ appliance: this._report.appliance, unit: this._report.unit, state: this._report.state, answer: this._report.answer }}
+            .draft=${this._report.robot
+              ? { robot: this._report.robot, code: this._report.state, answer: this._report.answer }
+              : { appliance: this._report.appliance, unit: this._report.unit, state: this._report.state, answer: this._report.answer }}
             .about=${this._report.name}
             @close=${(e: Event) => {
               e.stopPropagation(); // back to this list, not out of it

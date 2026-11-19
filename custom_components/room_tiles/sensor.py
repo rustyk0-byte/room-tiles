@@ -33,7 +33,7 @@ from .appliance_presets import PRESETS
 from .model import Appliance, ApplianceUnit
 from .ops import SECTION_APPLIANCES, SECTION_POOLS, SECTION_ROBOTS
 from .panels import LINK_ENTITY
-from .robot import CLEAN_AREA, OURS_S, QueueStep, RoomQueue, idle_is_a_stop, alert_of, mode_option, tile_text, tile_words_of, view as robot_view
+from .robot import CLEAN_AREA, OURS_S, QueueStep, RoomQueue, idle_is_a_stop, unknown_code, alert_of, mode_option, tile_text, tile_words_of, view as robot_view
 from .wording import minutes, tile_words, word_json
 from .wording import t as words
 from .pool import tile_name
@@ -521,6 +521,9 @@ class RobotSensor(SensorEntity, RestoreEntity):
         # Room Tiles' own commands to the vacuum: their contexts, the last one's time
         self._ours: deque[str] = deque(maxlen=20)
         self._sent_at = 0.0
+        # error codes it reported that Room Tiles has no words for and the
+        # user hasn't answered yet (the Appliances page asks; Repairs says so)
+        self._questions: list[str] = []
         self._attr_unique_id = f"robot_{rb.id}"
         self.entity_id = f"sensor.room_tiles_{rb.id}"
         self._attr_name = rb.name
@@ -533,7 +536,20 @@ class RobotSensor(SensorEntity, RestoreEntity):
         self._attr_name = rb.name
         if self.hass:
             self._subscribe()
+            self._ask()  # (an answer takes its question away)
             self.async_write_ha_state()
+
+    @callback
+    def _ask(self, code: str | None = None) -> None:
+        """A code to ask about (when it's unknown and unanswered), and the
+        Repairs notice in step with what's still asked."""
+        c = (code or "").strip().lower()
+        if c and unknown_code(c) and c not in self._rb.overrides and c not in self._questions:
+            self._questions.append(c)
+        self._questions = [q for q in self._questions if q not in self._rb.overrides and unknown_code(q)]
+        async_update_appliance_questions(
+            self.hass, f"robot_{self._rb.id}", self._attr_name, [{"label": self._attr_name, "state": q} for q in self._questions]
+        )
 
     def _subscribe(self) -> None:
         if self._unsub:
@@ -553,8 +569,11 @@ class RobotSensor(SensorEntity, RestoreEntity):
             self.rq.taken_over = a.get("taken_over") is True
             since = a.get("queue_error_since")
             self.rq.error_since = float(since) if isinstance(since, (int, float)) else None
+            self._questions = [str(q["code"]) for q in a.get("questions") or [] if isinstance(q, dict) and q.get("code")]
         self._alert = self._view()[0].alert
         self._subscribe()
+        err = self.hass.states.get(self._rb.error) if self._rb.error else None
+        self._ask(err.state if err else None)
 
     async def async_will_remove_from_hass(self) -> None:
         if self._unsub:
@@ -563,6 +582,7 @@ class RobotSensor(SensorEntity, RestoreEntity):
         if self._unsub_calls:
             self._unsub_calls()
             self._unsub_calls = None
+        async_update_appliance_questions(self.hass, f"robot_{self._rb.id}", self._attr_name, [])  # (gone: its notice too)
 
     @callback
     def _changed(self, event) -> None:
@@ -577,6 +597,9 @@ class RobotSensor(SensorEntity, RestoreEntity):
             )
             if step is not None:
                 self.hass.async_create_task(self._do(step))
+        if event.data.get("entity_id") == self._rb.error:
+            new = event.data.get("new_state")
+            self._ask(new.state if new else None)
         self._watch_alert(v)
         self.async_write_ha_state()
 
@@ -764,7 +787,7 @@ class RobotSensor(SensorEntity, RestoreEntity):
         vac = self.hass.states.get(self._rb.vacuum) if self.hass else None
         err = self.hass.states.get(self._rb.error) if (self.hass and self._rb.error) else None
         room = self._area_name(self.rq.current) if self.hass else ""
-        return robot_view(vac.state if vac else None, err.state if err else None, room, self.rq.taken_over), vac
+        return robot_view(vac.state if vac else None, err.state if err else None, room, self.rq.taken_over, self._rb.overrides), vac
 
     @property
     def native_value(self) -> str:
@@ -790,6 +813,8 @@ class RobotSensor(SensorEntity, RestoreEntity):
             "queue_error_since": self.rq.error_since,
             # cleared because something else took the vacuum over (shown until it docks)
             "taken_over": self.rq.taken_over,
+            # error codes to ask the user about (Room Tiles has no words for them)
+            "questions": [{"code": q} for q in self._questions],
             "tile": tile_text(v, self.rq.current or "", self.rq.queue),
             # its words, for each display to put in its own language
             "tile_words": tile_words_of(v),

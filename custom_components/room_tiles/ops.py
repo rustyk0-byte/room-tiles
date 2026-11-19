@@ -822,6 +822,8 @@ def remove_pool(data: RoomTilesData, pool_id: str) -> tuple[str, ...]:
 def set_robot(data: RoomTilesData, robot: dict[str, Any]) -> tuple[str, ...]:
     rb = RobotProfile.from_dict(robot)
     i = next((k for k, r in enumerate(data.robots) if r.id == rb.id), None)
+    if i is not None and "overrides" not in robot:
+        rb.overrides = dict(data.robots[i].overrides)  # (an edit without them keeps the answers)
     if i is None:
         data.robots.append(rb)
     else:

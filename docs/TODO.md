@@ -161,10 +161,6 @@ Upload firmware), one image per board in the folder.
   - **Report to test** (maintainer tool): turn a model report's or a
     problem report's issue into a CI test that replays its cycle through
     the preset (step 3 of clearing a beta flag below).
-  - **Setup's beta notes** (found devices) point to Report how it went once
-    the device is set up.
-  - **Unknown vacuum states:** "Also tell Room Tiles" for a vacuum state
-    Room Tiles doesn't know, like an appliance's.
   - Later (the repo public, or a GitHub sign-in): send reports from inside
     the app (device flow); show open issues for a model before a duplicate
     goes out; tell the reporter when their fix is released; a QR code on

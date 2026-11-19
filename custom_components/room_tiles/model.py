@@ -789,6 +789,9 @@ class PoolSystem:
 # ---- robot vacuum profiles ------------------------------------------------------
 
 
+ROBOT_ANSWERS = frozenset({"attention", "error", "none"})
+
+
 @dataclass
 class RobotProfile:
     """A robot vacuum's tile data (robot.py has the logic): `vacuum` (its HA
@@ -801,22 +804,32 @@ class RobotProfile:
     vacuum: str
     error: str | None = None
     preset: str = "vacuum"
+    # what the user said an error code Room Tiles doesn't know means (the
+    # Appliances page): code -> attention ("needs me") / error / none
+    overrides: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> RobotProfile:
         vac = _entity(d.get("vacuum"), "robot vacuum", required=True)
         if not vac.startswith("vacuum."):
             raise ModelError("a robot vacuum profile needs a vacuum entity")
+        raw = d.get("overrides") or {}
+        if not isinstance(raw, dict) or any(v not in ROBOT_ANSWERS for v in raw.values()):
+            raise ModelError(f"a robot vacuum's answers are {', '.join(sorted(ROBOT_ANSWERS))}")
         return cls(
             id=_req(d, "id", str),
             name=_req(d, "name", str),
             vacuum=vac,
             error=_entity(d.get("error"), "robot error sensor"),
             preset=str(d.get("preset") or "vacuum"),
+            overrides={str(k).strip().lower(): str(v) for k, v in raw.items()},
         )
 
     def as_dict(self) -> dict[str, Any]:
-        return {"id": self.id, "name": self.name, "vacuum": self.vacuum, "error": self.error, "preset": self.preset}
+        d = {"id": self.id, "name": self.name, "vacuum": self.vacuum, "error": self.error, "preset": self.preset}
+        if self.overrides:
+            d["overrides"] = dict(self.overrides)
+        return d
 
     def entities(self) -> list[str]:
         return [e for e in (self.vacuum, self.error) if e]

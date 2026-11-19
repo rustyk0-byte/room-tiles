@@ -224,3 +224,34 @@ async def test_matic_turning_idle_by_itself_lets_go(hass: HomeAssistant, entry, 
     hass.states.async_set("vacuum.matic", "idle", {"supported_features": 29212})
     await hass.async_block_till_done()
     assert (q()["current"], q()["queue"], q()["taken_over"]) == (None, [], True)
+
+
+async def test_an_unknown_error_code_is_asked_about(hass: HomeAssistant, entry) -> None:
+    """A code Room Tiles has no words for: listed for the Appliances page and
+    in Repairs; answered, it shows as the user said - and an edit without
+    the answers keeps them; "Also tell Room Tiles" has its report."""
+    from homeassistant.helpers import issue_registry as ir
+
+    from custom_components.room_tiles.report import build_unknown_robot_state
+
+    hass.states.async_set("vacuum.matic", "cleaning", {"supported_features": 29212})
+    hass.states.async_set("sensor.matic_operational_error", "no_error")
+    robot = {"id": "matic", "name": "Matic", "vacuum": "vacuum.matic", "error": "sensor.matic_operational_error", "preset": "matter"}
+    await _call(hass, "set_robot", robot=robot)
+    await hass.async_block_till_done()
+    q = lambda: hass.states.get("sensor.room_tiles_matic").attributes  # noqa: E731
+    hass.states.async_set("sensor.matic_operational_error", "mystery_code")
+    await hass.async_block_till_done()
+    assert q()["questions"] == [{"code": "mystery_code"}] and q()["alert"] == "error"
+    assert ir.async_get(hass).async_get_issue(DOMAIN, "appliance_question_robot_matic") is not None
+    # answered: "it needs me"
+    await _call(hass, "set_robot", robot={**robot, "overrides": {"mystery_code": "attention"}})
+    await hass.async_block_till_done()
+    assert q()["questions"] == [] and q()["alert"] == "attention"
+    assert ir.async_get(hass).async_get_issue(DOMAIN, "appliance_question_robot_matic") is None
+    # renamed on the dashboard (no answers in the edit): they stay
+    await _call(hass, "set_robot", robot={**robot, "name": "Matic 2"})
+    await hass.async_block_till_done()
+    assert entry.runtime_data.data.robots[0].overrides == {"mystery_code": "attention"}
+    draft = await build_unknown_robot_state(hass, entry.runtime_data.data, "matic", "mystery_code", "attention")
+    assert draft["kind_of_device"] == "vacuum" and draft["answers"] == [{"role": "error", "state": "mystery_code", "answer": "needs_you"}]

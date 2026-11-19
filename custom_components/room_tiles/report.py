@@ -26,7 +26,9 @@ from typing import Any
 
 # the answers a user gives on the Appliances page (an unknown state): what it
 # means - running (washing / drying), paused, off, error - and later report kinds'
-ANSWERS = frozenset({"running", "paused", "off", "error", "not_running", "done", "waiting", "door_open", "unknown"})
+ANSWERS = frozenset(
+    {"running", "paused", "off", "error", "not_running", "done", "waiting", "door_open", "unknown", "needs_you", "nothing"}
+)
 # a model report's outcome
 OUTCOMES = frozenset({"works", "partly", "broken"})
 FEATURE_ANSWERS = frozenset({"works", "partly", "broken", "not_tried"})  # (model_report.ANSWERS)
@@ -933,6 +935,30 @@ async def panel_facts(hass: Any, store: Any, device_id: str) -> dict[str, Any]:
         except Exception:  # noqa: BLE001 - no recorder / its history: no restarts list
             pass
     return out
+
+
+# a vacuum's answer (the Appliances page) -> the report's words
+_ROBOT_ANSWER = {"attention": "needs_you", "error": "error", "none": "nothing"}
+
+
+async def build_unknown_robot_state(hass: Any, data: Any, robot_id: str, code: str, answer: str) -> dict[str, Any] | None:
+    """"Also tell Room Tiles" for a vacuum: an error code Room Tiles had no
+    words for, and what the user said it means. None: no such vacuum."""
+    rb = next((r for r in data.robots if r.id == robot_id), None)
+    if rb is None:
+        return None
+    draft: dict[str, Any] = {
+        "kind_of_device": "vacuum",
+        "preset": rb.preset,
+        "answers": [{"role": "error", "state": code, "answer": _ROBOT_ANSWER.get(answer, "unknown")}],
+    }
+    draft.update(await device_facts(hass, rb.vacuum))
+    # the error sensor's own list of codes (an enum sensor): all learned at once
+    st = hass.states.get(rb.error) if rb.error else None
+    options = st.attributes.get("options") if st is not None else None
+    if isinstance(options, list) and options:
+        draft["states"] = [{"role": "error", "state": code, "attributes": {"options": options}}]
+    return draft
 
 
 async def build_unknown_state(hass: Any, data: Any, appliance_id: str, unit_id: str, state: str, phase: str) -> dict[str, Any] | None:

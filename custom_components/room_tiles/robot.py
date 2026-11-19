@@ -42,12 +42,24 @@ class RobotView:
     alert_word: Word = ""
 
 
-def alert_word_of(code: str | None) -> tuple[str, Word]:
-    """A Matter RVC error id -> (none / attention / error, its words)."""
+def unknown_code(code: str | None) -> bool:
+    """An error code Room Tiles has no words for (the user is asked what it
+    means - the Appliances page)."""
     c = (code or "").strip().lower()
-    if c in NO_ALERT:
+    return bool(c) and c not in NO_ALERT and not has(f"robot.alert.{c}")
+
+
+def alert_word_of(code: str | None, overrides: dict[str, str] | None = None) -> tuple[str, Word]:
+    """A Matter RVC error id -> (none / attention / error, its words).
+    `overrides`: what the user said a code means (code -> attention / error /
+    none) - they win."""
+    c = (code or "").strip().lower()
+    said = (overrides or {}).get(c)
+    if c in NO_ALERT or said == "none":
         return "none", ""
     word = w(f"robot.alert.{c}") if has(f"robot.alert.{c}") else c.replace("_", " ").capitalize()
+    if said in ("attention", "error"):
+        return said, word
     return ("attention" if c in ATTENTION else "error"), word
 
 
@@ -57,11 +69,18 @@ def alert_of(code: str | None) -> tuple[str, str]:
     return alert, render(word)
 
 
-def view(vacuum_state: str | None, error_code: str | None = None, room: str = "", taken_over: bool = False) -> RobotView:
+def view(
+    vacuum_state: str | None,
+    error_code: str | None = None,
+    room: str = "",
+    taken_over: bool = False,
+    overrides: dict[str, str] | None = None,
+) -> RobotView:
     """The tile's class and status line (`taken_over`: the room queue was
-    cleared because something else took the vacuum over - RoomQueue.let_go)."""
+    cleared because something else took the vacuum over - RoomQueue.let_go;
+    `overrides`: what the user said unknown codes mean)."""
     vs = (vacuum_state or "").lower()
-    alert, text = alert_word_of(error_code)
+    alert, text = alert_word_of(error_code, overrides)
     if vs in ("unavailable", "unknown", ""):
         cls = "offline"
     elif alert == "attention":

@@ -195,6 +195,21 @@ async def ws_report_preview(
             connection.send_error(msg["id"], "not_available", "only in a developer build")
             return
         draft = sample_report()
+    elif kind == "unknown_state" and "robot" in (msg.get("draft") or {}):
+        # (a vacuum's error code: the dashboard names the vacuum, code and answer)
+        from .report import build_unknown_robot_state
+
+        d = msg["draft"]
+        entries = hass.config_entries.async_loaded_entries(DOMAIN)
+        if not entries:
+            connection.send_error(msg["id"], "not_set_up", "Room Tiles is not set up")
+            return
+        built = await build_unknown_robot_state(hass, entries[0].runtime_data.data, str(d.get("robot")), str(d.get("code")), str(d.get("answer")))
+        if built is None:
+            connection.send_error(msg["id"], "not_found", "no such vacuum")
+            return
+        draft = built
+        draft["kind"] = kind
     elif kind == "unknown_state" and "appliance" in (msg.get("draft") or {}):
         # (the dashboard names the appliance, unit, state and answer; HA builds
         # the report from the device itself)

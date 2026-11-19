@@ -147,6 +147,8 @@ export interface RobotProfile {
   /** Matter's RVC operational error sensor (alerts), if it reports one */
   error: string | null;
   preset: string;
+  /** what the user said error codes Room Tiles doesn't know mean: code -> attention / error / none */
+  overrides?: Record<string, string>;
 }
 
 export type PoolLayout = "shared" | "separate" | "pool" | "spa";

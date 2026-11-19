@@ -122,3 +122,15 @@ def test_clean_mode_option():
     assert mode_option(matic, "mop") == "Mop"
     assert mode_option(["Auto", "Quiet"], "both") is None  # no such mode: left as it is
 
+
+
+def test_unknown_codes_and_the_users_answers():
+    """An error code Room Tiles has no words for is asked about; the user's
+    answer (needs me / a fault / nothing) decides how it shows."""
+    from custom_components.room_tiles.robot import alert_word_of, unknown_code, view
+
+    assert unknown_code("mystery_code") and not unknown_code("stuck") and not unknown_code("no_error") and not unknown_code("")
+    assert alert_word_of("mystery_code")[0] == "error"  # (asked meanwhile: a fault, to be safe)
+    assert alert_word_of("mystery_code", {"mystery_code": "attention"}) == ("attention", "Mystery code")
+    assert alert_word_of("mystery_code", {"mystery_code": "none"}) == ("none", "")
+    assert view("cleaning", "mystery_code", overrides={"mystery_code": "none"}).cls == "cleaning"
