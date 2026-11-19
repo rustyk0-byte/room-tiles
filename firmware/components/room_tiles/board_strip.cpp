@@ -540,7 +540,7 @@ void Board::open_strip_settings_() {
     }
   }
   // Change Wi-Fi (the wall panels' settings have it too): asked first
-  // MIRRORED: board_edit.cpp open_settings_ / confirm_wifi_change_ - a change here must be made there too.
+  // MIRRORED: wifi_setup.cpp build_phone_ (the others' "Set up with your phone instead") - a change here must be made there too.
   {
     y += 12;
     lv_obj_t *b = lv_obj_create(list);
@@ -592,12 +592,18 @@ void Board::open_strip_settings_() {
 
 // Change Wi-Fi, asked first (the panel goes offline until it's set up
 // again): a round page - the question, Change Wi-Fi, Cancel
-// MIRRORED: board_edit.cpp confirm_wifi_change_ - a change here must be made there too.
+// MIRRORED: wifi_setup.cpp build_phone_ - a change here must be made there too.
 void Board::confirm_strip_wifi_() {
   lv_obj_t *col = this->strip_page_(this->rt_->t("panel.wifi_change"));
   const uint32_t text = this->color_("text", 0xFFFFFF);
   lv_obj_t *ask = lv_label_create(col);
-  lv_label_set_text(ask, this->rt_->t("panel.wifi_change_ask").c_str());
+  {
+    std::string text = this->rt_->boot_text("panel.wifi_change_ask", "On your phone, join \"{name}\".");
+    const size_t at = text.find("{name}");
+    if (at != std::string::npos)
+      text.replace(at, 6, this->rt_->hotspot_name());
+    lv_label_set_text(ask, text.c_str());
+  }
   lv_label_set_long_mode(ask, LV_LABEL_LONG_MODE_WRAP);
   lv_obj_set_width(ask, 300);
   lv_obj_set_style_text_align(ask, LV_TEXT_ALIGN_CENTER, 0);
@@ -623,7 +629,7 @@ void Board::confirm_strip_wifi_() {
     lv_obj_center(l);
     y += 60;
   };
-  choice("panel.wifi_change", true, [](lv_event_t *e) { static_cast<Board *>(lv_event_get_user_data(e))->rt_->forget_wifi(); });
+  choice("screen.restart", true, [](lv_event_t *e) { static_cast<Board *>(lv_event_get_user_data(e))->rt_->forget_wifi(); });
   choice("common.cancel", false, [](lv_event_t *e) {
     // (back to the settings, where it was asked from)
     lv_async_call([](void *p) { static_cast<Board *>(p)->open_strip_settings_(); }, lv_event_get_user_data(e));

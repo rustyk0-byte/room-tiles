@@ -183,6 +183,7 @@ void RoomTiles::setup() {
     this->boot_lang_ = BootLang{};
   this->assets_changed_();  // what's stored from before shows right away
   this->say_("panel.connecting", "Connecting to Home Assistant…");
+  this->wifi_setup_.attach(this);  // (it hears every Wi-Fi scan from now on)
   // status words (tile_words...) in the panel's own language: its string pack
   this->states_.set_words([this](const char *token) { return this->assets_.t(token); });
   this->states_.on_change([this](const std::string &entity) {
@@ -760,16 +761,27 @@ void RoomTiles::watch_wifi_setup_() {
   // (never set up, or its network gone - a new router, a new password: after
   // a while without it the hotspot opens again, and the panel says so)
   const bool setup = w != nullptr && w->is_ap_active() && !w->is_connected();
-  if (setup == this->wifi_setup_)
+  // a new panel (the 7" / 10.1"): its networks to pick, on the screen,
+  // once its language is picked; gone again once it's on one (or the phone did it)
+  // (the board's fonts hooked up - its loop runs before the boot's last
+  // steps do - and the language picked)
+  // A panel that has a network saved isn't new - it's reconnecting (after
+  // a restart, an update) or its network is gone: its hotspot and the
+  // phone line as before, never this screen opening by itself
+  const bool picker_up = setup && !w->has_sta() && !this->strip_ && this->generic_ && this->board_.fonts().bar != nullptr &&
+                         this->lang_root_ != nullptr && !this->language_needed();
+  if (picker_up && !this->wifi_setup_.is_open())
+    this->wifi_setup_.open(false);
+  else if (!setup && this->wifi_setup_.is_open() && !this->wifi_setup_.changing() && !this->wifi_setup_.trying())
+    this->wifi_setup_.close();
+  if (setup == this->wifi_setup_mode_)
     return;
-  this->wifi_setup_ = setup;
+  this->wifi_setup_mode_ = setup;
   if (!setup) {
     this->say_("panel.connecting", "Connecting to Home Assistant…");
     return;
   }
-  std::string ssid = w->get_ap().get_ssid().str();  // (empty: .str(), never c_str())
-  if (ssid.empty())
-    ssid = App.get_name().str();  // (the hotspot is named like the panel)
+  const std::string ssid = this->hotspot_name();
   ESP_LOGI(TAG, "No Wi-Fi network: hotspot %s", ssid.c_str());
   this->say_("panel.wifi_setup", "Set up Wi-Fi: with your phone, join the network \"{name}\"", ssid);
 #endif
@@ -1084,12 +1096,34 @@ std::string RoomTiles::wifi_button_text() const {
 void RoomTiles::wifi_button_tap() {
   if (this->wifi_button_ == 0)
     return;
+  if (!this->strip_) {  // (the networks, picked here - the round panel: tapped twice, then its hotspot)
+    this->open_wifi_setup();
+    return;
+  }
   if (this->wifi_button_ == 2) {
     this->forget_wifi();
     return;
   }
   this->wifi_armed_ms_ = millis() | 1;
   this->watch_wifi_button_();
+}
+
+std::string RoomTiles::hotspot_name() const {
+  std::string ssid;
+#ifdef USE_WIFI
+  if (wifi::global_wifi_component != nullptr)
+    ssid = wifi::global_wifi_component->get_ap().get_ssid().str();  // (empty: .str(), never c_str())
+#endif
+  return ssid.empty() ? App.get_name().str() : ssid;  // (the hotspot is named like the panel)
+}
+
+void RoomTiles::open_wifi_setup() {
+  if (this->strip_ || !this->generic_) {
+    this->forget_wifi();  // (the round panel - asked on its page first; a hand-built one: nothing)
+    return;
+  }
+  if (!this->wifi_setup_.is_open())
+    this->wifi_setup_.open(true);
 }
 
 void RoomTiles::take_board_down_() {
@@ -1199,6 +1233,7 @@ void RoomTiles::loop() {
   this->board_.loop();
   this->map_view_.loop();
   this->picker_.loop();
+  this->wifi_setup_.loop();
   // the boot screen's big stopwatch: while it waits (no progress bar then)
   if (this->boot_busy_obj_ == nullptr) {
     this->boot_busy_obj_ = this->boot_busy_.make(lv_layer_top(), 72, this->assets_.color("accent", 0x4B9EF3));

@@ -357,10 +357,6 @@ A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
   themes"). Also: the dashboard's theme list could say when one is getting
   ready or can't be used (today: Repairs).
 
-- **Wi-Fi set up on the panel** (no phone): shown while it has no saved
-  network - a list of networks (strongest first, a lock on secured ones),
-  tap one, type the password on an on-screen keyboard (keys sized for the
-  7"; letters, numbers, symbols), Connect (ESPHome `wifi.configure`). Mesh
-  routers often turn away the first try after a restart ("Authentication
-  Failed", then fine), so say "wrong password" only after a few tries.
-  "Set up with your phone instead" stays, the hotspot running meanwhile.
+- **Wi-Fi set up on the panel, the round panel:** a knob letter wheel for
+  the password (the 7" / 10.1" have the on-screen keyboard) - only if people
+  ask; the phone way works there.

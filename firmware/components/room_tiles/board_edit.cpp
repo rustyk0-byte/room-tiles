@@ -558,7 +558,7 @@ void Board::open_settings_() {
          b->close_dialog_();  // (the screen under the menu)
          b->rt_->take_screenshot(true);
        }},
-      {"panel.wifi_change", [](Board *b) { b->confirm_wifi_change_(); }},
+      {"panel.wifi_change", [](Board *b) { b->rt_->open_wifi_setup(); }},  // (wifi_setup.cpp)
       {"panel.restart_panel", [](Board *b) { b->confirm_restart_(); }},
   };
   int i = 0;
@@ -664,27 +664,6 @@ void Board::confirm_restart_() {
   lv_obj_align(go, LV_ALIGN_BOTTOM_RIGHT, -18, -18);
   lv_obj_center(label(go, this->rt_->t("screen.restart"), this->fonts_.name, this->color_("onAccent", 0xFFFFFF)));
   lv_obj_add_event_cb(go, [](lv_event_t *) { App.safe_reboot(); }, LV_EVENT_CLICKED, nullptr);
-}
-
-// Change Wi-Fi: asked first (the panel goes offline until it's set up again)
-void Board::confirm_wifi_change_() {
-  lv_obj_t *d = this->dialog_(520, 260, this->rt_->t("panel.wifi_change"));
-  lv_obj_t *ask = label(d, this->rt_->t("panel.wifi_change_ask"), this->fonts_.name_s, this->color_("text", 0xFFFFFF));
-  lv_label_set_long_mode(ask, LV_LABEL_LONG_MODE_WRAP);
-  lv_obj_set_width(ask, 520 - 48);
-  lv_obj_set_pos(ask, 24, 66);
-  lv_obj_t *cancel = button(d, 200, 56, this->color_("button", 0x3A3A3A));
-  lv_obj_align(cancel, LV_ALIGN_BOTTOM_LEFT, 18, -18);
-  lv_obj_center(label(cancel, this->rt_->t("common.cancel"), this->fonts_.name, this->color_("text", 0xFFFFFF)));
-  lv_obj_add_event_cb(
-      cancel, [](lv_event_t *e) { static_cast<Board *>(lv_event_get_user_data(e))->close_dialog_(); },
-      LV_EVENT_CLICKED, this);
-  lv_obj_t *go = button(d, 200, 56, this->color_("accent", 0x4B9EF3));
-  lv_obj_align(go, LV_ALIGN_BOTTOM_RIGHT, -18, -18);
-  lv_obj_center(label(go, this->rt_->t("panel.wifi_change"), this->fonts_.name, this->color_("onAccent", 0xFFFFFF)));
-  lv_obj_add_event_cb(
-      go, [](lv_event_t *e) { static_cast<Board *>(lv_event_get_user_data(e))->rt_->forget_wifi(); },
-      LV_EVENT_CLICKED, this);
 }
 
 // The panel's language: Home Assistant's, or one with wording (its setting in HA)

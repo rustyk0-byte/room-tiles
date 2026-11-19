@@ -24,6 +24,7 @@
 #include "picker.h"
 #include "screenshot.h"
 #include "states.h"
+#include "wifi_setup.h"
 
 namespace esphome::room_tiles {
 
@@ -192,6 +193,13 @@ class RoomTiles : public Component {
   StateHub &states() { return this->states_; }
   ActionSender &actions() { return this->actions_; }
   ColorPicker &picker() { return this->picker_; }
+  /// Wi-Fi set up on the panel (wifi_setup.cpp): Change Wi-Fi opens it (the
+  /// round panel: the phone way - it forgets the network, asked first).
+  void open_wifi_setup();
+  /// The panel's setup hotspot's name (the Wi-Fi a phone joins to set it up).
+  std::string hotspot_name() const;
+  /// A boot screen line in the panel's language (its pack's, else built in).
+  std::string boot_text(const char *key, const char *fallback) const { return this->boot_text_(key, fallback); }
   Board &board() { return this->board_; }
   MapView &map_view() { return this->map_view_; }
   /// Show another area / layout now (drawn from what the panel has) and set
@@ -318,6 +326,7 @@ class RoomTiles : public Component {
   Board board_;
   MapView map_view_;
   ColorPicker picker_;
+  WifiSetup wifi_setup_;
   // this firmware: its board, generic or hand-built, and its build (the
   // first 8 bytes of its ELF's SHA-256, hex) - sent with each payload request
   const char *image_tag_{""};
@@ -351,7 +360,7 @@ class RoomTiles : public Component {
   // OFFLINE_AFTER_MS, so a short blip doesn't flip the screen
   uint32_t offline_since_{0};
   bool offline_{false};
-  bool wifi_setup_{false};  // (no Wi-Fi network yet: watch_wifi_setup_)
+  bool wifi_setup_mode_{false};  // (no Wi-Fi network yet: watch_wifi_setup_)
   int wifi_button_{0};        // (watch_wifi_button_)
   uint32_t wifi_armed_ms_{0};  // (its first tap: a second within a few seconds forgets)
   // settings picked on the panel (area, layout, theme, language -> its

@@ -39,6 +39,7 @@ esphome:
             f.thermo = lv_obj_get_style_text_font(id(ref_rt_font_thermo), LV_PART_MAIN);
             f.thermo_s = lv_obj_get_style_text_font(id(ref_rt_font_thermo_s), LV_PART_MAIN);
             f.glyph = lv_obj_get_style_text_font(id(ref_rt_icon_glyph), LV_PART_MAIN);
+            f.keys = lv_obj_get_style_text_font(id(ref_rt_font_keys), LV_PART_MAIN);
             f.glyph_s = lv_obj_get_style_text_font(id(ref_rt_icon_glyph_s), LV_PART_MAIN);
             f.tiny = lv_obj_get_style_text_font(id(ref_rt_icon_tiny), LV_PART_MAIN);
             f.menu = lv_obj_get_style_text_font(id(ref_rt_icon_menu), LV_PART_MAIN);
@@ -136,6 +137,18 @@ room_tiles:
 # Fonts are compiled in: Roboto with the Latin letters every Room Tiles
 # language needs (docs/DESIGN.md "Panel firmware").
 font:
+  # Wi-Fi setup's keyboard: the letters, and backspace / shift from MDI
+  - file: "gfonts://Roboto@400"
+    id: rt_font_keys
+    size: 26
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+    extras:
+      - file:
+          type: web
+          url: "https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/fonts/materialdesignicons-webfont.ttf"
+        glyphs: ["\U000F0B5C", "\U000F0636"]
   - file: "gfonts://Roboto@700"
     id: rt_font_title
     size: 40
@@ -254,8 +267,12 @@ font:
     # + the map's back arrow and zoom in / out
     # + the vacuum queue's play / pause / skip / stop
     # + the top bar's area lights (on / off) and help
+    # + Wi-Fi setup: the networks' signal (open / locked), look again, back,
+    # show / hide the password
     glyphs: ["\U000F0238", "\U000F0717", "\U000F0821", "\U000F0156", "\U000F004D", "\U000F0415", "\U000F0374",
-             "\U000F040A", "\U000F03E4", "\U000F04AD", "\U000F04DB", "\U000F1253", "\U000F1254", "\U000F0625"]
+             "\U000F040A", "\U000F03E4", "\U000F04AD", "\U000F04DB", "\U000F1253", "\U000F1254", "\U000F0625",
+             "\U000F091F", "\U000F0921", "\U000F0922", "\U000F0924", "\U000F0925", "\U000F0927", "\U000F0928",
+             "\U000F092A", "\U000F0450", "\U000F0141", "\U000F0208", "\U000F0209"]
   - file:
       type: web
       url: "https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/fonts/materialdesignicons-webfont.ttf"
@@ -541,6 +558,11 @@ lvgl:
             text: " "
             text_font: rt_icon_glyph
         - label:
+            id: ref_rt_font_keys
+            hidden: true
+            text: " "
+            text_font: rt_font_keys
+        - label:
             id: ref_rt_icon_glyph_s
             hidden: true
             text: " "
@@ -592,6 +614,13 @@ lvgl:
         - arc:
             id: feature_arc
             hidden: true
+        # (and Wi-Fi setup's keyboard: LVGL's button grid)
+        - buttonmatrix:
+            id: feature_buttonmatrix
+            hidden: true
+            rows:
+              - buttons:
+                  - text: "-"
 
     # the tile board: components/room_tiles draws it into main_root
     - id: page_main

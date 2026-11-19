@@ -78,6 +78,15 @@ CONFIG_SCHEMA = cv.Schema(
 
 async def to_code(config):
     request_http_client()  # ESP-IDF's HTTP client (the payload download)
+    from esphome.core import CORE
+
+    if "wifi" in CORE.config:
+        # Wi-Fi set up on the panel (wifi_setup.cpp): every scan's networks,
+        # not only the saved one's
+        from esphome.components.wifi import request_wifi_scan_results, request_wifi_scan_results_listener
+
+        request_wifi_scan_results_listener()
+        request_wifi_scan_results()  # (every network's, not only the saved one's)
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     # the image's tag: Room Tiles reads it from a firmware file to know its

@@ -51,6 +51,25 @@ KEYS = [
     "panel.wifi_change_again",
     "panel.wifi_chip_updating",
     "panel.wifi_setup",
+    # Wi-Fi set up on the panel (wifi_setup.cpp) - before it ever had a pack
+    "common.back",
+    "common.cancel",
+    "panel.wifi_again",
+    "panel.wifi_connect",
+    "panel.wifi_change_ask",
+    "panel.wifi_connected",
+    "screen.restart",
+    "panel.wifi_connecting_to",
+    "panel.wifi_failed",
+    "panel.wifi_kept",
+    "panel.wifi_looking",
+    "panel.wifi_name_ask",
+    "panel.wifi_none",
+    "panel.wifi_other",
+    "panel.wifi_password_for",
+    "panel.wifi_phone_hint",
+    "panel.wifi_phone_instead",
+    "panel.wifi_pick",
 ]
 
 

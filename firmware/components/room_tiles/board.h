@@ -51,6 +51,7 @@ struct Fonts {
   // the idle clock's digits (big)
   const lv_font_t *clock{nullptr};
   const lv_font_t *date{nullptr};  // the idle clock's date (analog; a theme's "large")
+  const lv_font_t *keys{nullptr};  // Wi-Fi setup's keyboard (letters + backspace / shift)
   // the Room Tiles icon at the top bars' far left (tiles and map)
   const lv_image_dsc_t *brand{nullptr};
 };
@@ -280,7 +281,6 @@ class Board {
   std::string room_line_() const;
   lv_obj_t *idle_row_{nullptr};  // the settings menu's "When idle" row (its list opens over it)
   void confirm_restart_();
-  void confirm_wifi_change_();
   void confirm_strip_wifi_();  // (the round panel's: a page, board_strip.cpp)
   void open_picker_(int slot);
   void close_dialog_();

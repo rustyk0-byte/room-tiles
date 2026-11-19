@@ -850,6 +850,27 @@ show and use what the integration holds; nothing about a house is compiled in.
   layout, with the picker). Map, layer and board editors, settings dialogs,
   device setup and short names are dashboard-only; the panel says when there
   is something to set up there.
+- **Wi-Fi set up on the panel** (firmware wifi_setup.cpp; the 7" / 10.1" -
+  the round panel: the phone way only): a panel with NO network saved shows
+  the networks nearby by itself once its language is picked (strongest
+  first, a lock on secured ones, "Other network..." to type one in), the
+  phone way on the same screen (its hotspot stays up). A panel that has a
+  network saved but isn't on it yet (restarting, an update, its network
+  gone) never gets it by itself - it reconnects in the background. Change
+  Wi-Fi (settings, and the boot screen's button) opens it too: the network
+  it's on is first with a check mark, and **it stays until the new one
+  works** - tried the way ESPHome's Improv does (set, not saved; saved only
+  once the panel is on THAT network; 45 s for a new panel, 90 s when leaving
+  one - a mesh router's first refusal is retried meanwhile), else the old
+  network again ("still on ..."). The screen is never closed from outside
+  while it tries. Scans: on a network, the panel's own (ESP-IDF, every
+  channel, staying connected - ESPHome's roaming check skips the scan on a
+  good signal); without one, ESPHome's; never while ESPHome is connecting
+  (it would interrupt it). The keyboard is LVGL's button grid with our
+  layers (letters, numbers, symbols; backspace / shift from MDI in
+  rt_font_keys), keys ~90 x 62 px. Open, the panel never goes idle; Change
+  Wi-Fi left untouched closes after 3 minutes. Its words are built into the
+  firmware (boot_words.h): a new panel has no pack yet.
 - **Boot screen:** the Room Tiles icon on black (built into the firmware,
   so it shows before any download), the name, and - small and dim at the
   name's bottom right - the firmware's release ("v0.1.4"; none on a build

@@ -229,8 +229,11 @@ itself. Leave it plugged in.
 
 ### Connect a panel to Wi-Fi
 
-Then, with no Wi-Fi yet, its screen shows the name of the panel's own Wi-Fi
-network, such as `room-tiles-a1b2c3`.
+Then, with no Wi-Fi yet, the 7" and 10.1" panels list the Wi-Fi networks
+nearby: tap yours, type its password on the screen and tap **Connect**.
+
+Or use your phone - on any panel, the round one too. The screen shows the
+name of the panel's own Wi-Fi network, such as `room-tiles-a1b2c3`:
 
 1. On your phone, open the Wi-Fi settings and join that network.
 2. Stay on the Wi-Fi settings screen for a little while - your phone opens
@@ -333,12 +336,15 @@ for about a minute and restarts once more. Leave it plugged in.
   Wi-Fi is back.
 - **New router or password:** join the panel's network and pick the new one,
   as above.
-- **Another network:** on the panel, gear › **Change Wi-Fi**. It forgets its
-  network and restarts - set it up as above.
+- **Another network:** on the panel, gear › **Change Wi-Fi**. The 7" and
+  10.1" list the networks to pick from - the one it's on stays until the new
+  one works, so a mistyped password never strands it. (Or **Set up with your
+  phone instead**; the round panel: its network is forgotten, then set it up
+  with your phone as above.)
 - **Stuck on "Connecting to Home Assistant…"** (the wrong network, like a
-  guest one): after a minute and a half a **Change Wi-Fi** button appears.
-  Tap it twice to start over. (Not added to Home Assistant yet? Do that
-  first.)
+  guest one): after a minute and a half a **Change Wi-Fi** button appears
+  (on the round panel: tap it twice). (Not added to Home Assistant yet? Do
+  that first.)
 
 ## Support
 
