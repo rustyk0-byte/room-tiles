@@ -125,6 +125,31 @@ def test_panel_pack_tables_never_share_a_key():
         assert not set(ui) & set(words), code
 
 
+def test_panel_string_packs_are_up_to_date():
+    """Each language's string pack (panel_packs/strings-<lang>.rtp.gz, built by
+    assets/build_panel.py) holds exactly its tables' texts: a word added
+    without rebuilding the packs would show as its key on the panels."""
+    import gzip
+    import struct
+
+    root = Path(wording.__file__).parents[2]
+    packs = root / "custom_components" / "room_tiles" / "panel_packs"
+    for code in ("en", "de", "fr", "es", "it", "nl", "pt"):
+        want: dict = {}
+        for folder in (root / "frontend" / "i18n", DIR):
+            want.update(json.loads((folder / "en.json").read_text(encoding="utf-8"))["strings"])
+            if code != "en":
+                want.update(json.loads((folder / f"{code}.json").read_text(encoding="utf-8"))["strings"])
+        data = gzip.decompress((packs / f"strings-{code}.rtp.gz").read_bytes())
+        count = struct.unpack_from("<H", data, 6)[0]
+        assert count == 1
+        _name, _kind, _fmt, _w, _h, _stride, offset, size = struct.unpack_from("<32sBBHHHII8x", data, 64)
+        have = json.loads(data[offset : offset + size])
+        missing = sorted(set(want) - set(have))
+        changed = sorted(k for k in want if k in have and have[k] != want[k])
+        assert not missing and not changed, f"strings-{code}: rebuild the packs (python3 assets/build_panel.py) - {missing[:5]} {changed[:5]}"
+
+
 def test_names_room_tiles_makes_follow_has_language():
     """Its own entities' names, the tile picker's names for them and new
     maps' defaults: in HA's language (stored so)."""
