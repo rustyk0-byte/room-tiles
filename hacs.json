@@ -1,7 +1,6 @@
 {
   "name": "Room Tiles",
   "homeassistant": "2026.11.0",
-  "render_readme": true,
   "zip_release": true,
   "filename": "room_tiles.zip",
   "hide_default_branch": true

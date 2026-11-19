@@ -1,0 +1,31 @@
+name: HACS
+
+# The HACS / Marketplace catalog's own checks of the repository (its files,
+# releases, brand images, description, topics): what a catalog listing needs
+# - none skipped. Only when what it checks changes (or run by hand).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "hacs.json"
+      - "README.md"
+      - "custom_components/room_tiles/manifest.json"
+      - "custom_components/room_tiles/brand/**"
+      - ".github/workflows/hacs.yml"
+  pull_request:
+    paths:
+      - "hacs.json"
+      - "custom_components/room_tiles/manifest.json"
+      - "custom_components/room_tiles/brand/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hacs/action@main
+        with:
+          category: integration
