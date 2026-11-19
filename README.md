@@ -22,10 +22,13 @@ shows the same things where they are.
 
 ## Install
 
-1. Settings › **Marketplace** › **Add from link**, and enter
-   `rustyk0-byte/room-tiles` (it's an **Integration**). Adding a repository
-   by link needs the Marketplace's GitHub connection (Settings › Devices &
-   services › Marketplace).
+[![Open Room Tiles in your Home Assistant's Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rustyk0-byte&repository=room-tiles&category=integration)
+
+1. Click the button above - it opens Room Tiles in your Home Assistant's
+   Marketplace. (Or: Settings › **Marketplace** › **Add from link**, and
+   enter `rustyk0-byte/room-tiles` - it's an **Integration**.) Adding a
+   repository by link needs the Marketplace's GitHub connection (Settings ›
+   Devices & services › Marketplace).
 2. Install **Room Tiles**, then restart Home Assistant.
 
 Updates show under Settings › **Updates**, like Home Assistant's own; the
