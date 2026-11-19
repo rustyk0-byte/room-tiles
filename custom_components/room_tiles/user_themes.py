@@ -38,7 +38,7 @@ ISSUE = "theme_problem"  # + "_<its file>"
 
 
 class UserThemes:
-    """The installed themes: built ones (by key, "my-<id>"), and the ones
+    """The installed themes: built ones (by key, "user:<id>"), and the ones
     that can't be used (with why)."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, base: dict, changed: Callable[[], None]) -> None:

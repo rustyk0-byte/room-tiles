@@ -40,20 +40,20 @@ describe("installed themes (Room Tiles' feed)", () => {
   it("join the list after the bundled ones, with their colours and pictures", async () => {
     const th = await import("./theme");
     th.setInstalledThemes([
-      { id: "my-candy", name: { en: "Candy" }, order: 100, colors: { accent: "#E8508A" }, offArt: ["icon_fan"], buttonArt: ["bar_map"], base: "/room_tiles_themes/abc/web" },
+      { id: "user:candy", name: { en: "Candy" }, order: 100, colors: { accent: "#E8508A" }, offArt: ["icon_fan"], buttonArt: ["bar_map"], base: "/room_tiles_themes/abc/web" },
     ]);
-    expect(th.themeNames()).toEqual([...THEME_NAMES, "my-candy"]);
-    expect(th.themeName("my-candy")).toBe("Candy");
-    expect(THEMES["my-candy"].accent).toBe("#E8508A");
-    expect(THEMES["my-candy"].page).toBe(THEMES.dark.page); // (left out: the default's)
-    expect(iconArt("icon_fan", false, "my-candy")).toBe("icon_fan_off");
-    expect(hasArt("my-candy", "bar_map")).toBe(true);
-    expect(th.assetUrl("/x", "ui/icon_fan.png", "my-candy")).toBe("/room_tiles_themes/abc/web/ui/icon_fan.png");
+    expect(th.themeNames()).toEqual([...THEME_NAMES, "user:candy"]);
+    expect(th.themeName("user:candy")).toBe("Candy");
+    expect(THEMES["user:candy"].accent).toBe("#E8508A");
+    expect(THEMES["user:candy"].page).toBe(THEMES.dark.page); // (left out: the default's)
+    expect(iconArt("icon_fan", false, "user:candy")).toBe("icon_fan_off");
+    expect(hasArt("user:candy", "bar_map")).toBe(true);
+    expect(th.assetUrl("/x", "ui/icon_fan.png", "user:candy")).toBe("/room_tiles_themes/abc/web/ui/icon_fan.png");
     expect(th.assetUrl("/x", "ui/icon_fan.png", "dark")).toMatch(/^\/x\/dark\/ui\/icon_fan\.png/);
     // removed: gone from every list
     th.setInstalledThemes([]);
     expect(th.themeNames()).toEqual([...THEME_NAMES]);
-    expect(THEMES["my-candy"]).toBeUndefined();
-    expect(th.isInstalledId("my-candy") && !th.isInstalledId("christmas")).toBe(true);
+    expect(THEMES["user:candy"]).toBeUndefined();
+    expect(th.isInstalledId("user:candy") && !th.isInstalledId("christmas")).toBe(true);
   });
 });

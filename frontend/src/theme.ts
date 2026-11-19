@@ -33,7 +33,7 @@ export const DEFAULT_THEME: ThemeName = DATA.themes.find((th) => th.default)?.id
 /** A theme the user installed (Room Tiles' feed "themes" - user_themes.py
  *  for_dashboard): described like the bundled ones, its pictures at `base`. */
 export interface InstalledTheme {
-  id: string; // "my-<its folder>"
+  id: string; // "user:<its folder>"
   name: Record<string, string>;
   order: number;
   colors: Record<string, string>;
@@ -42,7 +42,7 @@ export interface InstalledTheme {
   base: string;
 }
 /** An installed theme's id: never a bundled theme's (user_themes.py). */
-export const isInstalledId = (id: string): boolean => id.startsWith("my-");
+export const isInstalledId = (id: string): boolean => id.startsWith("user:");
 const INSTALLED_BASE: Record<ThemeName, string> = {};
 let installed: InstalledTheme[] = [];
 

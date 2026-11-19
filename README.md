@@ -75,6 +75,8 @@ Everything is in the settings menu (the gear):
 - **Panels** - your ESP32 panels and their updates (see below).
 - **Send feedback** - report a bug, suggest an idea or ask a question (see
   below).
+- **Theme** - pick one, or add your own: put a theme's folder in
+  `/config/room_tiles_themes/` ([how themes work](docs/THEMES.md)).
 
 Editing is best on a tablet or computer; each editor's **Help** (?) shows how.
 

@@ -24,7 +24,7 @@ from . import fmt
 # an installed theme's id everywhere Room Tiles keeps one (panels'
 # settings, the dashboard, packs): its folder's id after this - never the
 # same as a theme that comes with Room Tiles (none starts with it)
-PREFIX = "my-"
+PREFIX = "user:"
 # MIRRORED: frontend/theme-data.mjs BUTTONS (the buttons a theme may draw) - a change here must be made there too.
 BUTTONS = ("bar_grid", "bar_area_lights", "bar_map", "bar_help", "tile_map", "run_gift", "icon_settings")
 BUILDER = 1  # (bump when the build's output changes: every installed theme builds again)
@@ -220,7 +220,7 @@ def build(found: Found, base: dict, cache: Path) -> Built:
                     off.off_picture(img, panel.OFF_BRIGHTNESS.get(icon, 0.8), off.colour_of(colours, icon)).save(ui / f"{icon}_off.png")
         src = panel.Source(found.id, folder, colours, fmt.clock(folder, colours))
         images = panel.panel_images(src)
-        ident = f"{PREFIX}{hashlib.sha1(found.id.encode()).hexdigest()[:6]}"
+        ident = f"user-{hashlib.sha1(found.id.encode()).hexdigest()[:6]}"
         wall, _ = panel.build_theme(src, ident, images)
         rnd, _ = panel.build_theme(src, f"{ident}-round", images, round_panel=True)
         if len(wall) > panel.THEME_MAX:

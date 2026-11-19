@@ -580,18 +580,25 @@ the test in the same change.
   `frontend/theme-data.mjs`), the panel packs carry each theme's name
   ("theme.<id>" in the wording) and the integration reads
   `panel_packs/themes.json` (written with the packs).
-- **Bundled and installed themes, one list** (installing: TODO.md section 6).
+- **Bundled and installed themes, one list** (docs/THEMES.md "Installed themes").
   Bundled themes ship in the release zip **prebuilt** (their panel packs,
   their web pictures, `themes.json`) - built by us, nothing to do on the HA
   box. Installed themes (`/config/room_tiles_themes/<id>/`, a folder or its
-  zip) are **built by the integration** with the same pipeline, once, and
-  cached (by their files' fingerprint); the default art (`custom_components/room_tiles/themes/masters`,
+  zip) are **built by the integration** with the same pipeline
+  (`custom_components/room_tiles/themes/`: fmt / panel / web, run in the
+  executor, one theme at a time), once, and cached in HA's cache folder
+  (`/config/.cache/room_tiles/themes/`, not in backups) by their files'
+  fingerprint and the packager's (default art, panel format, quantizer).
+  Looked for at setup, when a dashboard's settings menu opens
+  (`room_tiles/themes_check`) and every 5 minutes - no folder, nothing
+  runs. A changed theme stays in use as it was until its new build is
+  ready; the default art (`custom_components/room_tiles/themes/masters`,
   shipped in the zip for this) fills their gaps, the default theme their
   colours. Rules:
   - **Ids never clash:** an installed theme is `user:<id>` everywhere it's
-    stored or sent (panel / browser settings, pack names `theme-user-<id>`,
-    its web pictures under their own address); a bundled one is its plain
-    id. A user's `christmas` is a second theme, and a Room Tiles update
+    stored or sent (panel / browser settings, pack names `theme-user:<id>`,
+    its web pictures under `/room_tiles_themes/<build>/web/` - a new
+    address with every build); a bundled one is its plain id. A user's `christmas` is a second theme, and a Room Tiles update
     adding a bundled theme never takes an installed one's place.
   - **The default is always bundled** (`default` in an installed
     theme.json is ignored): a missing or broken installed theme falls back

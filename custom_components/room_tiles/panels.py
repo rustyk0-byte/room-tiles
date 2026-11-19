@@ -67,7 +67,7 @@ def _themes(folder: Path = PACK_DIR) -> dict[str, dict[str, str]]:
 _THEME_INFO = _themes()
 THEMES = tuple(_THEME_INFO)  # the bundled ones; the first is the default (panels mark it "(Default)")
 # themes the user installed, ready to use (user_themes.py keeps this current):
-# key ("my-<id>") -> its names per language
+# key ("user:<id>") -> its names per language
 _INSTALLED: dict[str, dict[str, str]] = {}
 
 

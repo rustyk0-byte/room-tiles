@@ -46,17 +46,17 @@ async def test_an_installed_theme_reaches_panels_and_dashboards(hass: HomeAssist
     root = Path(hass.config.path("room_tiles_themes"))
     _candy(root)
     await store.user_themes.async_check()
-    assert "my-candy" in panels.all_themes() and panels.all_themes()[0] == "dark"
-    assert panels.theme_name("my-candy", "de") == "Bonbon"
+    assert "user:candy" in panels.all_themes() and panels.all_themes()[0] == "dark"
+    assert panels.theme_name("user:candy", "de") == "Bonbon"
     # the panels: its packs (and the round panel's), its colours over the default's
     packs = store.all_packs()
-    assert {"theme-my-candy", "theme-my-candy-round"} <= set(packs)
-    theme = panels.pack_for(packs, "theme", {"theme": "my-candy"})
-    assert theme is packs["theme-my-candy"] and theme.id.startswith("my-")
+    assert {"theme-user:candy", "theme-user:candy-round"} <= set(packs)
+    theme = panels.pack_for(packs, "theme", {"theme": "user:candy"})
+    assert theme is packs["theme-user:candy"] and theme.id.startswith("user-")
     # the dashboard: its description and its built pictures
     listed = store.payload()["themes"]
     (candy,) = listed["themes"]
-    assert candy["id"] == "my-candy" and candy["colors"]["accent"] == "#E8508A"
+    assert candy["id"] == "user:candy" and candy["colors"]["accent"] == "#E8508A"
     assert candy["colors"]["page"]  # (the default theme's, where it sets none)
     assert candy["buttonArt"] == ["bar_map"] and listed["problems"] == []
     web = Path(hass.config.cache_path(DOMAIN, "themes")) / candy["base"].split("/")[2] / "web"
@@ -64,9 +64,9 @@ async def test_an_installed_theme_reaches_panels_and_dashboards(hass: HomeAssist
         assert img.size == (60, 60)
     assert (web / "appliances").is_dir()
     # unchanged: never built again
-    before = store.user_themes.themes["my-candy"].version
+    before = store.user_themes.themes["user:candy"].version
     await store.user_themes.async_check()
-    assert store.user_themes.themes["my-candy"].version == before
+    assert store.user_themes.themes["user:candy"].version == before
 
 
 async def test_a_broken_theme_is_reported_and_left_out(hass: HomeAssistant, entry) -> None:
@@ -75,20 +75,20 @@ async def test_a_broken_theme_is_reported_and_left_out(hass: HomeAssistant, entr
     folder = _candy(root)
     Image.new("RGBA", (64, 64)).save(folder / "ui" / "icon_key.png")  # (wrong size)
     await store.user_themes.async_check()
-    assert "my-candy" not in panels.all_themes()
+    assert "user:candy" not in panels.all_themes()
     issue = ir.async_get(hass).async_get_issue(DOMAIN, "theme_problem_candy")
     assert issue is not None and "icon_key.png: 64x64" in issue.translation_placeholders["problems"]
     assert store.payload()["themes"]["problems"][0]["theme"] == "candy"
     # fixed: offered, the notice gone
     (folder / "ui" / "icon_key.png").unlink()
     await store.user_themes.async_check()
-    assert "my-candy" in panels.all_themes()
+    assert "user:candy" in panels.all_themes()
     assert ir.async_get(hass).async_get_issue(DOMAIN, "theme_problem_candy") is None
     # removed: gone again (and a panel on it falls back to the default)
     shutil.rmtree(folder)
     await store.user_themes.async_check()
-    assert "my-candy" not in panels.all_themes()
-    assert panels.pack_for(store.all_packs(), "theme", {"theme": "my-candy"}).id.startswith("dark-")
+    assert "user:candy" not in panels.all_themes()
+    assert panels.pack_for(store.all_packs(), "theme", {"theme": "user:candy"}).id.startswith("dark-")
 
 
 def test_a_theme_zip_unpacks_safely(tmp_path):

@@ -4,9 +4,10 @@ A theme changes how Room Tiles looks on the dashboard and on the touch
 panels: its colors, and any pictures it wants to draw its own way. This page
 is the theme format - **format 1**.
 
-> **Status:** the themes that come with Room Tiles (Dark, Light, Christmas)
-> are made this way. Installing a theme of your own is planned for a later
-> release; this format is what it will read.
+The themes that come with Room Tiles (Dark, Light, Christmas) are made this
+way, and a theme of your own is installed by putting its folder in Home
+Assistant (see [Installed themes](#installed-themes)). To start from one of
+ours, copy its folder from [`assets/themes/`](../assets/themes/).
 
 ## A theme is a folder
 
@@ -203,19 +204,27 @@ screens.
 
 ## Installed themes
 
-Themes that come with Room Tiles and themes you install sit side by side:
+**To install a theme,** put its folder - or a zip of it - in
+`/config/room_tiles_themes/` (make the folder the first time; the File
+editor or Samba add-on, for example, can do it). A zip may have
+`theme.json` at its top or inside one folder.
 
-- **Where:** a theme's folder (or a zip of it) in
-  `/config/room_tiles_themes/`. Room Tiles finds it on its own; panels and
-  dashboards can pick it like any other.
+- **No restart:** Room Tiles looks there every few minutes, and whenever
+  the dashboard's settings menu opens. The first time, it builds the
+  theme's pictures for the panels and the dashboard - a few seconds, up to
+  a minute on a small Home Assistant computer - then the theme shows up in
+  the theme lists on panels and dashboards, like any other. Change a file
+  and it's built again the same way; take the folder away and the theme
+  goes.
+- **Something wrong?** A theme Room Tiles can't use is listed in Home
+  Assistant's Repairs, with what to fix. Everything using it shows the
+  default theme until it's fixed.
 - **Names never clash:** your `christmas` and the Christmas that comes
   with Room Tiles are two themes - now, and after any Room Tiles update.
   Lists show the themes that come with Room Tiles first, then yours.
-- **The default stays a built-in theme.** If an installed theme is removed
-  or can't be read, everything using it goes back to the default, and Room
-  Tiles says why.
-- **A theme with a newer format** than this Room Tiles reads is skipped
-  until Room Tiles is updated.
+- **The default stays a built-in theme.**
+- **A theme with a newer format** than this Room Tiles reads waits in
+  Repairs until Room Tiles is updated.
 
 ## Versions
 

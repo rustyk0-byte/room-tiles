@@ -3,9 +3,8 @@
 Open work in priority order. Decisions and rules live in DESIGN.md / UI.md;
 this is only the list. Remove an item when it's built.
 
-Public since 2026-11-18 (v0.1.2 out). Next: the 0.1.3 release, then
-**Your own themes** (section 6 - the landing page says "coming soon"), then
-**Reports: what's left** (section 2). Section 1's rest waits on beta testers
+Public since 2026-11-18 (v0.1.3 out). Next: the release with installed
+themes, then **Reports: what's left** (section 2). Section 1's rest waits on beta testers
 or the first users.
 
 ## 1. Installing and updating panels
@@ -357,22 +356,10 @@ A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
 
 ## 6. After the first release
 
-- **Your own themes** (docs/THEMES.md, format 1 - written 2026-11-17; the
-  built-in themes are converted and build byte-identical packs from it).
-  Left: the integration finds themes in `/config/room_tiles_themes/<id>/`
-  (a folder or its zip), checks them (format, sizes, JSON, the pack limit -
-  the checker is written: assets/theme_format.py read() / check_pictures(),
-  tested in tests/test_theme_format.py, run by every pack build),
-  builds their panel packs and web sets itself - one packager (DESIGN.md
-  "One packager, two outputs"; the dashboard loads only its output, never a
-  theme's raw files), assets/build_panel.py + build_web.py's pipeline moved
-  into the integration, the default art filling gaps, cached; libimagequant
-  is in this container's Pillow - check HA's), sources at 2x / 4x scaled
-  down, an embedded colour profile converted to sRGB, `"off": "gray"`
-  generated there; the dashboard gets the themes from the integration at
-  run time (today: baked in at build); the panels already take theme names
-  from the payload (theme_names, 2026-11-17). Later: "Add theme from link" (a GitHub
-  release zip).
+- **Themes from a link:** "Add theme from link" (a GitHub release zip) -
+  installed themes themselves are built (docs/THEMES.md "Installed
+  themes"). Also: the dashboard's theme list could say when one is getting
+  ready or can't be used (today: Repairs).
 
 - **Wi-Fi set up on the panel** (no phone): shown while it has no saved
   network - a list of networks (strongest first, a lock on secured ones),
