@@ -1,9 +1,9 @@
 // Wi-Fi set up on the panel (wifi_setup.h): the screens, and trying a
 // network the way ESPHome's own Improv does - tried first, saved only once
 // the panel really is on it; if it isn't within the time, the network it had
-// comes back (Change Wi-Fi), or the hotspot stays (a new panel). A mesh
-// router that turns the first try away is retried meanwhile, so "check the
-// password" only comes after a few tries' time.
+// comes back (Change Wi-Fi), or the hotspot stays (a new panel). The router
+// turning the password away twice ends it at once (a mesh router may turn
+// the first try away); one that never answers: the whole time.
 
 #include "wifi_setup.h"
 
@@ -11,6 +11,9 @@
 #include <cstring>
 
 #ifdef USE_WIFI
+#include <atomic>
+
+#include <esp_event.h>
 #include <esp_wifi.h>
 #endif
 
@@ -32,6 +35,35 @@ static constexpr uint32_t TRY_NEW_MS = 45000;      // (a new panel: a few tries'
 static constexpr uint32_t TRY_SWITCH_MS = 90000;   // (leaving a network first takes longer - Improv's)
 static constexpr uint32_t DONE_SHOWN_MS = 2500;
 static constexpr uint32_t UNTOUCHED_MS = 3 * 60 * 1000;  // (Change Wi-Fi left open: it closes)
+static constexpr uint8_t REFUSED_ENOUGH = 2;  // (the router turned the password away: twice - not a mesh's first no)
+
+#ifdef USE_WIFI
+// the router's "no" to the network being tried (the Wi-Fi event task): its
+// name, and how often - read in loop(). Listened to only while a network is
+// tried (never at start-up: nothing else changes then)
+static char s_want[33];
+static esp_event_handler_instance_t s_listening = nullptr;
+static std::atomic<bool> s_watching{false};
+static std::atomic<uint8_t> s_refused{0};
+
+static void on_wifi_event(void *, esp_event_base_t base, int32_t id, void *data) {
+  if (base != WIFI_EVENT || id != WIFI_EVENT_STA_DISCONNECTED || !s_watching.load())
+    return;
+  const auto *it = static_cast<const wifi_event_sta_disconnected_t *>(data);
+  switch (it->reason) {
+    case WIFI_REASON_AUTH_FAIL:
+    case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:
+    case WIFI_REASON_HANDSHAKE_TIMEOUT:
+    case WIFI_REASON_MIC_FAILURE:
+    case WIFI_REASON_802_1X_AUTH_FAILED:
+      break;
+    default:
+      return;  // (not found, out of range... - the whole time, as before)
+  }
+  if (it->ssid_len == strlen(s_want) && memcmp(it->ssid, s_want, it->ssid_len) == 0)
+    s_refused.fetch_add(1);
+}
+#endif
 
 static const char *const BKSP = "\U000F0B5C";   // mdi:backspace-outline (rt_font_keys)
 static const char *const SHIFT = "\U000F0636";  // mdi:apple-keyboard-shift
@@ -662,6 +694,15 @@ void WifiSetup::connect_() {
   sta.set_ssid(this->ssid_);
   sta.set_password(this->typed_);
   const bool switching = w->is_connected();  // (sampled first: the old link drops after this)
+  strncpy(s_want, this->ssid_.c_str(), sizeof(s_want) - 1);
+  s_want[sizeof(s_want) - 1] = 0;
+  s_refused = 0;
+  s_watching = true;
+  if (s_listening == nullptr &&
+      esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &on_wifi_event, nullptr, &s_listening) != ESP_OK) {
+    s_listening = nullptr;
+    ESP_LOGW(TAG, "No Wi-Fi events: a wrong password takes the whole try");
+  }
   w->set_sta(sta);
   w->start_connecting(sta);
   this->try_ms_ = millis();
@@ -675,6 +716,11 @@ void WifiSetup::connect_() {
 // hotspot, a new panel) and why
 void WifiSetup::finish_(bool ok) {
 #ifdef USE_WIFI
+  s_watching = false;
+  if (s_listening != nullptr) {
+    esp_event_handler_instance_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, s_listening);
+    s_listening = nullptr;
+  }
   auto *w = wifi::global_wifi_component;
   if (w == nullptr)
     return;
@@ -694,6 +740,7 @@ void WifiSetup::finish_(bool ok) {
   }
   ESP_LOGW(TAG, "\"%s\" didn't connect%s", this->ssid_.c_str(), this->had_old_ ? ": back to the network it had" : "");
 #endif
+  this->typed_.clear();  // (typed again from scratch: hidden, it can't be fixed in place)
 }
 
 void WifiSetup::loop() {
@@ -714,7 +761,9 @@ void WifiSetup::loop() {
       this->finish_(true);
       this->done_ms_ = now;
       this->show_(View::DONE);
-    } else if (now - this->try_ms_ > this->try_for_ms_) {
+    } else if (s_refused.load() >= REFUSED_ENOUGH || now - this->try_ms_ > this->try_for_ms_) {
+      if (s_refused.load() >= REFUSED_ENOUGH)
+        ESP_LOGW(TAG, "\"%s\" turned the password away", this->ssid_.c_str());
       this->finish_(false);
       this->show_(this->locked_ ? View::PASSWORD : View::LIST);
     }

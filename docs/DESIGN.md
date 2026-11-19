@@ -861,8 +861,10 @@ show and use what the integration holds; nothing about a house is compiled in.
   it's on is first with a check mark, and **it stays until the new one
   works** - tried the way ESPHome's Improv does (set, not saved; saved only
   once the panel is on THAT network; 45 s for a new panel, 90 s when leaving
-  one - a mesh router's first refusal is retried meanwhile), else the old
-  network again ("still on ..."). The screen is never closed from outside
+  one - a mesh router's first refusal is retried meanwhile; the router
+  turning the password away twice ends it at once), else the old network
+  again ("still on ...") and the password field empty (typed again: hidden,
+  it can't be fixed in place). The screen is never closed from outside
   while it tries. Scans: on a network, the panel's own (ESP-IDF, every
   channel, staying connected - ESPHome's roaming check skips the scan on a
   good signal); without one, ESPHome's; never while ESPHome is connecting
