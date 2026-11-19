@@ -80,9 +80,10 @@ async def to_code(config):
     request_http_client()  # ESP-IDF's HTTP client (the payload download)
     from esphome.core import CORE
 
-    if "wifi" in CORE.config:
+    if "wifi" in CORE.config and config[CONF_LAYOUT] != "strip":
         # Wi-Fi set up on the panel (wifi_setup.cpp): every scan's networks,
-        # not only the saved one's
+        # not only the saved one's (the round panel: the phone way only -
+        # nothing kept)
         from esphome.components.wifi import request_wifi_scan_results, request_wifi_scan_results_listener
 
         request_wifi_scan_results_listener()

@@ -79,6 +79,8 @@ class WifiSetup
   std::vector<Network> networks_;
   bool scanning_{false};
   uint32_t scan_ms_{0};
+  uint8_t rescans_{0};        // (looked again by itself: while nothing found)
+  bool redraw_list_{false};  // (a scan changed the list: drawn again in loop())
   // the entry: the network picked, what's typed, shown or hidden
   std::string ssid_, typed_, error_text_;
   bool locked_{true};

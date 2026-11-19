@@ -865,12 +865,15 @@ show and use what the integration holds; nothing about a house is compiled in.
   turning the password away twice ends it at once), else the old network
   again ("still on ...") and the password field empty (typed again: hidden,
   it can't be fixed in place). The screen is never closed from outside
-  while it tries. Scans: on a network, the panel's own (ESP-IDF, every
+  while it tries. Scans: when it opens and on "Look again" (by itself only
+  while nothing is found, 3 times - each scan takes the radio off its
+  channel); a scan that changes the rows redraws the list, never under a
+  finger or mid-scroll. On a network, the panel's own (ESP-IDF, every
   channel, staying connected - ESPHome's roaming check skips the scan on a
   good signal); without one, ESPHome's; never while ESPHome is connecting
   (it would interrupt it). The keyboard is LVGL's button grid with our
   layers (letters, numbers, symbols; backspace / shift from MDI in
-  rt_font_keys), keys ~90 x 62 px. Open, the panel never goes idle; Change
+  rt_font_keys), keys ~93 x 83 px. Open, the panel never goes idle; Change
   Wi-Fi left untouched closes after 3 minutes. Its words are built into the
   firmware (boot_words.h): a new panel has no pack yet.
 - **Boot screen:** the Room Tiles icon on black (built into the firmware,

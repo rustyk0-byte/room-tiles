@@ -29,7 +29,8 @@ static const char *const TAG = "room_tiles.wifi";
 
 static constexpr int W = 1024, H = 600, PAD = 32;
 static constexpr int ROW_H = 64;  // (a network: easy to hit on the 7")
-static constexpr uint32_t RESCAN_MS = 20000;
+static constexpr uint32_t RESCAN_MS = 20000;  // (nothing found yet: looked again by itself)
+static constexpr uint8_t RESCANS = 3;
 static constexpr uint32_t SCAN_GIVE_UP_MS = 15000;
 static constexpr uint32_t TRY_NEW_MS = 45000;      // (a new panel: a few tries' time)
 static constexpr uint32_t TRY_SWITCH_MS = 90000;   // (leaving a network first takes longer - Improv's)
@@ -64,6 +65,9 @@ static void on_wifi_event(void *, esp_event_base_t base, int32_t id, void *data)
     s_refused.fetch_add(1);
 }
 #endif
+
+// a network's signal as 0..3 bars (its row's glyph)
+static int bars(int rssi) { return rssi >= -55 ? 3 : rssi >= -65 ? 2 : rssi >= -75 ? 1 : 0; }
 
 static const char *const BKSP = "\U000F0B5C";   // mdi:backspace-outline (rt_font_keys)
 static const char *const SHIFT = "\U000F0636";  // mdi:apple-keyboard-shift
@@ -125,6 +129,8 @@ void WifiSetup::open(bool changing) {
   lv_obj_add_event_cb(
       this->root_, [](lv_event_t *e) { static_cast<WifiSetup *>(lv_event_get_user_data(e))->touched_ms_ = millis(); },
       LV_EVENT_PRESSED, this);
+  this->rescans_ = 0;
+  this->redraw_list_ = false;
   ESP_LOGI(TAG, "Wi-Fi setup open (%s)", changing ? "change" : "new panel");
   this->show_(View::LIST);
   this->scan_();
@@ -207,9 +213,16 @@ void WifiSetup::on_wifi_scan_results(const wifi::wifi_scan_vector_t<wifi::WiFiSc
   this->scanning_ = false;
   if (found.empty() && !this->networks_.empty())
     return;  // (an empty scan - a roaming check that saw nothing: keep the list)
+  // the same rows as shown (names, order, locks, bars): nothing to redraw
+  bool same = found.size() == this->networks_.size();
+  for (size_t i = 0; same && i < found.size(); i++)
+    same = found[i].ssid == this->networks_[i].ssid && found[i].locked == this->networks_[i].locked &&
+           bars(found[i].rssi) == bars(this->networks_[i].rssi);
+  if (same)
+    return;
   this->networks_ = std::move(found);
   if (this->view_ == View::LIST)
-    this->build_list_();
+    this->redraw_list_ = true;  // (in loop(): never under a finger or mid-scroll)
 }
 #endif
 
@@ -290,6 +303,7 @@ void WifiSetup::build_list_() {
   const uint32_t text = this->rt_->color("text", 0xFFFFFF), dim = this->rt_->color("textSecondary", 0x9E9E9E);
   // (kept where it was when the list is drawn again after a scan)
   const int keep_y = this->list_ != nullptr ? (int) lv_obj_get_scroll_y(this->list_) : 0;
+  this->redraw_list_ = false;
   this->page_(this->t_("panel.wifi_pick", "Pick your Wi-Fi network"), this->changing_);
   this->list_ = lv_obj_create(this->root_);
   lv_obj_remove_style_all(this->list_);
@@ -341,8 +355,7 @@ void WifiSetup::build_list_() {
       order.push_back(i);
   for (size_t i : order) {
     const Network &n = this->networks_[i];
-    const int bars = n.rssi >= -55 ? 3 : n.rssi >= -65 ? 2 : n.rssi >= -75 ? 1 : 0;
-    lv_obj_t *r = row(n.ssid, n.locked ? LOCKED[bars] : OPEN[bars]);
+    lv_obj_t *r = row(n.ssid, n.locked ? LOCKED[bars(n.rssi)] : OPEN[bars(n.rssi)]);
     if (!current.empty() && n.ssid == current) {
       lv_obj_t *on = lv_label_create(r);
       lv_label_set_text(on, "\U000F012C");  // mdi:check (rt_icon_menu)
@@ -390,6 +403,16 @@ void WifiSetup::build_list_() {
         lv_async_call([](void *p) { static_cast<WifiSetup *>(p)->show_(View::NAME); }, self);
       },
       LV_EVENT_CLICKED, this);
+  if (!this->error_text_.empty()) {
+    // (an open network that didn't connect: why, above the list)
+    lv_obj_t *why = lv_label_create(this->list_);
+    lv_label_set_text(why, this->error_text_.c_str());
+    lv_label_set_long_mode(why, LV_LABEL_LONG_MODE_WRAP);
+    lv_obj_set_width(why, W - 2 * PAD - 16);
+    lv_obj_set_style_text_font(why, f.name_s, 0);
+    lv_obj_set_style_text_color(why, lv_color_hex(this->rt_->color("heatStrong", 0xF44336)), 0);
+    lv_obj_move_to_index(why, 0);
+  }
   if (this->networks_.empty()) {
     this->status_ = lv_label_create(this->list_);
     lv_label_set_text(this->status_, (this->scanning_ ? this->t_("panel.wifi_looking", "Looking for networks…")
@@ -407,7 +430,13 @@ void WifiSetup::build_list_() {
   lv_obj_t *al = lv_obj_get_child(again, 0);
   lv_label_set_text(al, this->t_("panel.wifi_again", "Look again").c_str());
   lv_obj_add_event_cb(
-      again, [](lv_event_t *e) { static_cast<WifiSetup *>(lv_event_get_user_data(e))->scan_(); }, LV_EVENT_CLICKED, this);
+      again,
+      [](lv_event_t *e) {
+        auto *self = static_cast<WifiSetup *>(lv_event_get_user_data(e));
+        self->rescans_ = 0;
+        self->scan_();
+      },
+      LV_EVENT_CLICKED, this);
   if (this->changing_) {
     lv_obj_t *phone = this->button_(this->root_, 420, 56, this->t_("panel.wifi_phone_instead", "Set up with your phone instead"), false);
     lv_obj_align(phone, LV_ALIGN_BOTTOM_LEFT, PAD, -24);
@@ -519,7 +548,7 @@ void WifiSetup::build_entry_(bool name) {
             self);
       },
       LV_EVENT_CLICKED, this);
-  // the keyboard: 4 rows, a 7"'s keys ~90 x 62 px
+  // the keyboard: 4 rows, keys ~93 x 83 px
   this->keys_ = lv_buttonmatrix_create(this->root_);
   lv_obj_set_size(this->keys_, W - 2 * 12, 600 - 232 - 12);
   lv_obj_set_pos(this->keys_, 12, 232);
@@ -554,6 +583,8 @@ void WifiSetup::paint_entry_() {
     lv_buttonmatrix_set_map(this->keys_, (const char **) MAPS[this->shift_]);
     // the space bar wide, the layer / shift / backspace keys a little wider
     const char *const *map = MAPS[this->shift_];
+    // (set_map keeps the keys' states when their number stays: cleared first)
+    lv_buttonmatrix_clear_button_ctrl_all(this->keys_, LV_BUTTONMATRIX_CTRL_CHECKED);
     uint32_t id = 0;
     for (int i = 0; map[i][0] != '\0'; i++) {
       if (strcmp(map[i], "\n") == 0)
@@ -627,6 +658,8 @@ void WifiSetup::build_connecting_() {
         lv_async_call(
             [](void *p) {
               auto *s = static_cast<WifiSetup *>(p);
+              if (s->root_ == nullptr || s->view_ != View::CONNECTING)
+                return;  // (the try ended meanwhile - saved, or already undone)
               s->finish_(false);
               s->error_text_.clear();  // (stopped on purpose: no "check the password")
               s->show_(s->locked_ ? View::PASSWORD : View::LIST);
@@ -749,10 +782,17 @@ void WifiSetup::loop() {
   const uint32_t now = millis();
   // a finger on the screen (anywhere in it - its buttons and keys too):
   // touched; then never idle under it (no clock, no dimming, the screen on)
+  bool pressed = false;
   for (lv_indev_t *in = lv_indev_get_next(nullptr); in != nullptr; in = lv_indev_get_next(in))
     if (lv_indev_get_state(in) == LV_INDEV_STATE_PRESSED)
-      this->touched_ms_ = now;
+      pressed = true;
+  if (pressed)
+    this->touched_ms_ = now;
   lv_display_trigger_activity(nullptr);
+  // on top of whatever else is on the top layer (the boot screen's
+  // stopwatch is made there after the screen opens)
+  if (lv_obj_get_index(this->root_) != (int32_t) lv_obj_get_child_count(lv_obj_get_parent(this->root_)) - 1)
+    lv_obj_move_foreground(this->root_);
 #ifdef USE_WIFI
   auto *w = wifi::global_wifi_component;
   if (this->view_ == View::CONNECTING && w != nullptr) {
@@ -781,8 +821,17 @@ void WifiSetup::loop() {
       if (this->status_ != nullptr && this->networks_.empty())
         lv_label_set_text(this->status_, this->t_("panel.wifi_none", "No networks found").c_str());
     }
-    if (!this->scanning_ && now - this->scan_ms_ > RESCAN_MS)
+    // looked again by itself only while nothing was found (a few times):
+    // each scan takes the radio off its channel - a phone on the hotspot,
+    // Home Assistant's link (else: "Look again")
+    if (!this->scanning_ && this->networks_.empty() && this->rescans_ < RESCANS && now - this->scan_ms_ > RESCAN_MS) {
+      this->rescans_++;
       this->scan_();
+    }
+    if (this->redraw_list_ && !pressed && (this->list_ == nullptr || !lv_obj_is_scrolling(this->list_))) {
+      this->redraw_list_ = false;
+      this->build_list_();
+    }
   }
   if (this->changing_ && now - this->touched_ms_ > UNTOUCHED_MS && this->view_ != View::CONNECTING)
     this->close();  // (Change Wi-Fi left open: nothing changed)

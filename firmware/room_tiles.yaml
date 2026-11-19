@@ -267,12 +267,12 @@ font:
     # + the map's back arrow and zoom in / out
     # + the vacuum queue's play / pause / skip / stop
     # + the top bar's area lights (on / off) and help
-    # + Wi-Fi setup: the networks' signal (open / locked), look again, back,
-    # show / hide the password
+    # + Wi-Fi setup: the networks' signal (open / locked), show / hide the
+    # password
     glyphs: ["\U000F0238", "\U000F0717", "\U000F0821", "\U000F0156", "\U000F004D", "\U000F0415", "\U000F0374",
              "\U000F040A", "\U000F03E4", "\U000F04AD", "\U000F04DB", "\U000F1253", "\U000F1254", "\U000F0625",
              "\U000F091F", "\U000F0921", "\U000F0922", "\U000F0924", "\U000F0925", "\U000F0927", "\U000F0928",
-             "\U000F092A", "\U000F0450", "\U000F0141", "\U000F0208", "\U000F0209"]
+             "\U000F092A", "\U000F0208", "\U000F0209"]
   - file:
       type: web
       url: "https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/fonts/materialdesignicons-webfont.ttf"
