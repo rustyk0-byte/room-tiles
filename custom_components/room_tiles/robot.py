@@ -121,7 +121,7 @@ def tile_words_of(v: RobotView) -> str:
 #   room again; else the next room - but only redirecting a vacuum that's
 #   already on a room when a PERSON pressed it (`manual`): an add that
 #   starts the queue must not redirect a clean that hasn't reported
-#   "cleaning" yet (the two-NFC-tags race, 2026-09-03).
+#   "cleaning" yet (two adds a moment apart).
 # - adding a room never resumes a paused vacuum; a room already being
 #   cleaned isn't queued again; one already queued moves to the end.
 # - an alert (attention / error) while a room is in progress pauses the
