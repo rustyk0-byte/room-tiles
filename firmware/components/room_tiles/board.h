@@ -281,6 +281,7 @@ class Board {
   lv_obj_t *idle_row_{nullptr};  // the settings menu's "When idle" row (its list opens over it)
   void confirm_restart_();
   void confirm_wifi_change_();
+  void confirm_strip_wifi_();  // (the round panel's: a page, board_strip.cpp)
   void open_picker_(int slot);
   void close_dialog_();
   lv_obj_t *dialog_(int w, int h, const std::string &title);

@@ -274,11 +274,11 @@ A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
   after 30 s). Drops the map, the vacuum view and tile editing (edit on the
   dashboard).
 - **Left:**
-  - The firmware builds without the map / vacuum code (one switch; today
-    it's built in and switched off at run time).
-  - Change Wi-Fi in its settings page.
   - Check the dashboard for a round panel: 5x2 only, no map data, idle
     settings on the dashboard, Help text to match.
+- **Not planned:** a firmware build without the map code - it would save
+  ~74 KB of the round image's 2.0 MB (its slot 51% full) and no RAM (the
+  map is off at run time); revisit only if the image nears its slot.
 
 ## 4. Panels - smaller items
 

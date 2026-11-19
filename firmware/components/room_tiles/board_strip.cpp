@@ -539,6 +539,29 @@ void Board::open_strip_settings_() {
       y += 60;
     }
   }
+  // Change Wi-Fi (the wall panels' settings have it too): asked first
+  // MIRRORED: board_edit.cpp open_settings_ / confirm_wifi_change_ - a change here must be made there too.
+  {
+    y += 12;
+    lv_obj_t *b = lv_obj_create(list);
+    lv_obj_remove_style_all(b);
+    lv_obj_set_size(b, 300, 52);
+    lv_obj_set_pos(b, 0, y);
+    lv_obj_set_style_radius(b, 10, 0);
+    lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(b, lv_color_hex(this->color_("button", 0x333333)), 0);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_SCROLL_CHAIN_VER);
+    lv_obj_add_event_cb(
+        b, [](lv_event_t *e) { lv_async_call([](void *p) { static_cast<Board *>(p)->confirm_strip_wifi_(); }, lv_event_get_user_data(e)); },
+        LV_EVENT_CLICKED, this);
+    lv_obj_t *l = lv_label_create(b);
+    lv_label_set_text(l, this->rt_->t("panel.wifi_change").c_str());
+    lv_obj_set_style_text_font(l, this->fonts_.name, 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(text), 0);
+    lv_obj_center(l);
+    y += 60;
+  }
   // done: the X at the bottom, where the color picker has its own
   // (MIRRORED: picker.cpp build_ round - a change here must be made there
   // too); the list ends above it, as the picker's column does
@@ -565,6 +588,46 @@ void Board::open_strip_settings_() {
     lv_obj_scroll_to_y(list, this->strip_settings_y_, LV_ANIM_OFF);
   }
   this->strip_settings_y_ = -1;
+}
+
+// Change Wi-Fi, asked first (the panel goes offline until it's set up
+// again): a round page - the question, Change Wi-Fi, Cancel
+// MIRRORED: board_edit.cpp confirm_wifi_change_ - a change here must be made there too.
+void Board::confirm_strip_wifi_() {
+  lv_obj_t *col = this->strip_page_(this->rt_->t("panel.wifi_change"));
+  const uint32_t text = this->color_("text", 0xFFFFFF);
+  lv_obj_t *ask = lv_label_create(col);
+  lv_label_set_text(ask, this->rt_->t("panel.wifi_change_ask").c_str());
+  lv_label_set_long_mode(ask, LV_LABEL_LONG_MODE_WRAP);
+  lv_obj_set_width(ask, 300);
+  lv_obj_set_style_text_align(ask, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_text_font(ask, this->fonts_.name_s, 0);
+  lv_obj_set_style_text_color(ask, lv_color_hex(text), 0);
+  lv_obj_set_pos(ask, 0, 0);
+  lv_obj_update_layout(ask);
+  int y = lv_obj_get_height(ask) + 20;
+  auto choice = [&](const char *key, bool primary, lv_event_cb_t cb) {
+    lv_obj_t *b = lv_obj_create(col);
+    lv_obj_remove_style_all(b);
+    lv_obj_set_size(b, 300, 52);
+    lv_obj_set_pos(b, 0, y);
+    lv_obj_set_style_radius(b, 10, 0);
+    lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(b, lv_color_hex(primary ? this->color_("accent", 0x4B9EF3) : this->color_("button", 0x333333)), 0);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, this);
+    lv_obj_t *l = lv_label_create(b);
+    lv_label_set_text(l, this->rt_->t(key).c_str());
+    lv_obj_set_style_text_font(l, this->fonts_.name, 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(primary ? this->color_("onAccent", 0xFFFFFF) : text), 0);
+    lv_obj_center(l);
+    y += 60;
+  };
+  choice("panel.wifi_change", true, [](lv_event_t *e) { static_cast<Board *>(lv_event_get_user_data(e))->rt_->forget_wifi(); });
+  choice("common.cancel", false, [](lv_event_t *e) {
+    // (back to the settings, where it was asked from)
+    lv_async_call([](void *p) { static_cast<Board *>(p)->open_strip_settings_(); }, lv_event_get_user_data(e));
+  });
 }
 
 }  // namespace esphome::room_tiles
