@@ -4,6 +4,7 @@ room_tiles - the last KEEP of each panel kept."""
 
 from __future__ import annotations
 
+import re
 import struct
 import time
 import zlib
@@ -56,7 +57,9 @@ def save(media_dir: str, node: str, data: bytes, width: int, height: int, now: f
     safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in node) or "panel"
     path = folder / f"{safe}-{stamp}.png"
     path.write_bytes(rgb565_to_png(data, width, height))
-    mine = sorted(folder.glob(f"{safe}-*.png"))
+    # (this panel's only: "kitchen-..." isn't "kitchen-2-...")
+    own = re.compile(re.escape(safe) + r"-\d{8}-\d{6}\.png")
+    mine = sorted(f for f in folder.glob(f"{safe}-*.png") if own.fullmatch(f.name))
     for old in mine[:-KEEP]:
         old.unlink(missing_ok=True)
     return path

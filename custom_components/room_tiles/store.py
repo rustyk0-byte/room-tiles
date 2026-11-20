@@ -90,6 +90,7 @@ class RoomTilesStore:
         # restarts, so a build that won't take isn't tried again after every
         # restart (firmware.AUTO_TRIES); its own small file
         self._fw_tries_store: Store[dict[str, Any]] = Store(hass, 1, FW_TRIES_KEY)
+        self._fw_tries_pending = False
         self.data = RoomTilesData()
         # worked out from HA, sent to clients, never saved: area id -> the
         # lights its button switches (arealights.py)
@@ -250,19 +251,20 @@ class RoomTilesStore:
         build = self.fw_install.get(device_id)
         return build is not None and (device_id not in self.fw_auto or self.fw_fetched.get(device_id) == build)
 
+    def _fw_tries_doc(self) -> dict[str, Any]:
+        """The tries to keep - only for builds still offered: the file stays
+        small, and an old build's count goes with it."""
+        offered = {img.build for img in self.fw_images.values()}
+        if offered:
+            for key in [k for k in self.fw_tries if k[1] not in offered]:
+                del self.fw_tries[key]
+        return {"tries": [[d, b, n] for (d, b), n in sorted(self.fw_tries.items())]}
+
     @callback
     def _save_fw_tries(self) -> None:
-        """The tries saved (delayed) - only for builds still offered: the file
-        stays small, and an old build's count goes with it."""
-
-        def doc() -> dict[str, Any]:
-            offered = {img.build for img in self.fw_images.values()}
-            if offered:
-                for key in [k for k in self.fw_tries if k[1] not in offered]:
-                    del self.fw_tries[key]
-            return {"tries": [[d, b, n] for (d, b), n in sorted(self.fw_tries.items())]}
-
-        self._fw_tries_store.async_delay_save(doc, SAVE_DELAY)
+        """The tries saved (delayed; written at once on unload)."""
+        self._fw_tries_pending = True
+        self._fw_tries_store.async_delay_save(self._fw_tries_doc, SAVE_DELAY)
 
     @callback
     def firmware_changed(self) -> None:
@@ -304,7 +306,12 @@ class RoomTilesStore:
         }
 
     async def async_save_now(self) -> None:
+        """Unloading: everything waiting to be saved, written now (a delayed
+        write left behind would land after a removal deleted the file)."""
         await self._store.async_save(self.data.as_dict())
+        if self._fw_tries_pending:
+            self._fw_tries_pending = False
+            await self._fw_tries_store.async_save(self._fw_tries_doc())
 
     @callback
     def async_add_listener(self, listener: Listener) -> Callable[[], None]:

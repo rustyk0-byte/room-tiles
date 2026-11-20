@@ -40,3 +40,18 @@ def test_the_last_few_are_kept(tmp_path, monkeypatch):
     names = sorted(p.name for p in (tmp_path / "room_tiles").iterdir())
     assert len([n for n in names if n.startswith("kitchen-panel-")]) == 2
     assert len([n for n in names if n.startswith("other-")]) == 1
+
+
+def test_a_panel_keeps_only_its_own_screenshots_trimmed(tmp_path):
+    """Another panel whose name starts the same keeps its pictures."""
+    from custom_components.room_tiles.screenshots import FOLDER, KEEP, save
+
+    w, h = 2, 2
+    data = bytes(w * h * 2)
+    for i in range(KEEP + 2):
+        save(str(tmp_path), "kitchen-2", data, w, h, now=1_700_000_000 + i)
+    for i in range(KEEP + 2):
+        save(str(tmp_path), "kitchen", data, w, h, now=1_700_100_000 + i)
+    names = [p.name for p in (tmp_path / FOLDER).iterdir()]
+    assert sum(n.startswith("kitchen-2-") for n in names) == KEEP
+    assert sum(not n.startswith("kitchen-2-") for n in names) == KEEP

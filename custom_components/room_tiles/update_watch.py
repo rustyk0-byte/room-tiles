@@ -64,7 +64,7 @@ def installer_asks_restart(hass: HomeAssistant) -> bool:
 
 
 @callback
-def async_start(hass: HomeAssistant, store: Any) -> Any:
+def async_start(hass: HomeAssistant, entry: Any, store: Any) -> Any:
     """Watch for an update until HA restarts (checked now, then every few
     minutes); returns the unsubscribe."""
 
@@ -89,5 +89,5 @@ def async_start(hass: HomeAssistant, store: Any) -> Any:
                 translation_key=ISSUE_RESTART,
             )
 
-    hass.async_create_background_task(check(), f"{DOMAIN} update check")
+    entry.async_create_background_task(hass, check(), f"{DOMAIN} update check")  # (ends with the entry)
     return async_track_time_interval(hass, check, CHECK_EVERY)

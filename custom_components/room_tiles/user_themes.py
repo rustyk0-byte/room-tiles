@@ -75,7 +75,7 @@ class UserThemes:
             self._queued = False
             from .themes import installed
 
-            if self._sig == ((), ()) and not self.root.is_dir():
+            if self._sig == ((), ()) and not await self.hass.async_add_executor_job(self.root.is_dir):
                 return  # (no themes folder, as before: nothing to look at - one stat)
             found, scan_broken = await self.hass.async_add_executor_job(installed.scan, self.root)
             sig = (tuple(sorted((f.id, f.stamp) for f in found)), tuple(sorted(b.source for b in scan_broken)))
@@ -155,14 +155,12 @@ class UserThemes:
     @callback
     def start(self) -> Callable[[], None]:
         """Look now (in the background) and every few minutes; returns the stop."""
-        if self.root.is_dir():  # (a stat; most homes have no themes folder)
-            self.check_soon()
+        self.check_soon()  # (most homes have no themes folder: one look, in the executor)
         return async_track_time_interval(self.hass, self._tick, CHECK_EVERY)
 
     @callback
     def _tick(self, _now: Any) -> None:
-        if self.root.is_dir() or self._sig != ((), ()):  # (a folder now, or themes before it went)
-            self.check_soon()
+        self.check_soon()  # (async_check looks for the folder off the event loop)
 
     # ---- adding one from a link ------------------------------------------------------
 

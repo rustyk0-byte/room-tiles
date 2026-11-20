@@ -200,7 +200,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoomTilesConfigEntry) ->
 
     # an update installed (HACS or by hand) but HA still runs the old code:
     # the dashboard's Restart bar + a repair (update_watch.py)
-    entry.async_on_unload(update_watch.async_start(hass, store))
+    entry.async_on_unload(update_watch.async_start(hass, entry, store))
 
     started = False  # set by async_at_started below
 
@@ -354,17 +354,19 @@ async def async_remove_entry(hass: HomeAssistant, entry: RoomTilesConfigEntry) -
     from homeassistant.helpers.storage import Store
 
     src = Path(hass.config.path(".storage", STORAGE_KEY))
-    if src.is_file():
-        dest = Path(hass.config.path(BACKUP_DIR)) / f"removed-{datetime.now():%Y%m%d-%H%M%S}.json"
+    dest = Path(hass.config.path(BACKUP_DIR)) / f"removed-{datetime.now():%Y%m%d-%H%M%S}.json"
 
-        def copy() -> None:
-            from .backups import prune
+    def copy() -> bool:
+        from .backups import prune
 
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dest)
-            prune(dest.parent)
+        if not src.is_file():
+            return False
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        prune(dest.parent)
+        return True
 
-        await hass.async_add_executor_job(copy)
+    if await hass.async_add_executor_job(copy):
         await Store(hass, STORAGE_VERSION, STORAGE_KEY).async_remove()
     await Store(hass, 1, FW_TRIES_KEY).async_remove()
     await Store(hass, 1, RECORDINGS_KEY).async_remove()
