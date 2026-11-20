@@ -715,12 +715,26 @@ class RobotSensor(SensorEntity, RestoreEntity):
     async def _next_room(self, step: QueueStep, stamp: tuple[int, int]) -> None:
         """The queue moving on by itself (no one waits for it): a refusal is
         logged - the room stays queued, as a refused Start leaves it."""
+        import voluptuous as vol
         from homeassistant.exceptions import HomeAssistantError
 
-        try:
-            await self._do(step, stamp)
-        except HomeAssistantError as err:
-            _LOGGER.warning("%s: the next room wasn't sent: %s", self._rb.name, err)
+        while True:
+            try:
+                await self._do(step, stamp)
+                return
+            except (HomeAssistantError, vol.Invalid) as err:
+                _LOGGER.warning("%s: room %s wasn't sent - left out of the queue: %s", self._rb.name, step.area, err)
+            # (a room the vacuum won't take - gone from HA, not on its map:
+            # it never blocks the rooms behind it)
+            if step.action != "clean" or not step.area:
+                return
+            self.rq.remove(step.area)
+            if self.rq.current == step.area:
+                self.rq.current = None
+            self.async_write_ha_state()
+            if not self.rq.queue:
+                return
+            step, stamp = QueueStep("clean", self.rq.queue[0]), self.rq.stamp()
 
     async def _do(self, step: QueueStep, stamp: tuple[int, int]) -> None:
         """Send the queue's step to the vacuum. clean_area goes out BEFORE the
@@ -729,8 +743,16 @@ class RobotSensor(SensorEntity, RestoreEntity):
         room went out, or it was stopped / cleared / let go meanwhile) is
         never sent - two quick Starts send it once."""
         async with self._sending:
-            if step.action == "clean" and self.rq.stamp() != stamp:
-                return
+            if step.action == "clean":
+                if self.rq.stamp() != stamp:
+                    return
+                if step.area != self.rq.current and step.area not in self.rq.queue[:1]:
+                    # (its room left the queue meanwhile - Clear, Remove: not
+                    # sent; the room that had finished is over)
+                    if not self.rq.queue:
+                        self.rq.current = None
+                    self.async_write_ha_state()
+                    return
             await self._send(step, stamp)
 
     async def _send(self, step: QueueStep, stamp: tuple[int, int]) -> None:

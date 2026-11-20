@@ -326,3 +326,50 @@ async def test_quick_presses_send_a_room_once_and_a_stop_wins(hass: HomeAssistan
     await hass.async_block_till_done()
     assert sent[-1] == ("return_to_base", None)
     assert (q()["queue"], q()["current"]) == ([], None)
+
+    # a Clear while a room is on its way: not a stop - that room is in progress
+    gate.clear()
+    await _call(hass, "vacuum_queue", robot="matic", action="add", area="kitchen")
+    await _call(hass, "vacuum_queue", robot="matic", action="add", area="hall")
+    hass.states.async_set("vacuum.matic", "docked", {"supported_features": 29212})
+    await hass.async_block_till_done()
+    start = hass.async_create_task(_call(hass, "vacuum_queue", robot="matic", action="start"))
+    await asyncio.sleep(0.05)
+    await _call(hass, "vacuum_queue", robot="matic", action="clear")
+    gate.set()
+    await start
+    await hass.async_block_till_done()
+    assert (q()["queue"], q()["current"]) == ([], "kitchen")
+
+
+async def test_a_room_the_vacuum_refuses_never_blocks_the_rest(hass: HomeAssistant, entry) -> None:
+    """The queue moving on by itself: a room the vacuum refuses (gone from HA,
+    not on its map) is left out, the next one goes."""
+    from homeassistant.exceptions import ServiceValidationError
+
+    sent: list = []
+
+    async def clean_area(call):
+        if call.data["cleaning_area_id"] == ["den"]:
+            raise ServiceValidationError("no such area")
+        sent.append(call.data["cleaning_area_id"])
+
+    async def plain(call):
+        pass
+
+    hass.services.async_register("vacuum", "clean_area", clean_area)
+    for name in ("start", "pause", "return_to_base"):
+        hass.services.async_register("vacuum", name, plain)
+    hass.states.async_set("vacuum.matic", "docked", {"supported_features": 29212})
+    await _call(hass, "set_robot", robot={"id": "matic", "name": "Matic", "vacuum": "vacuum.matic", "preset": "matter"})
+    await hass.async_block_till_done()
+    q = lambda: hass.states.get("sensor.room_tiles_matic").attributes  # noqa: E731
+    for area in ("kitchen", "den", "hall"):
+        await _call(hass, "vacuum_queue", robot="matic", action="add", area=area)
+    await _call(hass, "vacuum_queue", robot="matic", action="start")
+    hass.states.async_set("vacuum.matic", "cleaning", {"supported_features": 29212})
+    await hass.async_block_till_done()
+    hass.states.async_set("vacuum.matic", "returning", {"supported_features": 29212})  # kitchen done
+    await hass.async_block_till_done()
+    assert sent == [["kitchen"], ["hall"]]
+    assert (q()["queue"], q()["current"]) == ([], "hall")

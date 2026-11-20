@@ -210,8 +210,8 @@ class RoomQueue:
     current: str | None = None
     error_since: float | None = None
     taken_over: bool = False  # (cleared by something else; shown until it docks)
-    # (bumped when the queue is stopped / cleared / let go, and when a room
-    # goes out: a clean step decided before either is stale - never sent)
+    # (gen: bumped when the queue is stopped or let go; sends: when a room
+    # goes out - a clean step decided before either is stale, never sent)
     gen: int = 0
     sends: int = 0
 
@@ -253,8 +253,9 @@ class RoomQueue:
         return self.gen, self.sends
 
     def clear(self) -> None:
+        """The waiting rooms go - not a stop: a room on its way still
+        becomes the room in progress."""
         self.queue = []
-        self.gen += 1
 
     def skip(self) -> QueueStep:
         return QueueStep("dock")  # back to base: "returning" moves on to the next room
