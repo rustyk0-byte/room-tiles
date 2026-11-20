@@ -320,6 +320,19 @@ def old_signature(psk: bytes, node: str, ts: int, body: bytes | None = None) -> 
     return hmac.new(psk, msg.encode(), hashlib.sha256).hexdigest()
 
 
+SIGNED_WHOLE_FROM = 4  # (the panel format that signs whole requests - for good, whatever PANEL_SCHEMA becomes)
+
+
+def signs_old(schema: str) -> bool:
+    """A panel that signs the old way (its format before SIGNED_WHOLE_FROM,
+    or one that doesn't say) - by its own number, not ours: a later bump of
+    PANEL_SCHEMA must still let today's panels get their update."""
+    try:
+        return int(schema) < SIGNED_WHOLE_FROM
+    except ValueError:
+        return True
+
+
 def unsigned_query(raw: str) -> str:
     """A raw query string as it was signed: without its sig= (the rest
     exactly as sent, in its order)."""
@@ -371,8 +384,9 @@ def check_request(
         return None
     if abs(now - t) > MAX_SKEW_S:
         return None
-    if schema_mismatch(q.get("schema", "")) == "firmware":
-        # an older panel: its old signature, and only where it may use it
+    if signs_old(q.get("schema", "")):
+        # a panel from before whole-request signing: its old signature, and
+        # only where it may use it
         good = old_signature(dev.psk, node, t, body) if old_ok else ""
     else:
         good = request_signature(dev.psk, method, path, unsigned_query(raw_query), body)
@@ -855,7 +869,7 @@ class _PanelRequest(HomeAssistantView):
         # an older panel's signature covers only its name and time: each used
         # once at each address; so is any POST's, and the firmware download's
         # (each counts as a try)
-        old = schema_mismatch(q.get("schema", "")) == "firmware"
+        old = signs_old(q.get("schema", ""))
         # (by address too: an old panel asks for its image right after its
         # 426 - the same second, the same old signature - and must get it)
         if (old or body is not None or self.any_schema) and not REPLAYS.first_time(f"{request.path}|{q.get('sig', '')}", time.time()):

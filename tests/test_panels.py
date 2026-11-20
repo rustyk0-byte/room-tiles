@@ -106,6 +106,17 @@ def test_signed_requests_only():
     assert ok(old) is None
     assert ok(old, old_ok=True) is found["d1"]
     assert ok(old_signed(now, schema=None), old_ok=True) is found["d1"]  # (one that didn't say)
+    # a later format (PANEL_SCHEMA 5...): today's panels still sign whole and
+    # are recognised - they get their "update needed" and their update
+    from custom_components.room_tiles import panels as panels_mod
+
+    real = panels_mod.PANEL_SCHEMA
+    panels_mod.PANEL_SCHEMA = real + 1
+    try:
+        assert ok(signed("GET", URL, now, schema=str(real)), old_ok=True) is found["d1"]
+        assert ok(old_signed(now, schema=str(real)), old_ok=True) is None
+    finally:
+        panels_mod.PANEL_SCHEMA = real
     # a key twice (the check and the views must read one value): refused
     assert check_request(found, "GET", URL, _raw(good) + "&sig=" + "0" * 64, now) is None
     assert check_request(found, "GET", URL, "schema=4&" + _raw(old), now, old_ok=True) is None
