@@ -606,6 +606,9 @@ async def test_panel_taps_reach_ha(hass: HomeAssistant, hass_client_no_auth) -> 
     raw, q = post({"service": "light.toggle", "entity": "light.counter"}, int(time.time()) - 5)
     assert (await client.post(ACTION_URL, params=q, data=raw)).status == 409
     panels_mod.STARTED = 0
+    # a body bigger than any tap is never read (413)
+    raw, q = post({"service": "light.toggle", "entity": "light.counter", "pad": "x" * 70000}, int(time.time()) - 6)
+    assert (await client.post(ACTION_URL, params=q, data=raw)).status == 413
 
 
 def _fw_image(board="elecrow-p4-7in-v1.2-es", built="2026-11-15 18:33:30 -0500", elf=b"\x07" * 32, schema=PANEL_SCHEMA) -> bytes:
@@ -746,6 +749,8 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
     assert r.status == 426
     answer = await r.json()
     assert answer["schema"] == PANEL_SCHEMA and answer["firmware"]["build"] == image.build
+    # (an old panel's report isn't signed: nothing of it is kept)
+    assert store.fw_reports[dev.id].built != when + 3600
     assert "auto" not in answer["firmware"]
     r = await client.get(FIRMWARE_URL, params=q(schema=str(PANEL_SCHEMA - 1), build=image.build))
     assert r.status == 200

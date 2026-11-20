@@ -307,6 +307,8 @@ def answer_signature(psk: bytes, request_sig: str, status: int, body: bytes) -> 
 
 
 ANSWER_HEADER = "X-RT-Sig"
+ACTION_MAX_BYTES = 64 * 1024
+SCREENSHOT_MAX_BYTES = 1280 * 800 * 2  # (the biggest panel screen, RGB565)
 
 
 def old_signature(psk: bytes, node: str, ts: int, body: bytes | None = None) -> str:
@@ -858,7 +860,9 @@ class _PanelRequest(HomeAssistantView):
         # 426 - the same second, the same old signature - and must get it)
         if (old or body is not None or self.any_schema) and not REPLAYS.first_time(f"{request.path}|{q.get('sig', '')}", time.time()):
             return self._signed(request, dev, web.Response(status=409, text="already done"))
-        if body is not None and int(q.get("ts", "0")) < STARTED:
+        if (old or body is not None or self.any_schema) and int(q.get("ts", "0")) < STARTED:
+            # (what's used once: never signed before this run started either -
+            # the guard above starts empty)
             return self._signed(request, dev, web.Response(status=409, text="signed before Home Assistant started"))
         from .repairs import async_report_panel_schema
 
@@ -873,14 +877,13 @@ class _PanelRequest(HomeAssistantView):
             if needs == "firmware":
                 from . import firmware as fw
 
+                # (an older panel's report isn't covered by its signature:
+                # it picks the image offered in this answer, nothing is kept -
+                # what HA shows and installs comes from signed reports only)
                 running = fw.reported(dict(q))
                 if running is not None:
-                    store.firmware_seen(dev.device_id, running)
-                    image = store.fw_images.get(running.board)
-                    offer = fw.offer(image, running)
+                    offer = fw.offer(store.fw_images.get(running.board), running)
                     if offer is not None:
-                        if store.fw_install.get(dev.device_id) != image.build or dev.device_id in store.fw_auto:
-                            store.firmware_install(dev.device_id, image.build)
                         answer["firmware"] = offer
             return self._signed(request, dev, web.json_response(answer, status=426))
         panel = store.data.panel(dev.device_id)
@@ -958,9 +961,12 @@ class PanelFirmwareView(_PanelRequest):
             return found
         store, _panel, dev = found
         hass: HomeAssistant = request.app["hass"]
+        # the image asked for (?build=) - a generic one; for a panel whose
+        # signed report says its board, only that board's
         running = store.fw_reports.get(dev.device_id)
-        image = store.fw_images.get(running.board) if running is not None else None
-        if image is None or not running.generic or image.build != request.query.get("build"):
+        build = request.query.get("build")
+        image = next((img for img in store.fw_images.values() if img.build == build), None)
+        if image is None or not image.generic or (running is not None and (image.board != running.board or not running.generic)):
             return self._signed(request, dev, web.Response(status=404))
         data = await hass.async_add_executor_job(image.path.read_bytes)
         if hashlib.sha256(data).hexdigest() != image.sha256:
@@ -1005,6 +1011,10 @@ class PanelScreenshotView(_PanelRequest):
     async def post(self, request: web.Request) -> web.Response:
         from . import screenshots
 
+        # (read only up to what a panel's screen can be: a stranger's 16 MB
+        # never gets read and hashed)
+        if request.content_length is None or request.content_length > SCREENSHOT_MAX_BYTES:
+            return web.Response(status=413)
         raw = await request.read()
         found = self._panel(request, raw)
         if isinstance(found, web.Response):
@@ -1044,6 +1054,8 @@ class PanelActionView(_PanelRequest):
     async def post(self, request: web.Request) -> web.Response:
         import json
 
+        if request.content_length is None or request.content_length > ACTION_MAX_BYTES:
+            return web.Response(status=413)  # (a tap is a few hundred bytes)
         raw = await request.read()
         found = self._panel(request, raw)
         if isinstance(found, web.Response):
