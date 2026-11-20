@@ -875,9 +875,25 @@ show and use what the integration holds; nothing about a house is compiled in.
   other numbers - but **an older panel always has its way out**: whatever
   it signed with then (before format 4: only its name, time and body), HA
   takes it for the 426 answer and its image's download - nothing else
-  (no taps, settings, screenshots, data). A rule for good, not a shim.
+  (no taps, settings, screenshots, data). A rule for good, not a shim -
+  with one end date: formats 3 and 4 signed with the panel's ESPHome API
+  key, which Room Tiles reads from HA's ESPHome entry ONLY for that way out
+  (COMPAT, removed about two weeks after format 5 ships - integrations
+  don't read each other's secrets). After that a format-4 panel left
+  behind takes no answer (it checks them with that key) and needs one USB
+  reinstall; formats before 4 still get their update (they check nothing).
+- **Each panel's own key** (format 5): Room Tiles makes it (32 random
+  bytes), keeps it in its own storage (`.storage/room_tiles.panel_keys` -
+  never in an export, the dashboard or a payload; a panel gone from HA:
+  its key goes) and hands it over through the panel's ESPHome action
+  `room_tiles_key` - over the panel's encrypted ESPHome connection, so only
+  that panel can get it. The panel keeps it ("RTKY"; a factory reset
+  forgets it). A panel without one (new, reset) asks with an unsigned
+  `&hello=1` request: HA answers 401 (nothing in it) and sends the key; a
+  panel signing with a key HA doesn't have (HA restored from an older
+  backup) gets 403 and the key again - at most every 10 s each.
 - **Panel requests are signed whole** (format 4): HMAC-SHA256 with the
-  panel's ESPHome API key over "RT2", the method, the path, the query as
+  panel's own key (format 5; its ESPHome API key before) over "RT2", the method, the path, the query as
   sent (without its sig) and the body's SHA-256 (panels.py
   request_signature / signing.cpp sign_request) - no value, path or method
   of a caught request can be changed and sent again; HA's clock +- 5 min;
@@ -962,7 +978,9 @@ show and use what the integration holds; nothing about a house is compiled in.
     Assistant" stays).
   - **No API key yet** (HA hasn't added it): "Add this panel in Home
     Assistant", the panel's name as HA's Discovered list shows it (the
-    friendly name with the chip's suffix) and where that is.
+    friendly name with the chip's suffix) and where that is. Added, but no
+    key from Room Tiles yet: "Waiting for Room Tiles to add this panel…"
+    while it asks for it (a few seconds).
   - **No area:** none picked and its device has no shown area - the payload
     says so (`area_set: false`; the first area meanwhile) and the panel opens
     its area picker by itself, once a start.

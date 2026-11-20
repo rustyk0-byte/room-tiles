@@ -102,6 +102,12 @@ Upload firmware), one image per board in the folder.
   - Keep in step: an ESPHome upgrade that moves ESP-Hosted needs the
     matching image (firmware/wifi_chip/README.md).
 
+- **Drop the format-4 way out** (about two weeks after format 5 ships,
+  not before 2026-12-04): Room Tiles stops reading the ESPHome API key
+  (`panels.py` COMPAT - PanelDevice.psk, `_psk`, old_signature). Then: a
+  Repairs notice for a format-4 panel left behind (one USB reinstall);
+  formats before 4 keep their update (they check no answers).
+
 ## 2. Early users
 
 - **Full localization with a string table** (a release gate). No
