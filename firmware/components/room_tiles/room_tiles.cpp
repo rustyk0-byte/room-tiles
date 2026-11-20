@@ -63,6 +63,7 @@ static int knob_steps(uint32_t gap_ms) {
 }
 static const size_t MAX_BODY = 6 * 1024 * 1024;  // bigger than this is refused
 static const uint32_t RETRY_MS = 30000;
+static const uint32_t KEY_WAIT_MS = 5000;  // (asked Room Tiles for its key: asked again this soon)
 static const uint32_t THEME_RETRY_MAX_MS = 30 * 60 * 1000;
 // a theme picked on the panel: how long the boot screen waits for its download
 static const uint32_t THEME_WAIT_MS = 20000;
@@ -148,6 +149,13 @@ void RoomTiles::setup() {
   if (!this->idle_lights_pref_.load(&this->idle_lights_) || this->idle_lights_ > 1)
     this->idle_lights_ = 0;
   this->wifi_chip_pref_ = global_preferences->make_preference<uint32_t>(0x52545743u /* "RTWC" */);
+  // the panel's own key, from Room Tiles (set_key) - a factory reset forgets it
+  this->key_pref_ = global_preferences->make_preference<KeyRecord>(0x52544B59u /* "RTKY" */);
+  {
+    KeyRecord rec{};
+    if (this->key_pref_.load(&rec) && rec.set == 1)
+      room_tiles::set_key(rec.key);
+  }
   if (!this->wifi_chip_pref_.load(&this->wifi_chip_tried_))
     this->wifi_chip_tried_ = 0;
   this->strip_points_pref_ = global_preferences->make_preference<StripPoints>(0x52545350u /* "RTSP" */);
@@ -1363,10 +1371,44 @@ bool RoomTiles::sign_(const char *path, const std::string &params, std::string &
       this->retry_at_ = millis() + 2000;
       return false;
     default:
-      this->set_adding_(true);  // (no key yet: HA hasn't added this panel)
-      this->retry_at_ = millis() + RETRY_MS;
+      if (!has_api_key()) {
+        this->set_adding_(true);  // (no API key yet: HA hasn't added this panel)
+        this->retry_at_ = millis() + RETRY_MS;
+      } else {
+        this->want_hello_ = true;  // (added, no key from Room Tiles yet: ask for it)
+      }
       return false;
   }
+}
+
+void RoomTiles::set_key(const std::string &hex) {
+  if (hex.size() != 64) {
+    ESP_LOGW(TAG, "Room Tiles key refused: not 64 hex digits");
+    return;
+  }
+  KeyRecord rec{};
+  for (int i = 0; i < 32; i++) {
+    char *end = nullptr;
+    const std::string two = hex.substr(i * 2, 2);
+    const long v = strtol(two.c_str(), &end, 16);
+    if (end != two.c_str() + 2) {
+      ESP_LOGW(TAG, "Room Tiles key refused: not 64 hex digits");
+      return;
+    }
+    rec.key[i] = (uint8_t) v;
+  }
+  rec.set = 1;
+  KeyRecord had{};
+  const bool same = this->key_pref_.load(&had) && had.set == 1 && memcmp(had.key, rec.key, 32) == 0;
+  room_tiles::set_key(rec.key);
+  if (!same) {
+    this->key_pref_.save(&rec);
+    global_preferences->sync();  // (kept now: a restart right after mustn't lose it)
+  }
+  ESP_LOGI(TAG, "Room Tiles key %s", same ? "received again (the same)" : "received and kept");
+  this->key_at_ = millis() | 1;
+  this->want_hello_ = false;
+  this->retry_at_ = 0;  // (on at once)
 }
 
 void RoomTiles::start_job_(Job job) {
@@ -1385,11 +1427,19 @@ void RoomTiles::start_job_(Job job) {
     params = "&build=" + this->want_build_;
   const char *path = job == JOB_PAYLOAD ? PANEL_PATH : job == JOB_FIRMWARE ? FIRMWARE_PATH : PACK_PATH;
   std::string query;
-  if (!this->sign_(path, params, query))
-    return;
+  bool hello = false;
+  if (!this->sign_(path, params, query)) {
+    // no key from Room Tiles yet: the payload's request asks for it instead
+    // (unsigned - it carries nothing; the key comes over ESPHome)
+    if (job != JOB_PAYLOAD || !this->want_hello_)
+      return;
+    this->want_hello_ = false;
+    query = hello_query();
+    hello = true;
+  }
   this->job_ = job;
   this->job_url_ = this->base_url_ + path + query;
-  this->job_sig_ = query.substr(query.rfind("&sig=") + 5);
+  this->job_sig_ = hello ? std::string() : query.substr(query.rfind("&sig=") + 5);
   this->job_revision_ = this->revision_;
   this->job_error_.clear();
   this->pack_id_.clear();
@@ -1583,6 +1633,11 @@ void RoomTiles::finish_payload_() {
     if (!this->want_build_.empty())
       ESP_LOGI(TAG, "Home Assistant offers build %s for it", this->want_build_.c_str());
     this->mismatch_(theirs);
+  } else if (this->http_status_ == 401) {
+    // asked for its key (hello): Room Tiles hands it over through the
+    // panel's ESPHome action (set_key) - then on at once
+    ESP_LOGI(TAG, "No key from Room Tiles yet: asked for it");
+    this->say_("panel.wait_added", "Waiting for Room Tiles to add this panel…");
   } else if (this->http_status_ == 404) {
     ESP_LOGW(TAG, "Room Tiles doesn't know this panel yet (404)");
     this->say_("panel.wait_added", "Waiting for Room Tiles to add this panel…");
@@ -1837,7 +1892,10 @@ void RoomTiles::finish_payload_() {
     this->show_summary_();
     this->maybe_show_board_();
   } else {
-    this->retry_at_ = millis() + RETRY_MS;
+    // (a key just in - asked for, or a new one after a 403 - on at once; asked
+    // and still waiting: soon; else the usual wait)
+    const bool fresh_key = this->key_at_ != 0 && millis() - this->key_at_ < 10000;
+    this->retry_at_ = millis() + (fresh_key ? 500 : this->http_status_ == 401 ? KEY_WAIT_MS : RETRY_MS);
   }
 }
 

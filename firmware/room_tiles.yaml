@@ -53,6 +53,15 @@ esphome:
 api:
   # (the key: the identity package)
   encryption: {}
+  # Room Tiles hands the panel its own key here - over this encrypted
+  # connection, so nothing else can (panels.py async_send_key)
+  # MIRRORED: custom_components/room_tiles/panels.py KEY_ACTION - the same name there
+  actions:
+    - action: room_tiles_key
+      variables:
+        key: string
+      then:
+        - lambda: id(rt).set_key(key);
 
 # (ota: the identity package - a hand-built panel takes ESPHome's updates;
 # a generic one only Room Tiles' own, its key set at run time)

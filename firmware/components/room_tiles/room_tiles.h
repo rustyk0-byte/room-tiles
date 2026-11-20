@@ -165,6 +165,10 @@ class RoomTiles : public Component {
   /// Back to new (the panel's Factory Reset button in HA): Room Tiles forgets
   /// this panel's settings, then its theme, wording and everything kept on it.
   void factory_reset();
+  /// Room Tiles hands the panel its own key (64 hex - the ESPHome action
+  /// room_tiles_key, over the panel's encrypted ESPHome connection): kept,
+  /// and every request signed with it from now on (signing.h).
+  void set_key(const std::string &hex);
 #ifdef USE_UPDATE
   /// The board's Wi-Fi chip runs other firmware than the image this build
   /// carries (its update entity's on_update_available): an older chip is
@@ -417,6 +421,14 @@ class RoomTiles : public Component {
   bool hold_boot_screen_{false};  // (a factory reset / the Wi-Fi chip's update: the boot screen stays up)
   uint32_t wifi_chip_tried_{0};  // (the carried Wi-Fi chip version last tried: its hash - never again)
   ESPPreferenceObject wifi_chip_pref_;
+  // the panel's own key (set_key): its own record ("RTKY")
+  struct KeyRecord {
+    uint8_t key[32];
+    uint8_t set;
+  };
+  ESPPreferenceObject key_pref_;
+  uint32_t key_at_{0};      // (when the last key came: the next try right away)
+  bool want_hello_{false};  // (no key yet, HA has added the panel: ask Room Tiles for it - start_job_)
   uint8_t clock24_{0};  // 0 = the language's way, 1 = 12-hour, 2 = 24-hour
   // the round panel's strip, per room: its own record, the rooms last used
   // first (a room id's hash -> its snap point; the oldest goes when full)

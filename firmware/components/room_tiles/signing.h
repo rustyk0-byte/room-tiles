@@ -1,5 +1,6 @@
 // Room Tiles panel: signing requests to the integration with the panel's own
-// API key (panels.py has the other side).
+// key - Room Tiles makes it and hands it over through the panel's ESPHome
+// action room_tiles_key (panels.py has the other side).
 #pragma once
 
 #include <cstddef>
@@ -12,13 +13,13 @@ namespace esphome::room_tiles {
 // The panels' format (payload, packs, taps, screenshots): bump both on any
 // change the other side can't read. Every request says it (&schema=); HA
 // answers another number with 426 and its own number as the body.
-static constexpr int PANEL_SCHEMA = 4;  // (4: the whole request signed - sign_request)
+static constexpr int PANEL_SCHEMA = 5;  // (5: the panel's own Room Tiles key - set_key)
 
 enum class SignResult { OK, NO_TIME, NO_KEY };
 
 // MIRRORED: custom_components/room_tiles/panels.py request_signature - a change here must be made there too.
 /// A request's query, signed whole: "?name=<node>&ts=<unix time>&n=<count>&schema=<PANEL_SCHEMA><params>&sig=<hex>"
-/// - `params`: its own values, each "&key=value" (URL-safe), or "". sig = HMAC-SHA256(API key,
+/// - `params`: its own values, each "&key=value" (URL-safe), or "". sig = HMAC-SHA256(the panel's key,
 /// "RT2\n<method>\n<path>\n<the query without '?' and &sig>\n<sha256 of the body, hex - "" for a GET>"):
 /// nothing of it can be changed and sent again. `body` nullptr: a GET. Any thread.
 SignResult sign_request(const char *method, const char *path, const std::string &params, const uint8_t *body,
@@ -30,12 +31,20 @@ inline SignResult sign_request(const char *method, const char *path, const std::
 }
 
 // MIRRORED: custom_components/room_tiles/panels.py answer_signature - a change here must be made there too.
-/// HA's answer is from HA: `answer_sig` (its X-RT-Sig header, hex) = HMAC-SHA256(API key,
+/// HA's answer is from HA: `answer_sig` (its X-RT-Sig header, hex) = HMAC-SHA256(the panel's key,
 /// "RT2-ANSWER\n<the request's sig>\n<status>\n<sha256 of the body, hex>"). Nothing HA
 /// answers (data, an update offer, a pack, an image) is taken without it.
 bool answer_ok(const std::string &request_sig, int status, const uint8_t *body, size_t size, const char *answer_sig);
 
 /// The panel has its API key (HA sets it when it adds the panel).
 bool has_api_key();
+
+/// The panel's own key (32 bytes, from Room Tiles - RoomTiles::set_key keeps
+/// it). Any thread.
+void set_key(const uint8_t key[32]);
+bool has_key();
+/// No key yet: "?name=<node>&schema=<PANEL_SCHEMA>&hello=1" - unsigned (it
+/// carries nothing); Room Tiles answers 401 and hands the key over.
+std::string hello_query();
 
 }  // namespace esphome::room_tiles

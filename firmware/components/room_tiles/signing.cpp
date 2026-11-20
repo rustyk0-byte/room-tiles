@@ -1,7 +1,9 @@
 #include "signing.h"
 
+#include <array>
 #include <atomic>
 #include <cctype>
+#include <mutex>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -22,13 +24,37 @@ static void hex(const uint8_t *in, size_t n, char *out) {
     snprintf(out + i * 2, 3, "%02x", in[i]);
 }
 
+// the panel's own key (set on the loop, read by the download / action tasks)
+static std::mutex key_lock;
+static std::array<uint8_t, 32> the_key{};
+static bool key_set = false;
+
+void set_key(const uint8_t key[32]) {
+  std::lock_guard<std::mutex> g(key_lock);
+  std::copy(key, key + 32, the_key.begin());
+  key_set = true;
+}
+
+bool has_key() {
+  std::lock_guard<std::mutex> g(key_lock);
+  return key_set;
+}
+
+static bool get_key(std::array<uint8_t, 32> &out) {
+  std::lock_guard<std::mutex> g(key_lock);
+  out = the_key;
+  return key_set;
+}
+
+std::string hello_query() {
+  return "?name=" + App.get_name().str() + "&schema=" + std::to_string(PANEL_SCHEMA) + "&hello=1";
+}
+
 bool answer_ok(const std::string &request_sig, int status, const uint8_t *body, size_t size, const char *answer_sig) {
-#ifdef USE_API_NOISE
   if (answer_sig == nullptr || strlen(answer_sig) != 64)
     return false;
-  noise::psk_t key;
-  api::global_api_server->get_noise_ctx().load_psk(key);
-  if (noise::NoiseContext::is_all_zeros(key))
+  std::array<uint8_t, 32> key;
+  if (!get_key(key))
     return false;
   uint8_t digest[32];
   char digest_hex[65];
@@ -46,9 +72,6 @@ bool answer_ok(const std::string &request_sig, int status, const uint8_t *body, 
   for (int i = 0; i < 64; i++)
     diff |= (uint8_t) (want[i] ^ (char) tolower((unsigned char) answer_sig[i]));
   return diff == 0;
-#else
-  return false;
-#endif
 }
 
 bool has_api_key() {
@@ -68,10 +91,8 @@ SignResult sign_request(const char *method, const char *path, const std::string 
   const time_t now = ::time(nullptr);
   if (now < TIME_VALID)
     return SignResult::NO_TIME;
-#ifdef USE_API_NOISE
-  noise::psk_t key;
-  api::global_api_server->get_noise_ctx().load_psk(key);
-  if (noise::NoiseContext::is_all_zeros(key))
+  std::array<uint8_t, 32> key;
+  if (!get_key(key))
     return SignResult::NO_KEY;
   const std::string node = App.get_name().str();
   // (n: a count - two requests in one second never share a signature, so
@@ -96,9 +117,6 @@ SignResult sign_request(const char *method, const char *path, const std::string 
   hex(mac, 32, sig);
   query = "?" + unsigned_query + "&sig=" + sig;
   return SignResult::OK;
-#else
-  return SignResult::NO_KEY;
-#endif
 }
 
 }  // namespace esphome::room_tiles
