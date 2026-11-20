@@ -736,7 +736,8 @@ show and use what the integration holds; nothing about a house is compiled in.
   override, else Room Tiles' "<Area> Area Lights"; a hidden area has none
   made: its lights; the payload's `panel.room_lights`, `panel.room`). Idle while they're all off (none on, one at least
   reported off), the screen goes off instead of the clock or a board an
-  animation keeps; they come on while it's off and still untouched: the
+  animation keeps; they come on while it's dark - whatever made it dark (an
+  update made while dark, HA's absence, the backlight switched off): the
   clock (or the kept board) again. Under its word, the room it follows
   ("Office (HA device area)"), or what's missing (no area in HA; an
   area without lights): then as usual. Its own record ("RTIL": the idle
@@ -747,6 +748,38 @@ show and use what the integration holds; nothing about a house is compiled in.
   The list (a panel's settings menu) stays open for more than one change:
   the four faces two by two, a pick shown in place; its own X, or a tap
   beside it, closes it.
+- **Screen states** (screen_policy.cpp - plain C++, its rules tested on a
+  PC: firmware/tests/screen_policy_test.cpp, GitHub's "Firmware tests"):
+  one place decides what the screen shows - **lit**, **dimmed** (a board
+  an animation keeps, or "Connecting…" while HA is gone), **the idle
+  clock** or **dark** - from the facts each loop (time since the last use,
+  the sleep time, the board up or the boot screen, HA gone and for how
+  long, the room's lights, the idle setting, an animation in view) and a
+  few events (a touch or the knob, the backlight switched in HA, an update).
+  Where it would be, by the facts alone:
+
+  | Facts | Screen |
+  |---|---|
+  | used within the sleep time (or sleep never) | lit |
+  | the board, the room's lights off | dark (room) |
+  | the board, a tile animating | dimmed |
+  | the board, a clock set | the clock |
+  | the board, screen off set | dark (idle) |
+  | HA gone, a clock set, under 10 min | dimmed ("Connecting…") |
+  | HA gone otherwise | dark (away) |
+  | the boot screen otherwise (setting up, downloading) | lit |
+
+  Dark is sticky - it always has its reason, and leaves only for: a touch
+  or the knob (which only wakes: it never reaches a tile); the backlight
+  switched on in HA (counts as use); an update that shows its progress;
+  **the room's lights going from off to on, whatever made it dark**; the
+  board's return within 15 s after HA's absence darkened it, when there's
+  something to show. An animation starting never wakes a dark screen. The
+  board's first appearance after a start counts as use; its return after
+  HA's absence doesn't (idle as before it). An automatic update made while
+  dark stays dark and stores its reason ("RTQB"): the next start is dark
+  for the same reason and idle until used - its room's lights coming on
+  bring the clock.
 - **The Wi-Fi chip** (an ESP32-C6 with Espressif's ESP-Hosted
   `network_adapter`; firmware/wifi_chip/): its firmware must match the
   ESP-Hosted library in the panel firmware, and boards ship with older
@@ -803,8 +836,9 @@ show and use what the integration holds; nothing about a house is compiled in.
   it once nobody's using it - by idle time only, whatever is on screen:
   idle (dark, the clock, or dimmed - also a board an animation keeps up),
   or 10 minutes untouched when it never goes idle; one that starts while the screen is
-  dark by choice (idle: the screen off; the room's lights off) stays dark
-  (and the new firmware goes dark again as it starts) - dark only because
+  dark (idle: the screen off; the room's lights off; the backlight switched
+  off) stays dark (and the new firmware goes dark again as it starts, for the
+  same reason - "Screen states") - dark only because
   HA was gone (restarting for this very update) doesn't count: the update
   shows its progress and the panel comes back lit.
   Never older: only an image built more
