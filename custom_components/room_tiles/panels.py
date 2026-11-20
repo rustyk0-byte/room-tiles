@@ -1004,6 +1004,28 @@ class _PanelRequest(HomeAssistantView):
         return await hass.async_add_executor_job(self._signed, request, dev, resp)
 
 
+def build_payload(hass: HomeAssistant, store: Any, panel: Panel, dev: PanelDevice, firmware: dict[str, Any] | None = None) -> dict[str, Any]:
+    """A panel's payload from the running Room Tiles (PanelView; the demo
+    home's in tools/demo/make_demo.py)."""
+    return payload(
+        store.data,
+        panel,
+        dev,
+        str(store.panel_link.revision),
+        hass.config.language,
+        store.all_packs(),
+        tile_icons(hass, store.data),
+        picker_extras(hass, store.data),
+        popup_lists(hass.states.async_all(), store.data),
+        robot_list(store.data, store.vacuums, {rid: e.entity_id for rid, e in store.robot_entities.items()}),
+        sum(len(store.appliance_found.get(k) or []) for k in ("found", "pools", "robots")),
+        store.area_lights,
+        firmware,
+        room_lights(hass, store.data, dev),
+        is_round(store, dev.device_id),
+    )
+
+
 class PanelView(_PanelRequest):
     """GET a panel's payload."""
 
@@ -1029,23 +1051,12 @@ class PanelView(_PanelRequest):
         image = store.fw_images.get(running.board) if running else None
         wanted = store.fw_install.get(dev.device_id)
         auto = dev.device_id in store.fw_auto
-        body = payload(
-            store.data,
-            panel,
-            dev,
-            str(store.panel_link.revision),
-            hass.config.language,
-            store.all_packs(),
-            tile_icons(hass, store.data),
-            picker_extras(hass, store.data),
-            popup_lists(hass.states.async_all(), store.data),
-            robot_list(store.data, store.vacuums, {rid: e.entity_id for rid, e in store.robot_entities.items()}),
-            sum(len(store.appliance_found.get(k) or []) for k in ("found", "pools", "robots")),
-            store.area_lights,
-            fw.offer(image, running, auto) if image is not None and wanted == image.build else None,
-            room_lights(hass, store.data, dev),
-            is_round(store, dev.device_id),
-        )
+        offer = fw.offer(image, running, auto) if image is not None and wanted == image.build else None
+        body = build_payload(hass, store, panel, dev, offer)
+        if store.demo_shows(dev):  # (a developer build's demo home - demo.py)
+            from . import demo
+
+            body = demo.apply(body, store.demo_home)
         return self._signed(request, dev, web.json_response(body, headers={"Cache-Control": "no-store"}))
 
 
@@ -1170,6 +1181,10 @@ class PanelActionView(_PanelRequest):
         if isinstance(found, web.Response):
             return found
         store, panel, dev = found
+        if store.demo_shows(dev):
+            # a demo home's tap or setting: never carried out (its entities
+            # may share ids with this home's - demo.py)
+            return self._signed(request, dev, web.json_response({"ok": True}))
         try:
             body = json.loads(raw or b"{}")
         except ValueError:

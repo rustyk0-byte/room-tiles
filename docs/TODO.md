@@ -227,8 +227,9 @@ Upload firmware), one image per board in the folder.
   chosen picks the latest stable. Later: ask to be listed in the
   Marketplace's main catalog (found without a link).
 - **Panel screenshots for the landing page:** today's pictures are the
-  dashboard (the demo home) and photos; panel screenshots need a
-  developer-only demo mode that serves the demo home to one panel.
+  dashboard (the demo home) and photos. The demo home on a panel is built
+  (DESIGN.md "The demo home on a panel"); left: take the pictures (each
+  panel size, a few themes) and put them on the landing page.
 ## 3. Round panel
 
 Built and tried on the hardware (every screen: the strip, the knob,

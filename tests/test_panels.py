@@ -390,7 +390,7 @@ def test_language_names_match_the_dashboards():
     from custom_components.room_tiles.panels import LANG_NAMES
 
     ts = (Path(__file__).resolve().parent.parent / "frontend" / "src" / "i18n.ts").read_text(encoding="utf-8")
-    block = re.search(r"LANG_NAMES[^{]*\{(.*?)\};", ts, re.S).group(1)
+    block = re.search(r"export const LANG_NAMES[^{]*\{(.*?)\};", ts, re.S).group(1)
     assert dict(re.findall(r'(\w+):\s*"([^"]+)"', block)) == LANG_NAMES
 
 
@@ -848,6 +848,59 @@ def test_a_refused_settings_change_changes_nothing():
     assert apply_settings(data, p, {"settings": {"theme": "light", "area": "kitchen"}}) is None
     assert (p.theme, p.area) == ("light", "kitchen")
     assert apply_settings(data, p, {"settings": {"theme": None}}) is None and p.theme is None
+
+
+async def test_a_demo_panel_gets_the_demo_home_and_its_taps_go_nowhere(hass: HomeAssistant, hass_client_no_auth) -> None:
+    """A developer build's demo home (demo.py): the listed panel is sent the
+    demo's areas and states; what it sends back is never carried out."""
+    import json
+
+    from pytest_homeassistant_custom_component.common import async_mock_service
+
+    esp = MockConfigEntry(domain="esphome", data={"device_name": "panel-1"})
+    esp.add_to_hass(hass)
+    dev = dr.async_get(hass).async_get_or_create(
+        config_entry_id=esp.entry_id,
+        connections={(dr.CONNECTION_NETWORK_MAC, "aa:bb:cc:dd:ee:01")},
+        manufacturer="room-tiles",
+        model="panel",
+        name="Hall panel",
+    )
+    ar.async_get(hass).async_create("Kitchen")
+    e = MockConfigEntry(domain=DOMAIN)
+    e.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(e.entry_id)
+    await hass.async_block_till_done()
+    store = e.runtime_data
+    store.panel_keys[dev.id] = KEY.hex()
+    from custom_components.room_tiles.model import Tile
+
+    store.data.areas[0].tiles["5x2"][0] = Tile(kind="onoff_light", entity="light.counter")
+    store.demo_names = {"Hall panel"}
+    store.demo_home = {
+        "area": "den",
+        "home": {"areas": [{"id": "den", "name": "Den", "layout": "5x2", "tiles": {}}], "entities": {}},
+        "states": {"light.counter": {"": "on"}},
+    }
+    calls = async_mock_service(hass, "light", "toggle")
+    client = await hass_client_no_auth()
+    now = int(time.time()) + 50  # (its own times: another test's same tap would be a replay)
+    r = await client.get(URL, params=signed("GET", URL, now))
+    assert r.status == 200
+    body = await r.json()
+    assert [a["id"] for a in body["areas"]] == ["den"] and body["panel"]["area"] == "den"
+    assert body["demo"] == {"states": {"light.counter": {"": "on"}}}
+    raw = json.dumps({"service": "light.toggle", "entity": "light.counter"}).encode()
+    assert (await client.post(ACTION_URL, params=signed("POST", ACTION_URL, now + 1, raw), data=raw)).status == 200
+    raw = json.dumps({"settings": {"area": "den"}}).encode()
+    assert (await client.post(ACTION_URL, params=signed("POST", ACTION_URL, now + 2, raw), data=raw)).status == 200
+    await hass.async_block_till_done()
+    assert calls == []
+    assert all(p.area != "den" for p in store.data.panels)
+    # off again: the real home
+    store.demo_names = set()
+    body = await (await client.get(URL, params=signed("GET", URL, now + 3))).json()
+    assert "demo" not in body and [a["id"] for a in body["areas"]] == ["kitchen"]
 
 
 async def test_a_panel_action_ha_refuses_is_logged(hass: HomeAssistant, caplog) -> None:

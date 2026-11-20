@@ -135,6 +135,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoomTilesConfigEntry) ->
     if DEV_BUILD:
         entry.async_on_unload(async_track_time_interval(hass, check_packs, PACK_CHECK_EVERY))
 
+    if DEV_BUILD:
+        # the demo home on panels (demo.py - panel screenshots): its folder
+        # read again when it changes, the panels told
+        from . import demo
+
+        demo_dir = Path(hass.config.path(demo.DEMO_DIR))
+        demo_seen: list[Any] = [None]
+
+        async def check_demo(_now: Any = None) -> None:
+            now = await hass.async_add_executor_job(demo.fingerprint, demo_dir)
+            if now == demo_seen[0]:
+                return
+            demo_seen[0] = now
+            store.demo_names, store.demo_home = await hass.async_add_executor_job(demo.read, demo_dir)
+            if store.demo_names:
+                _LOGGER.info("Demo home on panels: %s%s", ", ".join(sorted(store.demo_names)), "" if store.demo_home else " (no panel.json yet)")
+            store.panel_link.bump()
+
+        await check_demo()
+        entry.async_on_unload(async_track_time_interval(hass, check_demo, PACK_CHECK_EVERY))
+
     # panel firmware images (firmware.py): read at setup (HA's Reload of the
     # integration reads them again) and after an upload; a developer build
     # also picks up builds dropped into the folder, like packs (each named

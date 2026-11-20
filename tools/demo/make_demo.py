@@ -13,6 +13,9 @@ writes <folder> (default tools/demo/out/):
 - meta.json      when it was made (the demo page moves every time in the
                  states - a finish time... - by how long ago that was) and
                  the room the demo opens in
+- panel.json     the demo home for a panel (a developer build serves it -
+                 custom_components/room_tiles/demo.py: copy it into
+                 <config>/room_tiles_demo/)
 
 Nothing here is a real home: names, rooms and devices are made up.
 """
@@ -307,3 +310,12 @@ async def test_make_demo(hass: HomeAssistant, hass_ws_client) -> None:
     })
     _write("devices.json", {d.id: {"id": d.id, "name": d.name_by_user or d.name, "area_id": d.area_id, "manufacturer": d.manufacturer}
                             for d in dr.async_get(hass).devices})
+
+    # ... and what a panel is sent for it (made-up panel; the real one's own
+    # settings are its own when a developer build serves this)
+    from custom_components.room_tiles import demo, panels
+    from custom_components.room_tiles.model import Panel
+
+    dev = panels.PanelDevice("demo", "room-tiles-demo", "Demo panel", START_ROOM)
+    body = panels.build_payload(hass, entry.runtime_data, Panel(id="demo"), dev)
+    _write("panel.json", demo.home_of(body, demo.states_of(hass.states.async_all()), START_ROOM))

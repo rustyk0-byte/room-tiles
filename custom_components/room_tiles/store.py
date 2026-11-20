@@ -114,6 +114,10 @@ class RoomTilesStore:
 
         self.panel_link = PanelLink()
         self.panel_packs: dict = {}  # theme packs + wording, loaded at setup (panels.load_packs)
+        # a developer build's demo home on panels (demo.py; DEV_BUILD only -
+        # a released install never fills these)
+        self.demo_names: set[str] = set()
+        self.demo_home: dict | None = None
         self.user_themes: Any = None  # the installed themes (user_themes.UserThemes), set at setup
         # panel firmware (firmware.py): the newest image per board, what each
         # panel reports it runs (device id -> PanelFirmware), the installs
@@ -178,6 +182,12 @@ class RoomTilesStore:
         )
 
     @callback
+    def demo_shows(self, dev: Any) -> bool:
+        """Does this panel show the demo home (demo.py)?"""
+        from .demo import shows_demo
+
+        return bool(self.demo_names) and shows_demo(self.demo_names, self.demo_home, dev)
+
     def all_packs(self) -> dict:
         """Every pack a panel may get: the bundled themes and wording, and the
         installed themes' (user_themes.py)."""

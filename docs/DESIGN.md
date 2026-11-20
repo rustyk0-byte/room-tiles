@@ -713,7 +713,16 @@ show and use what the integration holds; nothing about a house is compiled in.
   never a released install (HACS copies only the integration). Decided once
   at startup and logged as a warning. Every development-only behavior
   checks it - search for `DEV_BUILD` to find them all. Today: packs rebuilt
-  on disk are served live.
+  on disk are served live, and the demo home on a panel (below).
+- **The demo home on a panel** (a developer build only; demo.py - the
+  landing page's panel pictures): `tools/demo/make_demo.py` writes
+  panel.json (the made-up home's areas, tiles, maps and states, as HA's
+  ESPHome integration sends them); in `<config>/room_tiles_demo/` with a
+  panels.txt naming panels (one a line), those panels get it - their own
+  settings kept, the area, the home and its states the demo's. The panel
+  then asks HA for no states and takes none it pushes (a demo entity can
+  share an id with a real one), and what it sends back - a tap, a setting
+  - is never carried out. Unlisted, it restarts into the real home.
 - **When idle** (every panel; idle_clock.cpp): after the sleep time
   untouched (a new or reset panel: 1 minute - the round one 30 s - then the
   digital clock at 40 %; one set up keeps its own), the screen goes dark or a clock comes up (digital - the time,
