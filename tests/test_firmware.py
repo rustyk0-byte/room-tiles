@@ -214,3 +214,17 @@ def test_the_version_a_panel_runs(tmp_path):
     assert running_label(PanelFirmware(img.board, "ff" * 8, True, release="0.1.0"), img) == "0.1.0"
     assert running_label(PanelFirmware(img.board, "ff" * 8, True), img) == "build (ffffff)"
     assert running_label(None, img) is None
+
+
+def test_a_report_with_values_no_panel_sends_is_ignored():
+    """A replayed request with a made-up build time or board: never a
+    version HA can't show (fromtimestamp would overflow)."""
+    from custom_components.room_tiles.firmware import reported
+
+    q = {"board": "elecrow-p4-7in-v1.2-es", "build": "0123456789abcdef", "generic": "1"}
+    assert reported({**q, "built": "1763600000"}).built == 1763600000
+    assert reported({**q, "built": "99999999999"}).built is None
+    assert reported({**q, "built": "5"}).built is None
+    reported({**q, "built": "4294967295"}).label  # (the largest kept: shown fine)
+    assert reported({**q, "board": "../../x"}) is None
+    assert reported({**q, "board": "x" * 100}) is None

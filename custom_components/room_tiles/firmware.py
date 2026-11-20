@@ -290,14 +290,16 @@ def reported(query: dict[str, str]) -> PanelFirmware | None:
     """A panel's report from its payload request - None from firmware too
     old to send one."""
     board, build = query.get("board", ""), query.get("build", "")
-    if not board or not re.fullmatch(r"[0-9a-f]{16}", build):
+    if not re.fullmatch(r"[a-z0-9][a-z0-9.-]{0,63}", board) or not re.fullmatch(r"[0-9a-f]{16}", build):
         return None
     built = query.get("built", "")
+    # (a build time a clock can show: 2001 .. 2106 - anything else isn't one)
+    built_ts = int(built) if built.isdigit() and len(built) <= 10 else 0
     return PanelFirmware(
         board=board,
         build=build,
         generic=query.get("generic") == "1",
-        built=int(built) if built.isdigit() and int(built) > 0 else None,
+        built=built_ts if 1_000_000_000 <= built_ts < 2**32 else None,
         release=_release(query.get("release")),
     )
 
