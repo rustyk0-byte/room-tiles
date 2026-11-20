@@ -999,6 +999,8 @@ async def test_old_panel_notices_from_its_version(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
     issue = ir.async_get(hass).async_get_issue(DOMAIN, f"panel_old_{dev.id}")
     assert issue is not None and issue.translation_key == "panel_needs_reinstall"
+    # the install page comes in as a placeholder (hassfest: no links in texts)
+    assert issue.translation_placeholders["url"].startswith("https://")
     reg.async_update_device(dev.id, sw_version="0.1.5 (ESPHome 2026.10.2)")
     await hass.async_block_till_done()
     assert ir.async_get(hass).async_get_issue(DOMAIN, f"panel_old_{dev.id}").translation_key == "panel_needs_firmware"

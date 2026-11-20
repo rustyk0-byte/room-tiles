@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import issue_registry as ir
 
 from . import ops
-from .const import DOMAIN
+from .const import DOMAIN, INSTALL_URL
 from .model import RoomTilesData
 
 ISSUE_SHORT_NAMES = "short_names"  # older versions: a repair, now a notification
@@ -253,7 +253,7 @@ def async_report_panel_versions(hass: HomeAssistant, found: dict[str, Any]) -> N
             is_fixable=False,
             severity=ir.IssueSeverity.WARNING,
             translation_key=f"{ISSUE_PANEL_SCHEMA}_{needs}",
-            translation_placeholders={"name": _name(name)},
+            translation_placeholders={"name": _name(name), "url": INSTALL_URL},
         )
 
 

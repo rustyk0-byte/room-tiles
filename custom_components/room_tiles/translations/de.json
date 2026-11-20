@@ -55,7 +55,7 @@
     },
     "panel_needs_reinstall": {
       "title": "Firmware von {name} neu installieren",
-      "description": "{name} hat Firmware aus Room Tiles 0.1.6, die sich nicht selbst auf diese Version aktualisieren kann. Installiere die Firmware einmal neu per USB-Kabel, über die Installationsseite: https://rustyk0-byte.github.io/room-tiles/install/ – danach aktualisiert sie sich wie gewohnt selbst."
+      "description": "{name} hat Firmware aus Room Tiles 0.1.6, die sich nicht selbst auf diese Version aktualisieren kann. Installiere die Firmware einmal neu per USB-Kabel, über die Installationsseite: {url} – danach aktualisiert sie sich wie gewohnt selbst."
     },
     "theme_problem": {
       "title": "Room Tiles kann das Design {theme} nicht verwenden",

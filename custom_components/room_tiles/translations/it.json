@@ -55,7 +55,7 @@
     },
     "panel_needs_reinstall": {
       "title": "Reinstalla il firmware di {name}",
-      "description": "{name} ha il firmware di Room Tiles 0.1.6, che non può aggiornarsi da solo a questa versione. Reinstalla il firmware una volta con un cavo USB, dalla pagina di installazione: https://rustyk0-byte.github.io/room-tiles/install/ - poi si aggiorna da solo come sempre."
+      "description": "{name} ha il firmware di Room Tiles 0.1.6, che non può aggiornarsi da solo a questa versione. Reinstalla il firmware una volta con un cavo USB, dalla pagina di installazione: {url} - poi si aggiorna da solo come sempre."
     },
     "theme_problem": {
       "title": "Room Tiles non può usare il tema {theme}",

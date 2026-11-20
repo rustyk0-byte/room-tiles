@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 DOMAIN = "room_tiles"
+# the panels' install page (Repairs texts take it as a placeholder)
+INSTALL_URL = "https://rustyk0-byte.github.io/room-tiles/install/"
 
 # DEVELOPER BUILD: running straight from the Room Tiles source (the pack
 # builder, assets/build_panel.py, beside the integration) - never a released
