@@ -23,6 +23,9 @@ HERE = Path(__file__).parent
 MASTERS = HERE / "masters"  # the default art: what a theme doesn't draw
 FORMAT = 1
 HEX = re.compile(r"#[0-9A-Fa-f]{6}")
+# a colour's name (it becomes a CSS variable on the dashboard: nothing else
+# may get in with it)
+COLOUR_NAME = re.compile(r"[A-Za-z][A-Za-z0-9]{0,39}")
 ID = re.compile(r"[a-z0-9][a-z0-9_-]{0,31}")
 
 
@@ -64,6 +67,9 @@ def read(folder: Path, where: str | None = None) -> dict:
     colours = doc.get("colors", {})
     if not isinstance(colours, dict):
         raise ThemeError(f"{where}: colors must be an object")
+    bad_names = [k for k in colours if not COLOUR_NAME.fullmatch(k)]
+    if bad_names:
+        raise ThemeError(f"{where}: color names are letters and digits, starting with a letter ({', '.join(map(repr, bad_names))})")
     bad = [k for k, v in colours.items() if not (isinstance(v, str) and HEX.fullmatch(v))]
     if bad:
         raise ThemeError(f"{where}: colors must be #rrggbb ({', '.join(bad)})")

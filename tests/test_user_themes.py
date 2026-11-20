@@ -221,3 +221,15 @@ async def test_add_a_theme_from_a_link(hass: HomeAssistant, entry, aioclient_moc
     assert await themes.async_add_from_link("https://example.com/gone.zip") == {"error": "not_found"}
     assert not (Path(hass.config.path("room_tiles_themes")) / "notes.zip").exists()
     await hass.async_block_till_done()
+
+
+def test_a_colour_name_is_only_a_name(tmp_path) -> None:
+    """A colour's name becomes a CSS variable on the dashboard: letters and
+    digits only, nothing more gets in with it."""
+    from custom_components.room_tiles.themes import fmt
+
+    folder = tmp_path / "bad"
+    folder.mkdir()
+    (folder / "theme.json").write_text(json.dumps({"format": 1, "id": "bad", "name": {"en": "Bad"}, "colors": {"a;background:url(x)": "#000000"}}))
+    with pytest.raises(fmt.ThemeError, match="color names"):
+        fmt.read(folder)

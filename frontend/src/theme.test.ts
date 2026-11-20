@@ -59,4 +59,15 @@ describe("installed themes (Room Tiles' feed)", () => {
     expect(THEMES["user:candy"]).toBeUndefined();
     expect(th.isInstalledId("user:candy") && !th.isInstalledId("christmas")).toBe(true);
   });
+
+  it("never add CSS of their own through a colour's name or value", async () => {
+    const th = await import("./theme");
+    th.setInstalledThemes([
+      { id: "user:bad", name: { en: "Bad" }, order: 100, colors: { "a;background:url(https://x.example/p);--b": "#000000", accent: "red;color:blue" }, offArt: [], buttonArt: [], base: "/t" },
+    ]);
+    const css = th.themeCss("user:bad");
+    expect(css).not.toContain("url(");
+    expect(css).not.toContain("blue");
+    th.setInstalledThemes([]);
+  });
 });

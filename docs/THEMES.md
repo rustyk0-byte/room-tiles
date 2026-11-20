@@ -45,7 +45,7 @@ default theme - so a theme can be just a few colors.
 | `format` | required | `1` |
 | `id` | required | the folder's name: a-z, 0-9, `-` or `_`, up to 32 - it never clashes with a theme that comes with Room Tiles (see [Installed themes](#installed-themes)) |
 | `name` | required | its name per language (`en`, `de`, `es`, `fr`, `it`, `nl`, `pt`); English is required, the others fall back to it |
-| `colors` | optional | colors as `#rrggbb` - see below |
+| `colors` | optional | colors as `#rrggbb`, by the names below (letters and digits only) |
 | `off` | optional | `"gray"`: Room Tiles makes the "off" picture of every icon (see [Off pictures](#off-pictures)) |
 | `order` | optional | its place among the installed themes (lower first) |
 

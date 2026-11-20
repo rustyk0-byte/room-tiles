@@ -147,7 +147,9 @@ const kebab = (s: string) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 /** The theme as CSS custom properties (--rt-page, --rt-tile-border, ...). */
 export function themeCss(name: ThemeName = DEFAULT_THEME): string {
   const t = THEMES[name] ?? THEMES[DEFAULT_THEME];
+  // (only a name and a colour each: an installed theme's data never adds CSS of its own)
   return Object.entries(t)
+    .filter(([k, v]) => /^[A-Za-z][A-Za-z0-9]{0,39}$/.test(k) && /^#[0-9a-fA-F]{6}$/.test(String(v)))
     .map(([k, v]) => `--rt-${kebab(k)}:${v}`)
     .join(";");
 }
