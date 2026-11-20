@@ -90,6 +90,15 @@ async def to_code(config):
         request_wifi_scan_results()  # (every network's, not only the saved one's)
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
+    # the captive portal's firmware upload (ESPHome's ota.web_server, brought
+    # along by captive_portal - no setting turns it off): never started - an
+    # open hotspot must never take firmware from anyone near
+    # (a generic image only, and only the one captive_portal brought along: a
+    # hand-built panel's own web_server OTA stays)
+    for ota in CORE.config.get("ota") or [] if config[CONF_GENERIC] else []:
+        if ota.get("platform") == "web_server" and not ota[CONF_ID].is_manual:
+            web_ota = await cg.get_variable(ota[CONF_ID])
+            cg.add(web_ota.mark_failed())
     # the image's tag: Room Tiles reads it from a firmware file to know its
     # board, panel format and release (custom_components/room_tiles/firmware.py
     # IMAGE_TAG) - an image for another format is never offered

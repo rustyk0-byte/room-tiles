@@ -893,6 +893,16 @@ show and use what the integration holds; nothing about a house is compiled in.
   rt_font_keys), keys ~93 x 83 px. Open, the panel never goes idle; Change
   Wi-Fi left untouched closes after 3 minutes. Its words are built into the
   firmware (boot_words.h): a new panel has no pack yet.
+  **The open hotspot only while no network is saved:** a set-up panel never
+  opens its fallback hotspot (identity/generic.yaml ap_timeout 0 - safe mode
+  too) - a router restarting
+  would otherwise let anyone near give it their own network. A panel whose
+  saved network is gone shows Change Wi-Fi on its boot screen after 90 s off
+  Wi-Fi (the 7" / 10.1": the list; the round panel: its phone way, which
+  forgets the network - the hotspot then comes back). The hotspot's setup page
+  never takes firmware: ESPHome's captive portal brings an open upload
+  (ota.web_server) along with it, switched off by room_tiles' code
+  generation (mark_failed before setup).
 - **Boot screen:** the Room Tiles icon on black (built into the firmware,
   so it shows before any download), the name, and - small and dim at the
   name's bottom right - the firmware's release ("v0.1.4"; none on a build
