@@ -225,6 +225,7 @@ def test_a_report_with_values_no_panel_sends_is_ignored():
     assert reported({**q, "built": "1763600000"}).built == 1763600000
     assert reported({**q, "built": "99999999999"}).built is None
     assert reported({**q, "built": "5"}).built is None
+    assert reported({**q, "built": "²"}).built is None  # (a digit to Python, not to int())
     reported({**q, "built": "4294967295"}).label  # (the largest kept: shown fine)
     assert reported({**q, "board": "../../x"}) is None
     assert reported({**q, "board": "x" * 100}) is None

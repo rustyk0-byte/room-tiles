@@ -294,7 +294,7 @@ def reported(query: dict[str, str]) -> PanelFirmware | None:
         return None
     built = query.get("built", "")
     # (a build time a clock can show: 2001 .. 2106 - anything else isn't one)
-    built_ts = int(built) if built.isdigit() and len(built) <= 10 else 0
+    built_ts = int(built) if built.isascii() and built.isdigit() and len(built) <= 10 else 0
     return PanelFirmware(
         board=board,
         build=build,

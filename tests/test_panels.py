@@ -94,6 +94,11 @@ def test_signed_requests_only():
     assert ok(old) is None
     assert ok(old, old_ok=True) is found["d1"]
     assert ok(old_signed(now, schema=None), old_ok=True) is found["d1"]  # (one that didn't say)
+    # a key twice (the check and the views must read one value): refused
+    assert check_request(found, "GET", URL, _raw(good) + "&sig=" + "0" * 64, now) is None
+    assert check_request(found, "GET", URL, "schema=4&" + _raw(old), now, old_ok=True) is None
+    # a signature that isn't 64 hex digits: refused (never an error)
+    assert ok({**good, "sig": "é"}) is None
 
 
 def test_the_source_is_a_developer_build():
@@ -552,6 +557,11 @@ async def test_panel_taps_reach_ha(hass: HomeAssistant, hass_client_no_auth) -> 
     assert (await client.post(ACTION_URL, params={**q, "sig": q["sig"].upper()}, data=raw)).status == 409
     mixed = "".join(c.upper() if i % 2 else c for i, c in enumerate(q["sig"]))
     assert (await client.post(ACTION_URL, params={**q, "sig": mixed}, data=raw)).status == 409
+    # ... or with another sig= in front of it (HA would read that one first)
+    from urllib.parse import urlencode
+
+    url = ACTION_URL + "?" + urlencode({"sig": "1" * 64}) + "&" + urlencode(q)
+    assert (await client.post(url, data=raw)).status == 403
     assert len(calls) == 1
     # a body that isn't the one signed is refused
     _raw, q2 = post({"service": "light.toggle", "entity": "light.counter"}, int(time.time()) - 1)

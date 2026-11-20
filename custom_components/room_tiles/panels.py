@@ -335,10 +335,16 @@ def check_request(
     key and its time is close to HA's; else None. `old_ok`: an older panel's
     old signature counts too (only for its way out: the 426 answer, its
     update's download)."""
-    from urllib.parse import parse_qs
+    import re
+    from urllib.parse import parse_qsl
 
-    q = {k: v[-1] for k, v in parse_qs(raw_query, keep_blank_values=True).items()}
+    pairs = parse_qsl(raw_query, keep_blank_values=True)
+    q = dict(pairs)
+    if len(q) != len(pairs):
+        return None  # (a key twice: what's checked here and what's used later must be one value)
     node, sig = q.get("name", ""), q.get("sig", "").lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", sig):
+        return None
     dev = next((p for p in panels.values() if p.node == node), None)
     if dev is None or dev.psk is None:
         return None
