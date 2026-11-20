@@ -531,7 +531,8 @@ void RoomTiles::idle_loop_() {
     }
     return;
   }
-  if (idle && !keep && !this->clock_.shown()) {
+  if (idle && !keep && !this->clock_.shown() && !this->asleep_) {
+    // (never while dark: the first touch must reach the sleep overlay - wake)
     const bool round = this->strip_;
     // the theme's clock: the analog one in a theme without (the setting stays)
     int face = this->idle_.mode;
@@ -1234,6 +1235,11 @@ void RoomTiles::loop() {
   this->map_view_.loop();
   this->picker_.loop();
   this->wifi_setup_.loop();
+  // dark: the sleep overlay over everything on the top layer (the Wi-Fi
+  // setup keeps itself on top of the rest) - a first touch only wakes
+  if (this->asleep_ && this->sleep_overlay_ != nullptr &&
+      lv_obj_get_index(this->sleep_overlay_) != (int32_t) lv_obj_get_child_count(lv_layer_top()) - 1)
+    lv_obj_move_foreground(this->sleep_overlay_);
   // the boot screen's big stopwatch: while it waits (no progress bar then)
   if (this->boot_busy_obj_ == nullptr) {
     this->boot_busy_obj_ = this->boot_busy_.make(lv_layer_top(), 72, this->assets_.color("accent", 0x4B9EF3));
