@@ -52,6 +52,7 @@ class UserThemes:
         self._changed = changed
         self.themes: dict[str, Any] = {}  # key -> installed.Built (ok)
         self.broken: list[Any] = []  # installed.Built with problems
+        self._build_broken: list[Any] = []  # (of those: the ones that failed to build - not the scan's)
         self.building: set[str] = set()  # ids being built now
         self._stamps: dict[str, str] = {}  # id -> the stamp it was built from
         self._lock = asyncio.Lock()
@@ -83,7 +84,10 @@ class UserThemes:
             sig = (tuple(sorted((f.id, f.stamp) for f in found)), tuple(sorted(b.source for b in scan_broken)))
             if sig == self._sig:
                 return  # nothing changed
-            before = {b.id: b for b in [*self.themes.values(), *self.broken]}
+            # (what each found theme built to last time - not what the scan
+            # said about another file of the same id: that never replaces a
+            # good build)
+            before = {b.id: b for b in [*self._build_broken, *self.themes.values()]}
             todo = [f for f in found if self._stamps.get(f.id) != f.stamp or f.id not in before]
             results = {f.id: before[f.id] for f in found if f not in todo}
             if todo:
@@ -105,7 +109,8 @@ class UserThemes:
                     )
             self._stamps = {i: st for i, st in self._stamps.items() if i in results}
             self.themes = {b.key: b for b in results.values() if b.ok}
-            self.broken = [b for b in results.values() if not b.ok] + scan_broken
+            self._build_broken = [b for b in results.values() if not b.ok]
+            self.broken = self._build_broken + scan_broken
             self._sig = sig
             keep = {b.web.parent.name for b in self.themes.values() if b.web is not None}
             await self.hass.async_add_executor_job(installed.prune, self.cache, keep)

@@ -41,5 +41,10 @@ def test_prune_leaves_work_in_progress_alone(tmp_path):
 
     for name in ("kept-1", "old-2", ".link-abc", ".kept-3.tmp"):
         (tmp_path / name).mkdir()
+    import os
+
+    old = tmp_path / ".gone-4.tmp"
+    old.mkdir()
+    os.utime(old, (0, 0))  # (left behind by a restart, long ago)
     prune(tmp_path, {"kept-1"})
     assert sorted(p.name for p in tmp_path.iterdir()) == [".kept-3.tmp", ".link-abc", "kept-1"]

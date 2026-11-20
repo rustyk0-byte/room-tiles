@@ -316,9 +316,22 @@ def build(found: Found, base: dict, cache: Path) -> Built:
 def prune(cache: Path, keep: set[str]) -> None:
     """Drop cached builds no theme uses any more (`keep`: their folders' names).
     Work in progress is left alone: builds and "Add from link" downloads
-    (dot-named folders) may be running beside a prune."""
+    (dot-named folders) may be running beside a prune - those an hour old
+    (cut short by a restart) go."""
+    import time
+
     if not cache.is_dir():
         return
     for entry in cache.iterdir():
-        if entry.is_dir() and entry.name not in keep and not entry.name.startswith("."):
+        if entry.is_dir() and entry.name.startswith("."):
+            # (work in progress - unless an hour old: left by a build or a
+            # download that a restart cut short)
+            try:
+                stale = time.time() - entry.stat().st_mtime > 3600
+            except OSError:
+                continue
+            if stale:
+                shutil.rmtree(entry, ignore_errors=True)
+            continue
+        if entry.is_dir() and entry.name not in keep:
             shutil.rmtree(entry, ignore_errors=True)

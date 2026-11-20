@@ -272,3 +272,18 @@ def test_a_free_size_picture_has_a_limit(tmp_path) -> None:
     Image.new("RGBA", (300, 80)).save(folder / "ui" / "bar_map.png")
     problems = fmt.check_pictures(folder)
     assert len(problems) == 1 and "bar_grid.png" in problems[0] and "at most" in problems[0]
+
+
+async def test_another_file_of_the_same_id_never_breaks_a_good_theme(hass: HomeAssistant, entry) -> None:
+    """candy/ works; a broken candy.zip beside it (the scan: "same id") and
+    then an unrelated change in the folder: candy stays usable."""
+    store = entry.runtime_data
+    root = Path(hass.config.path("room_tiles_themes"))
+    _candy(root)
+    await store.user_themes.async_check()
+    assert "user:candy" in panels.all_themes()
+    (root / "candy.zip").write_bytes(_zip_bytes({"candy/theme.json": json.dumps({"format": 1, "id": "candy", "name": {"en": "Candy"}})}))
+    await store.user_themes.async_check()
+    (root / "notes").mkdir()  # (something else changed in the folder)
+    await store.user_themes.async_check()
+    assert "user:candy" in panels.all_themes()
