@@ -71,10 +71,10 @@ static bool entries_ok(const uint8_t *p, const PackHeader &h, uint8_t kind) {
       need = 1024 + (uint64_t) stride * ht;
     else if (format == 3)  // I8X: the palette, then an index a pixel
       need = 1024 + px;
-    else if (format == 2)  // RGB565A8: the colours (`stride` a line), then an alpha a pixel
-      need = (uint64_t) stride * ht + px;
+    else if (format == 2)  // RGB565A8: the colours (`stride` a line), then the alphas (`stride / 2` a line - LVGL's)
+      need = (uint64_t) stride * ht + (uint64_t) (stride / 2) * ht;
     else
-      continue;  // (a kind this firmware doesn't draw: never used)
+      return false;  // (a picture this firmware can't draw: never taken - load_theme_ would draw it as RGB565A8)
     if (w == 0 || ht == 0 || (format != 3 && stride < (format == 2 ? 2u * w : (uint32_t) w)) || size < need)
       return false;
   }
@@ -268,8 +268,8 @@ void AssetStore::load_theme_() {
       this->clock_.assign(reinterpret_cast<const char *>(p + offset), size);
       continue;
     }
-    if (kind != 1)
-      continue;
+    if (kind != 1 || (format != 1 && format != 2 && format != 3))
+      continue;  // (entries_ok refuses a pack with one anyway)
     int slot = -1;
     for (int s = 0; s < IMG_COUNT; s++) {
       if (strcmp(ASSET_NAMES[s], name) == 0) {
