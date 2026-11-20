@@ -142,6 +142,7 @@ OWN_SIZES = {
 }
 # the idle clock's other pieces: any size (clock.json says how they sit)
 CLOCK_FREE = ("clock_hour", "clock_minute", "clock_second", "clock_cap")
+FREE_MAX_PX = 2048  # (a picture of any size: at most this a side)
 SCALES = (1, 2, 4)  # a source may be the size, or 2x / 4x of it (docs/THEMES.md)
 
 
@@ -200,6 +201,10 @@ def check_pictures(theme_dir: Path, scaled_ok: bool = True) -> list[str]:
                 continue
             need = want[(sub, f.stem)]
             if need is None:
+                # (any size - fitted into its box: still never one that takes
+                # gigabytes to open)
+                if max(size) > FREE_MAX_PX:
+                    problems.append(f"{where}: {size[0]}x{size[1]} - at most {FREE_MAX_PX} px a side")
                 continue
             ok = [(need[0] * k, need[1] * k) for k in (SCALES if scaled_ok else (1,))]
             if size not in ok:

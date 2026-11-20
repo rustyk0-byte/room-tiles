@@ -132,7 +132,7 @@ Without one, the button shows its plain symbol.
 The top bars' buttons - `bar_grid`, `bar_map`, `bar_area_lights` (and its
 `_off`), `bar_help` and the gear `icon_settings` - all come out the **same
 size**, on the dashboard and on the panels, and the same size as the plain
-symbols beside them. Draw them at **any size**: the build trims the empty
+symbols beside them. Draw them at **any size** (up to 2048 px a side): the build trims the empty
 edges around what you drew, scales it to fit one box and centers it. Draw
 with a little room around the picture if you want it to look smaller.
 

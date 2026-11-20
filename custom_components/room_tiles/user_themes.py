@@ -127,7 +127,7 @@ class UserThemes:
                 is_fixable=False,
                 severity=ir.IssueSeverity.WARNING,
                 translation_key=ISSUE,
-                translation_placeholders={"theme": b.source, "problems": "\n".join(f"- {p}" for p in b.problems)},
+                translation_placeholders={"theme": _md(b.source), "problems": "\n".join(f"- {_md(p)}" for p in b.problems)},
             )
         for gone in self._issues - now:
             ir.async_delete_issue(self.hass, DOMAIN, gone)
@@ -245,6 +245,12 @@ class UserThemes:
             if not addresses or not all(ipaddress.ip_address(a).is_global for a in addresses):
                 raise LinkError("download_failed")
             resp = await session.get(url, timeout=aiohttp_timeout(180), allow_redirects=False)
+            # (and where it really connected: a name can lead elsewhere the
+            # second time it's looked up)
+            peer = _peer(resp)
+            if peer is None or not ipaddress.ip_address(peer).is_global:
+                resp.release()
+                raise LinkError("download_failed")
             if resp.status in (301, 302, 303, 307, 308) and resp.headers.get("Location"):
                 url = urljoin(url, resp.headers["Location"])
                 resp.release()
@@ -335,6 +341,22 @@ class UserThemes:
             "building": sorted(self.building),
             "problems": [{"theme": b.source, "problems": b.problems} for b in self.broken],
         }
+
+
+def _md(text: str) -> str:
+    """A theme's own text (its file names...) in a Repairs notice: shown as
+    it is, never as links or formatting (HA reads the notice as Markdown)."""
+    import re
+
+    return re.sub(r"([\\`*_{}\[\]()<>#+!|~])", r"\\\1", text)
+
+
+def _peer(resp: Any) -> str | None:
+    """The address a response came from (None: unknown)."""
+    conn = getattr(resp, "connection", None)
+    transport = getattr(conn, "transport", None) if conn is not None else None
+    peer = transport.get_extra_info("peername") if transport is not None else None
+    return str(peer[0]) if peer else None
 
 
 def _addresses(host: str, port: int) -> list[str]:

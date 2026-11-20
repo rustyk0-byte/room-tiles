@@ -91,7 +91,7 @@ async def test_a_broken_theme_is_reported_and_left_out(hass: HomeAssistant, entr
     await store.user_themes.async_check()
     assert "user:candy" not in panels.all_themes()
     issue = ir.async_get(hass).async_get_issue(DOMAIN, "theme_problem_candy")
-    assert issue is not None and "icon_key.png: 64x64" in issue.translation_placeholders["problems"]
+    assert issue is not None and "icon\\_key.png: 64x64" in issue.translation_placeholders["problems"]
     assert store.payload()["themes"]["problems"][0]["theme"] == "candy"
     # fixed: offered, the notice gone
     (folder / "ui" / "icon_key.png").unlink()
@@ -168,6 +168,7 @@ async def test_add_a_theme_from_a_link(hass: HomeAssistant, entry, aioclient_moc
     from custom_components.room_tiles import user_themes as ut
 
     monkeypatch.setattr(ut, "_addresses", lambda host, port: ["192.168.1.1"] if host == "router.example" else ["140.82.112.3"])
+    monkeypatch.setattr(ut, "_peer", lambda resp: "140.82.112.3")
     themes = entry.runtime_data.user_themes
     # never into the home network: not directly, not through a redirect
     aioclient_mock.get("https://router.example/t.zip", content=b"x")
@@ -233,3 +234,27 @@ def test_a_colour_name_is_only_a_name(tmp_path) -> None:
     (folder / "theme.json").write_text(json.dumps({"format": 1, "id": "bad", "name": {"en": "Bad"}, "colors": {"a;background:url(x)": "#000000"}}))
     with pytest.raises(fmt.ThemeError, match="color names"):
         fmt.read(folder)
+
+
+async def test_a_link_that_connects_into_the_home_network_is_refused(hass: HomeAssistant, entry, aioclient_mock, monkeypatch) -> None:
+    """A name that looked public, then led to a home address when connecting
+    (DNS rebinding): refused."""
+    from custom_components.room_tiles import user_themes as ut
+
+    monkeypatch.setattr(ut, "_addresses", lambda host, port: ["140.82.112.3"])
+    monkeypatch.setattr(ut, "_peer", lambda resp: "192.168.1.1")
+    aioclient_mock.get("https://rebind.example/t.zip", content=b"x")
+    assert await entry.runtime_data.user_themes.async_add_from_link("https://rebind.example/t.zip") == {"error": "download_failed"}
+
+
+def test_a_free_size_picture_has_a_limit(tmp_path) -> None:
+    """Top-bar and clock-hand pictures may be any size - but never one that
+    takes gigabytes to open."""
+    from custom_components.room_tiles.themes import fmt
+
+    folder = tmp_path / "big"
+    (folder / "ui").mkdir(parents=True)
+    Image.new("RGBA", (fmt.FREE_MAX_PX + 1, 4)).save(folder / "ui" / "bar_grid.png")
+    Image.new("RGBA", (300, 80)).save(folder / "ui" / "bar_map.png")
+    problems = fmt.check_pictures(folder)
+    assert len(problems) == 1 and "bar_grid.png" in problems[0] and "at most" in problems[0]
