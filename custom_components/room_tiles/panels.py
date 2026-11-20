@@ -872,7 +872,10 @@ class _PanelRequest(HomeAssistantView):
         old = signs_old(q.get("schema", ""))
         # (by address too: an old panel asks for its image right after its
         # 426 - the same second, the same old signature - and must get it)
-        if (old or body is not None or self.any_schema) and not REPLAYS.first_time(f"{request.path}|{q.get('sig', '')}", time.time()):
+        # (an old signature doesn't cover the address: one use in all - the
+        # address only for the others, whose signature does)
+        replay_key = q.get("sig", "") if old else f"{request.path}|{q.get('sig', '')}"
+        if (old or body is not None or self.any_schema) and not REPLAYS.first_time(replay_key, time.time()):
             return self._signed(request, dev, web.Response(status=409, text="already done"))
         if (old or body is not None or self.any_schema) and int(q.get("ts", "0")) < STARTED:
             # (what's used once: never signed before this run started either -
@@ -940,7 +943,9 @@ class PanelView(_PanelRequest):
 
         running = fw.reported(dict(request.query))
         if running is not None:
-            store.firmware_seen(dev.device_id, running)
+            # (a report signed earlier than the last one taken - a caught
+            # request sent again - never replaces it)
+            store.firmware_seen(dev.device_id, running, int(request.query.get("ts", "0")))
         image = store.fw_images.get(running.board) if running else None
         wanted = store.fw_install.get(dev.device_id)
         auto = dev.device_id in store.fw_auto

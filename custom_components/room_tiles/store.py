@@ -125,6 +125,7 @@ class RoomTilesStore:
         # a too-old panel's forced update: when it was fetched (this HA run
         # only, the last hour counts - never stuck for good)
         self.fw_forced: dict[tuple[str, str], list[float]] = {}
+        self.fw_report_ts: dict[str, int] = {}  # (when each panel's last report was signed)
         self.fw_listeners: list[Callable[[], None]] = []
         self.fw_rescan: Callable[[], Any] | None = None  # (__init__: read the images again)
         self.fw_upload_dir: Any = None  # (<config>/room_tiles_firmware)
@@ -187,9 +188,14 @@ class RoomTilesStore:
             listener(sections)
 
     @callback
-    def firmware_seen(self, device_id: str, report: Any) -> None:
+    def firmware_seen(self, device_id: str, report: Any, ts: int = 0) -> None:
         """A panel reported what it runs (firmware.PanelFirmware): an install
-        asked for is done once it runs that build; update entities hear."""
+        asked for is done once it runs that build; update entities hear.
+        `ts`: when it was signed - one older than the last taken is ignored."""
+        if ts and ts < self.fw_report_ts.get(device_id, 0):
+            return
+        if ts:
+            self.fw_report_ts[device_id] = ts
         changed = self.fw_reports.get(device_id) != report
         self.fw_reports[device_id] = report
         if self.fw_install.get(device_id) == report.build:

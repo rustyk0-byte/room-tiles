@@ -158,6 +158,17 @@ def async_report_dropped_overrides(hass: HomeAssistant, dropped: list[str]) -> N
     )
 
 
+def _name(text: str) -> str:
+    """A name the device chose (its friendly name), in a notice's title and
+    text: never a link or formatting - Markdown's characters and web
+    addresses taken out, one line."""
+    import re
+
+    text = re.sub(r"[\[\]()<>`*_#!|~:\\]", " ", text)
+    text = re.sub(r"(?i)www\.", "www\u200b.", text)
+    return " ".join(text.split())[:80]
+
+
 def _code(text: str) -> str:
     """Text from outside (a device's state...) as Markdown code: shown as it
     is, never as a link or formatting."""
@@ -210,7 +221,7 @@ def async_report_panel_schema(hass: HomeAssistant, device_id: str, name: str, ne
         is_fixable=False,
         severity=ir.IssueSeverity.WARNING,
         translation_key=f"{ISSUE_PANEL_SCHEMA}_{needs}",
-        translation_placeholders={"name": name},
+        translation_placeholders={"name": _name(name)},
     )
 
 

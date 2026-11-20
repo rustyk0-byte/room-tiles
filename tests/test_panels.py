@@ -721,9 +721,10 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
     import itertools
 
     back = itertools.count(1)
+    start = int(time.time()) - 250
 
     def q(build="ff" * 8, built=None, schema=str(PANEL_SCHEMA), path=URL, **more):
-        more.setdefault("ts", int(time.time()) - next(back))  # (each request its own signature)
+        more.setdefault("ts", start + next(back))  # (each request its own signature, each later than the last)
         extra = {"board": board, "build": build, "generic": "1"}
         if built is not None:
             extra["built"] = str(built)
@@ -839,3 +840,19 @@ async def test_a_panel_action_ha_refuses_is_logged(hass: HomeAssistant, caplog) 
 
     await _call_for_panel(hass, Panel(id="d1"), "light", "no_such_action", {"entity_id": "light.x"})
     assert "wasn't done" in caplog.text
+
+
+def test_an_older_report_never_replaces_a_newer_one():
+    """A caught payload request sent again (signed earlier): its report is ignored."""
+    from types import SimpleNamespace
+
+    from custom_components.room_tiles.store import RoomTilesStore
+
+    seen = []
+    store = SimpleNamespace(fw_report_ts={}, fw_reports={}, fw_install={}, fw_auto=set(), firmware_auto=lambda: True,
+                            firmware_changed=lambda: None)
+    new, old = SimpleNamespace(build="b2"), SimpleNamespace(build="b1")
+    RoomTilesStore.firmware_seen(store, "d1", new, 2000)
+    RoomTilesStore.firmware_seen(store, "d1", old, 1000)
+    assert store.fw_reports["d1"] is new
+    seen.append(1)
