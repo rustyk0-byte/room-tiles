@@ -1052,11 +1052,13 @@ class PanelView(_PanelRequest):
         wanted = store.fw_install.get(dev.device_id)
         auto = dev.device_id in store.fw_auto
         offer = fw.offer(image, running, auto) if image is not None and wanted == image.build else None
-        body = build_payload(hass, store, panel, dev, offer)
         if store.demo_shows(dev):  # (a developer build's demo home - demo.py)
             from . import demo
 
-            body = demo.apply(body, store.demo_home)
+            picked = store.demo_picks.get(dev.device_id)
+            body = demo.apply(build_payload(hass, store, picked or panel, dev, offer), store.demo_home, picked)
+        else:
+            body = build_payload(hass, store, panel, dev, offer)
         return self._signed(request, dev, web.json_response(body, headers={"Cache-Control": "no-store"}))
 
 
@@ -1181,14 +1183,26 @@ class PanelActionView(_PanelRequest):
         if isinstance(found, web.Response):
             return found
         store, panel, dev = found
-        if store.demo_shows(dev):
-            # a demo home's tap or setting: never carried out (its entities
-            # may share ids with this home's - demo.py)
-            return self._signed(request, dev, web.json_response({"ok": True}))
         try:
             body = json.loads(raw or b"{}")
         except ValueError:
             return self._signed(request, dev, web.Response(status=400, text="not JSON"))
+        if store.demo_shows(dev):
+            # a demo home's tap: never carried out (its entities may share
+            # ids with this home's); its own pick: kept while it shows the
+            # demo, never saved (demo.py)
+            if isinstance(body, dict) and "settings" in body:
+                from dataclasses import replace
+
+                from . import demo
+
+                shown = store.demo_picks.get(dev.device_id) or replace(panel)
+                picked = demo.pick(shown, store.demo_home, body, all_themes(), LAYOUTS)
+                if picked is None:
+                    return self._signed(request, dev, web.Response(status=400, text="not a setting"))
+                store.demo_picks[dev.device_id] = picked
+                store.panel_link.bump()
+            return self._signed(request, dev, web.json_response({"ok": True}))
         hass: HomeAssistant = request.app["hass"]
         if isinstance(body, dict) and "settings" in body:
             why = apply_settings(store.data, panel, body)

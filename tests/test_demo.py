@@ -65,3 +65,17 @@ def test_which_panels_show_it(tmp_path):
     (tmp_path / "panel.json").write_text("{not json")
     assert demo.read(tmp_path)[1] is None
     assert len(demo.fingerprint(tmp_path)) == 2
+
+
+def test_a_demo_panels_own_picks_hold_while_it_shows_the_demo():
+    from custom_components.room_tiles.model import Panel
+
+    shown = Panel(id="d1", area="attic", theme="dark")
+    picked = demo.pick(shown, _home(), {"settings": {"area": "kitchen", "theme": "light"}}, ("dark", "light"), ("5x2", "6x3"))
+    assert picked.area == "kitchen" and picked.theme == "light" and shown.theme == "dark"  # (a copy: nothing saved)
+    out = demo.apply({"panel": {"layout": "5x2"}}, _home(), picked)
+    assert out["panel"]["area"] == "kitchen"
+    # checked: a real home's area, an unknown theme or setting - refused
+    for bad in ({"area": "attic"}, {"theme": "neon"}, {"layout": "9x9"}, {"wifi": "x"}):
+        assert demo.pick(shown, _home(), {"settings": bad}, ("dark", "light"), ("5x2", "6x3")) is None
+    assert demo.pick(shown, _home(), {"service": "light.toggle"}, ("dark",), ("5x2",)) is None

@@ -149,6 +149,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoomTilesConfigEntry) ->
                 return
             demo_seen[0] = now
             store.demo_names, store.demo_home = await hass.async_add_executor_job(demo.read, demo_dir)
+            store.demo_picks = {}  # (a demo's picks end with it)
             if store.demo_names:
                 _LOGGER.info("Demo home on panels: %s%s", ", ".join(sorted(store.demo_names)), "" if store.demo_home else " (no panel.json yet)")
             store.panel_link.bump()

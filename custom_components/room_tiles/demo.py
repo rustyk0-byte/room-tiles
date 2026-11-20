@@ -10,14 +10,16 @@ screenshots: the landing page's pictures, never a real home's).
 
 A listed panel keeps its own settings (theme, language, screen) and gets
 the demo home instead of this one, its states with it (the firmware asks
-HA for nothing then - a demo entity may share an id with a real one). What
-it sends back (a tap, a setting) is never carried out. Unlisting it
-restarts the panel back to the real home.
+HA for nothing then - a demo entity may share an id with a real one). A
+tap it sends is never carried out; a setting it picks (area, layout,
+theme, language) holds only while it shows the demo - kept in memory,
+never saved (pick). Unlisting it restarts the panel back to the real home.
 """
 
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -77,17 +79,40 @@ def shows_demo(names: set[str], home: dict[str, Any] | None, dev: Any) -> bool:
     return home is not None and (dev.name in names or dev.node in names)
 
 
-def apply(real: dict[str, Any], home: dict[str, Any]) -> dict[str, Any]:
+def pick(shown: Any, home: dict[str, Any], body: Any, themes: tuple[str, ...], layouts: tuple[str, ...]) -> Any:
+    """A demo panel's own pick (its {"settings": ...}): `shown` (a copy of
+    its settings, the demo's picks in it) with the pick in - checked like
+    panels.apply_settings, the area against the demo home's. None: refused
+    (nothing changes)."""
+    want = body.get("settings") if isinstance(body, dict) else None
+    if not isinstance(want, dict):
+        return None
+    areas = {a.get("id") for a in home["home"].get("areas") or []}
+    for key, value in want.items():
+        if key not in ("area", "layout", "theme", "language"):
+            return None
+        if value is None:
+            continue
+        if (key == "area" and value not in areas) or (key == "layout" and value not in layouts) or (
+            key == "theme" and value not in themes
+        ):
+            return None
+    return replace(shown, **{k: None if v is None else str(v) for k, v in want.items()})
+
+
+def apply(real: dict[str, Any], home: dict[str, Any], picked: Any = None) -> dict[str, Any]:
     """The panel's payload with the demo home in it: its own settings stay
-    (theme, language...); the area, the home and its states are the demo's."""
+    (theme, language...); the area, the home and its states are the demo's
+    - or the area / layout it picked while showing it (pick)."""
     out = {**real, **home["home"]}
     panel = dict(real.get("panel") or {})
     areas = home["home"].get("areas") or []
-    area = next((a for a in areas if a.get("id") == home.get("area")), areas[0] if areas else None)
+    want = getattr(picked, "area", None) or home.get("area")
+    area = next((a for a in areas if a.get("id") == want), areas[0] if areas else None)
     panel.update({
         "area": area.get("id") if area else None,
         "area_set": True,
-        "layout": (area or {}).get("layout") or panel.get("layout") or "5x2",
+        "layout": getattr(picked, "layout", None) or (area or {}).get("layout") or panel.get("layout") or "5x2",
         "room_lights": [],  # (its real room's lights: nothing to do with the demo)
         "room": "",
     })

@@ -118,6 +118,7 @@ class RoomTilesStore:
         # a released install never fills these)
         self.demo_names: set[str] = set()
         self.demo_home: dict | None = None
+        self.demo_picks: dict[str, Any] = {}  # device id -> its settings with its demo picks (never saved)
         self.user_themes: Any = None  # the installed themes (user_themes.UserThemes), set at setup
         # panel firmware (firmware.py): the newest image per board, what each
         # panel reports it runs (device id -> PanelFirmware), the installs

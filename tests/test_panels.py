@@ -897,9 +897,12 @@ async def test_a_demo_panel_gets_the_demo_home_and_its_taps_go_nowhere(hass: Hom
     await hass.async_block_till_done()
     assert calls == []
     assert all(p.area != "den" for p in store.data.panels)
+    # ... but it holds while the demo shows (in memory, never saved)
+    body = await (await client.get(URL, params=signed("GET", URL, now + 3))).json()
+    assert body["panel"]["area"] == "den"
     # off again: the real home
     store.demo_names = set()
-    body = await (await client.get(URL, params=signed("GET", URL, now + 3))).json()
+    body = await (await client.get(URL, params=signed("GET", URL, now + 4))).json()
     assert "demo" not in body and [a["id"] for a in body["areas"]] == ["kitchen"]
 
 
