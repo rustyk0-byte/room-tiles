@@ -69,15 +69,6 @@ void BusyIcons::show(lv_obj_t *busy, bool on) {
     lv_obj_add_flag(busy, LV_OBJ_FLAG_HIDDEN);
 }
 
-void BusyIcons::forget_in(lv_obj_t *parent) {
-  for (Item &it : this->items_)
-    for (lv_obj_t *o = it.root; o != nullptr; o = lv_obj_get_parent(o))
-      if (o == parent) {
-        it.root = nullptr;  // (a deque: the others keep their places)
-        break;
-      }
-}
-
 void BusyIcons::animate(uint32_t now) {
   if (now - this->drawn_at_ < 50)
     return;

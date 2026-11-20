@@ -637,7 +637,7 @@ void Board::build_tile_(TileView &tv, int x, int y, int w, int h, lv_obj_t *pare
   this->watch_(tv.kind, tv.entity);
   // the small stopwatch, over the middle (shown while it waits)
   if (!tv.entity.empty())
-    tv.busy = this->busy_icons_.make(box, px(40), this->color_("accent", 0x4B9EF3));
+    tv.busy = (tv.slot < 0 ? this->popup_busy_ : this->busy_icons_).make(box, px(40), this->color_("accent", 0x4B9EF3));
 }
 
 // What each kind of tile needs to know (the state + these attributes). HA
@@ -1249,11 +1249,10 @@ lv_obj_t *Board::popup_add(lv_obj_t *parent, const std::string &entity, const st
 }
 
 void Board::popup_clear() {
-  for (auto &tv : this->popups_) {
-    this->busy_icons_.forget_in(tv.box);
+  for (auto &tv : this->popups_)
     lv_obj_delete(tv.box);
-  }
   this->popups_.clear();
+  this->popup_busy_.clear();  // (their stopwatches went with them)
 }
 
 void Board::paint_lights_() {
@@ -1352,6 +1351,7 @@ void Board::loop() {
     this->tick_(tv, now);
   this->animate_(now);
   this->busy_icons_.animate(now);
+  this->popup_busy_.animate(now);
 }
 
 // A tile's timers: held values running out, flashes, waits

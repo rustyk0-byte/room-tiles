@@ -343,6 +343,9 @@ class Board {
   std::string layout_;
   std::vector<TileView> tiles_;
   BusyIcons busy_icons_;
+  // the map pop-up's tiles' stopwatches: their own - a board rebuilt under
+  // an open pop-up must not free them; gone with the pop-up (popup_clear)
+  BusyIcons popup_busy_;
 };
 
 }  // namespace esphome::room_tiles

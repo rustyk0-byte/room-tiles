@@ -19,8 +19,6 @@ class BusyIcons {
   void animate(uint32_t now);
   /// Forget them all (their parents were deleted).
   void clear() { this->items_.clear(); }
-  /// Forget the ones inside `parent` (about to be deleted).
-  void forget_in(lv_obj_t *parent);
 
  protected:
   struct Item {
