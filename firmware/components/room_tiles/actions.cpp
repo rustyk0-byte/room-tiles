@@ -74,6 +74,11 @@ void ActionSender::worker_(void *arg) {
       cfg.keep_alive_enable = true;
       cfg.disable_auto_redirect = true;
       client = esp_http_client_init(&cfg);
+      if (client == nullptr) {
+        ESP_LOGW(TAG, "Couldn't send (no HTTP client): %s", item->c_str());
+        delete item;
+        continue;
+      }
     } else {
       esp_http_client_set_url(client, url.c_str());
     }

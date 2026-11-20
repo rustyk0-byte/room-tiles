@@ -444,8 +444,6 @@ void RoomTiles::set_idle(int mode, bool anim_keep, bool seconds, bool save) {
   this->idle_.anim_keep = anim_keep ? 1 : 0;
   this->idle_.seconds = seconds ? 1 : 0;
   this->clock_.hide();  // (shown again in the new way when idle)
-  if (this->idle_.mode == IDLE_OFF)
-    this->clock_.hide();
   if (save)
     this->idle_pref_.save(&this->idle_);
 }

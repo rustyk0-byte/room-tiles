@@ -62,8 +62,14 @@ void IdleClock::show(RoomTiles *rt, const Fonts &fonts, int face, bool seconds, 
   lv_obj_add_event_cb(this->root_, &IdleClock::on_release_, LV_EVENT_RELEASED, this);
   const uint32_t text = rt->color("text", 0xFFFFFF), dim = rt->color("textSecondary", 0x9E9E9E);
 
-  if (face == THEME && !this->build_theme_(w, h))
-    this->face_ = face = ANALOG;  // (its clock.json unreadable: the analog one)
+  if (face == THEME && !this->build_theme_(w, h)) {
+    // (its clock incomplete or unreadable: the analog one - without the
+    // theme's pieces made before it gave up)
+    lv_obj_clean(this->root_);
+    this->time_ = this->ampm_ = this->date_ = nullptr;
+    this->hour_ = this->minute_ = this->second_ = Hand{};
+    this->face_ = face = ANALOG;
+  }
   if (face == ANALOG) {
     const int s = std::min(w, h) * 4 / 5;
     lv_obj_t *dial = lv_obj_create(this->root_);

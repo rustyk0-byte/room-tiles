@@ -117,9 +117,10 @@ void Screenshot::upload_(void *arg) {
     cfg.timeout_ms = 30000;
     cfg.disable_auto_redirect = true;
     esp_http_client_handle_t client = esp_http_client_init(&cfg);
-    esp_http_client_set_header(client, "Content-Type", "application/octet-stream");
+    if (client != nullptr)
+      esp_http_client_set_header(client, "Content-Type", "application/octet-stream");
     const uint32_t start = xTaskGetTickCount();
-    esp_err_t err = esp_http_client_open(client, (int) size);
+    esp_err_t err = client != nullptr ? esp_http_client_open(client, (int) size) : ESP_ERR_NO_MEM;
     size_t sent = 0;
     while (err == ESP_OK && sent < size) {
       const int n = esp_http_client_write(client, reinterpret_cast<const char *>(data) + sent,
@@ -154,7 +155,8 @@ void Screenshot::upload_(void *arg) {
       self->file_ = file;
       saved = true;
     }
-    esp_http_client_cleanup(client);
+    if (client != nullptr)
+      esp_http_client_cleanup(client);
   }
   heap_caps_free(self->px_);
   self->px_ = nullptr;
