@@ -23,6 +23,8 @@ from pathlib import Path
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
+from aiohttp import ThreadedResolver
+from aiohttp.abc import AbstractResolver
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_track_time_interval
@@ -184,8 +186,11 @@ class UserThemes:
             zip_url, folder = await self._zip_url(session, url)
         except LinkError as err:
             return {"error": err.code}
+        # (the download - wherever the link or its redirects lead - on a
+        # connection that only ever reaches public addresses)
+        public = _public_session(self.hass)
         try:
-            async with await self._get_public(session, zip_url) as resp:
+            async with await self._get_public(public, zip_url) as resp:
                 if resp.status == 404:
                     return {"error": "not_found"}
                 if resp.status != 200:
@@ -199,6 +204,8 @@ class UserThemes:
                         return {"error": "too_big"}
         except Exception:  # noqa: BLE001 - any network failure is the same to the user
             return {"error": "download_failed"}
+        finally:
+            await public.close()
 
         def keep() -> dict[str, Any]:
             self.cache.mkdir(parents=True, exist_ok=True)
@@ -230,27 +237,17 @@ class UserThemes:
         return result
 
     async def _get_public(self, session: Any, url: str) -> Any:
-        """GET `url` the safe way for a link someone pasted: https only, and
-        never into the home network (a redirect is followed only after the
-        same check - at most 5). Raises on anything else (download_failed:
-        nothing tells what answered where)."""
-        import ipaddress
+        """GET `url` the safe way for a link someone pasted, on `session`
+        (_public_session: public addresses only): https only, a redirect
+        followed only after the same check - at most 5. Raises on anything
+        else (download_failed: nothing tells what answered where)."""
         from urllib.parse import urljoin, urlsplit
 
         for _hop in range(6):
             parts = urlsplit(url)
             if parts.scheme != "https" or not parts.hostname:
                 raise LinkError("download_failed")
-            addresses = await self.hass.async_add_executor_job(_addresses, parts.hostname, parts.port or 443)
-            if not addresses or not all(ipaddress.ip_address(a).is_global for a in addresses):
-                raise LinkError("download_failed")
             resp = await session.get(url, timeout=aiohttp_timeout(180), allow_redirects=False)
-            # (and where it really connected: a name can lead elsewhere the
-            # second time it's looked up)
-            peer = _peer(resp)
-            if peer is None or not ipaddress.ip_address(peer).is_global:
-                resp.release()
-                raise LinkError("download_failed")
             if resp.status in (301, 302, 303, 307, 308) and resp.headers.get("Location"):
                 url = urljoin(url, resp.headers["Location"])
                 resp.release()
@@ -345,28 +342,40 @@ class UserThemes:
 
 def _md(text: str) -> str:
     """A theme's own text (its file names...) in a Repairs notice: shown as
-    it is, never as links or formatting (HA reads the notice as Markdown)."""
-    import re
-
-    return re.sub(r"([\\`*_{}\[\]()<>#+!|~])", r"\\\1", text)
-
-
-def _peer(resp: Any) -> str | None:
-    """The address a response came from (None: unknown)."""
-    conn = getattr(resp, "connection", None)
-    transport = getattr(conn, "transport", None) if conn is not None else None
-    peer = transport.get_extra_info("peername") if transport is not None else None
-    return str(peer[0]) if peer else None
+    it is, never as links or formatting (HA reads the notice as Markdown) -
+    as code (no Markdown and no web addresses there)."""
+    return "`" + text.replace("`", "'").replace("\n", " ") + "`"
 
 
-def _addresses(host: str, port: int) -> list[str]:
-    """Where a host name leads (blocking: the executor)."""
-    import socket
+class _PublicResolver(AbstractResolver):
+    """Names to addresses - public ones only (none: an error): what "Add
+    from link" connects to is exactly what was checked - a name that leads
+    into the home network, now or the second time it's looked up, never
+    gets a connection."""
 
-    try:
-        return [info[4][0] for info in socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)]
-    except OSError:
-        return []
+    def __init__(self) -> None:
+        self._inner = ThreadedResolver()
+
+    async def resolve(self, host: str, port: int = 0, family: int = 0) -> list[dict[str, Any]]:
+        import ipaddress
+
+        found = await self._inner.resolve(host, port, family)
+        public = [h for h in found if ipaddress.ip_address(h["host"]).is_global]
+        if not public:
+            raise OSError(f"{host}: no public address")
+        return public
+
+    async def close(self) -> None:
+        await self._inner.close()
+
+
+def _public_session(hass: HomeAssistant) -> Any:
+    """A session of its own for a pasted link's download: its connections
+    reach public addresses only (_PublicResolver). Closed after use."""
+    import aiohttp
+    from homeassistant.util.ssl import get_default_context
+
+    return aiohttp.ClientSession(connector=aiohttp.TCPConnector(resolver=_PublicResolver(), ssl=get_default_context()))
 
 
 class LinkError(Exception):

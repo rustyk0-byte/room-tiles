@@ -91,7 +91,7 @@ async def test_a_broken_theme_is_reported_and_left_out(hass: HomeAssistant, entr
     await store.user_themes.async_check()
     assert "user:candy" not in panels.all_themes()
     issue = ir.async_get(hass).async_get_issue(DOMAIN, "theme_problem_candy")
-    assert issue is not None and "icon\\_key.png: 64x64" in issue.translation_placeholders["problems"]
+    assert issue is not None and "icon_key.png: 64x64" in issue.translation_placeholders["problems"]
     assert store.payload()["themes"]["problems"][0]["theme"] == "candy"
     # fixed: offered, the notice gone
     (folder / "ui" / "icon_key.png").unlink()
@@ -167,14 +167,11 @@ async def test_add_a_theme_from_a_link(hass: HomeAssistant, entry, aioclient_moc
     release - looked at, then kept in the themes folder and built."""
     from custom_components.room_tiles import user_themes as ut
 
-    monkeypatch.setattr(ut, "_addresses", lambda host, port: ["192.168.1.1"] if host == "router.example" else ["140.82.112.3"])
-    monkeypatch.setattr(ut, "_peer", lambda resp: "140.82.112.3")
+    # (the download's own public-only session: the test's mock here -
+    # _PublicResolver is tested on its own)
+    monkeypatch.setattr(ut, "_public_session", lambda hass: aioclient_mock.create_session(hass.loop))
     themes = entry.runtime_data.user_themes
-    # never into the home network: not directly, not through a redirect
-    aioclient_mock.get("https://router.example/t.zip", content=b"x")
-    assert await themes.async_add_from_link("https://router.example/t.zip") == {"error": "download_failed"}
-    aioclient_mock.get("https://example.com/hop.zip", status=302, headers={"Location": "https://router.example/t.zip"})
-    assert await themes.async_add_from_link("https://example.com/hop.zip") == {"error": "download_failed"}
+    # a redirect to plain http: refused
     aioclient_mock.get("https://example.com/plain.zip", status=302, headers={"Location": "http://example.com/t.zip"})
     assert await themes.async_add_from_link("https://example.com/plain.zip") == {"error": "download_failed"}
     mint = _zip_bytes({"mint/theme.json": json.dumps({"format": 1, "id": "mint", "name": {"en": "Mint"}})})
@@ -236,15 +233,28 @@ def test_a_colour_name_is_only_a_name(tmp_path) -> None:
         fmt.read(folder)
 
 
-async def test_a_link_that_connects_into_the_home_network_is_refused(hass: HomeAssistant, entry, aioclient_mock, monkeypatch) -> None:
-    """A name that looked public, then led to a home address when connecting
-    (DNS rebinding): refused."""
+async def test_a_pasted_link_never_reaches_the_home_network() -> None:
+    """The download's connections only get public addresses: a name that
+    leads into the home network (now, or the second time it's looked up)
+    gets none - so no connection."""
     from custom_components.room_tiles import user_themes as ut
 
-    monkeypatch.setattr(ut, "_addresses", lambda host, port: ["140.82.112.3"])
-    monkeypatch.setattr(ut, "_peer", lambda resp: "192.168.1.1")
-    aioclient_mock.get("https://rebind.example/t.zip", content=b"x")
-    assert await entry.runtime_data.user_themes.async_add_from_link("https://rebind.example/t.zip") == {"error": "download_failed"}
+    class Fake:
+        def __init__(self, hosts):
+            self.hosts = hosts
+
+        async def resolve(self, host, port=0, family=0):
+            return [{"hostname": host, "host": h, "port": port, "family": 2, "proto": 6, "flags": 0} for h in self.hosts]
+
+        async def close(self):
+            pass
+
+    r = ut._PublicResolver()
+    r._inner = Fake(["192.168.1.1", "127.0.0.1"])
+    with pytest.raises(OSError):
+        await r.resolve("router.example", 443)
+    r._inner = Fake(["10.0.0.5", "140.82.112.3"])
+    assert [h["host"] for h in await r.resolve("mixed.example", 443)] == ["140.82.112.3"]
 
 
 def test_a_free_size_picture_has_a_limit(tmp_path) -> None:
