@@ -45,6 +45,42 @@ static bool read_header(const uint8_t *p, size_t avail, PackHeader &h) {
   return version == PANEL_SCHEMA && h.data_size >= HEADER + ENTRY * h.count && h.data_size + HASH <= avail;
 }
 
+// Every entry inside the pack's data, and every picture as big as its size
+// says (what's drawn or parsed is read from there - nothing past it)
+static bool entries_ok(const uint8_t *p, const PackHeader &h, uint8_t kind) {
+  if (kind == PACK_STRINGS && h.count < 1)
+    return false;
+  const uint64_t first = HEADER + (uint64_t) ENTRY * h.count;
+  for (uint16_t i = 0; i < h.count; i++) {
+    const uint8_t *e = p + HEADER + ENTRY * i;
+    const uint8_t ekind = e[32], format = e[33];
+    uint16_t w, ht, stride;
+    uint32_t offset, size;
+    memcpy(&w, e + 34, 2);
+    memcpy(&ht, e + 36, 2);
+    memcpy(&stride, e + 38, 2);
+    memcpy(&offset, e + 40, 4);
+    memcpy(&size, e + 44, 4);
+    if (offset < first || (uint64_t) offset + size > h.data_size)
+      return false;
+    if (ekind != 1)
+      continue;
+    const uint64_t px = (uint64_t) w * ht;
+    uint64_t need;
+    if (format == 1)  // I8: the palette, then a row of `stride` a line
+      need = 1024 + (uint64_t) stride * ht;
+    else if (format == 3)  // I8X: the palette, then an index a pixel
+      need = 1024 + px;
+    else if (format == 2)  // RGB565A8: the colours (`stride` a line), then an alpha a pixel
+      need = (uint64_t) stride * ht + px;
+    else
+      continue;  // (a kind this firmware doesn't draw: never used)
+    if (w == 0 || ht == 0 || (format != 3 && stride < (format == 2 ? 2u * w : (uint32_t) w)) || size < need)
+      return false;
+  }
+  return true;
+}
+
 bool AssetStore::check(PackKind kind, const uint8_t *data, size_t len, std::string &id, std::string &error) {
   PackHeader h;
   if (!read_header(data, len, h) || h.data_size + HASH != len) {
@@ -59,6 +95,10 @@ bool AssetStore::check(PackKind kind, const uint8_t *data, size_t len, std::stri
   mbedtls_sha256(data, h.data_size, digest, 0);
   if (memcmp(digest, data + h.data_size, 32) != 0) {
     error = "damaged (checksum)";
+    return false;
+  }
+  if (!entries_ok(data, h, kind)) {
+    error = "damaged (its entries)";
     return false;
   }
   id = h.id;
@@ -163,7 +203,16 @@ bool AssetStore::load(PackKind kind, bool verify) {
   }
   r.map = static_cast<const uint8_t *>(ptr);
   std::string id, error;
+  PackHeader full;
   if (!verify) {
+    // (just written: checked in memory - its entries checked again here,
+    // cheap, as the pictures are drawn straight from flash)
+    if (!read_header(r.map, h.data_size + HASH, full) || full.kind != kind || !entries_ok(r.map, full, kind)) {
+      ESP_LOGW(TAG, "Stored %s pack is damaged - it will be downloaded again", kind == PACK_THEME ? "theme" : "wording");
+      esp_partition_munmap(r.handle);
+      r.map = nullptr;
+      return false;
+    }
     char raw[33];
     memcpy(raw, r.map + 16, 32);
     raw[32] = '\0';
