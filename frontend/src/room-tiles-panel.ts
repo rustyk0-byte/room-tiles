@@ -279,6 +279,13 @@ export class RoomTilesPanel extends LitElement {
     return (id && this._layouts[id]) || this._current?.layout || "5x2";
   }
   private _unsub?: Promise<() => Promise<void>>;
+  // a subscribe that failed (Room Tiles not loaded): tried again after a
+  // wait that grows - not on every one of HA's state updates
+  private _subscribeAt = 0;
+  private _subscribeWait = 0;
+  // timers that subscribe / look again later: cancelled when the panel goes
+  private _subscribeTimer?: number;
+  private _versionRetryTimer?: number;
   private _picker = false; // the area picker overlay
   private _pending: Record<string, Pending> = {};
   private _motion: MotionMode = (load(STORE_MOTION) as MotionMode) || "follow";
@@ -572,6 +579,8 @@ export class RoomTilesPanel extends LitElement {
     window.removeEventListener("keydown", this._onInput, true);
     window.clearInterval(this._versionTimer);
     window.clearTimeout(this._reloadTimer);
+    window.clearTimeout(this._subscribeTimer);
+    window.clearTimeout(this._versionRetryTimer);
     window.removeEventListener("keydown", this._onKey);
     window.removeEventListener("beforeunload", this._onBeforeUnload);
     this.removeEventListener("tiles-ask", this._onTilesAsk as EventListener);
@@ -596,7 +605,7 @@ export class RoomTilesPanel extends LitElement {
 
   protected updated(changed: PropertyValues): void {
     this._fitClock(); // (the top bar's time: shown only when it fits)
-    if (changed.has("hass") && this.hass && !this._unsub) this._subscribe();
+    if (changed.has("hass") && this.hass && !this._unsub && Date.now() >= this._subscribeAt) this._subscribe();
     if (changed.has("_mapOpen") && this._mapOpen && this._mapRemember) save(STORE_LAST_MAP, this._mapOpen);
     if (changed.has("theme")) {
       this.setAttribute("style", themeCss(this.theme));
@@ -619,7 +628,7 @@ export class RoomTilesPanel extends LitElement {
   // ---- data feed --------------------------------------------------------------
 
   private _subscribe(): void {
-    if (!this.hass || this._unsub) return;
+    if (!this.hass || this._unsub || !this.isConnected) return; // (a timer's, after the panel went: nothing)
     this._unsub = this.hass.connection.subscribeMessage<FeedMessage>(
       (msg) => this._onFeed(msg),
       { type: "room_tiles/subscribe" },
@@ -627,6 +636,10 @@ export class RoomTilesPanel extends LitElement {
     this._unsub.catch((err: { message?: string }) => {
       this._error = err?.message || "not set up"; // (the screen says it in the language)
       this._unsub = undefined;
+      // again after 5 s, then longer (up to a minute) - HA's next state
+      // update after that wait tries
+      this._subscribeWait = Math.min(60000, this._subscribeWait ? this._subscribeWait * 2 : 5000);
+      this._subscribeAt = Date.now() + this._subscribeWait;
     });
   }
 
@@ -640,7 +653,8 @@ export class RoomTilesPanel extends LitElement {
     if (msg.type === "reset") {
       // Room Tiles was reloaded: subscribe again
       this._unsubscribe();
-      window.setTimeout(() => this._subscribe(), 1000);
+      window.clearTimeout(this._subscribeTimer);
+      this._subscribeTimer = window.setTimeout(() => this._subscribe(), 1000);
       return;
     }
     if (msg.schema > PAYLOAD_SCHEMA) {
@@ -648,6 +662,7 @@ export class RoomTilesPanel extends LitElement {
       return;
     }
     this._error = undefined;
+    this._subscribeWait = 0;
     if (msg.type === "full") {
       this._versionTries = 0;
       void this._checkVersion(true); // (re)connected: maybe HA was restarted / updated
@@ -683,8 +698,10 @@ export class RoomTilesPanel extends LitElement {
     // file yet; asked again every few seconds until it does, so the bar
     // shows within seconds of HA being back, not a minute later)
     const again = () => {
-      if (retry && (this._versionTries = (this._versionTries ?? 0) + 1) <= VERSION_RETRY_TRIES)
-        window.setTimeout(() => void this._checkVersion(true), VERSION_RETRY_MS);
+      if (retry && this.isConnected && (this._versionTries = (this._versionTries ?? 0) + 1) <= VERSION_RETRY_TRIES) {
+        window.clearTimeout(this._versionRetryTimer);
+        this._versionRetryTimer = window.setTimeout(() => void this._checkVersion(true), VERSION_RETRY_MS);
+      }
     };
     try {
       const r = await fetch(`${STATIC_BASE}/version.json`, { cache: "no-store" });
