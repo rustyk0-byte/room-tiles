@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { html, render } from "lit";
-import { LANGS, baseLanguage, num, pct, setLanguage, t, th, thn, tn } from "./i18n";
+import { LANGS, LANG_NAMES, baseLanguage, loadLanguage, num, pct, setLanguage, t, th, thn, tn } from "./i18n";
 
 const DIR = join(__dirname, "..", "i18n");
 const files = readdirSync(DIR).filter((f) => f.endsWith(".json"));
@@ -10,9 +10,17 @@ const load = (f: string) => JSON.parse(readFileSync(join(DIR, f), "utf8")) as { 
 const en = load("en.json").strings;
 const holes = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 
+beforeAll(async () => {
+  for (const code of Object.keys(LANG_NAMES)) await loadLanguage(code);
+});
+
 describe("string tables (frontend/i18n)", () => {
   it("every language file is loaded by i18n.ts", () => {
-    expect(files.map((f) => f.replace(".json", "")).sort()).toEqual(Object.keys(LANGS).sort());
+    expect(files.map((f) => f.replace(".json", "")).sort()).toEqual(Object.keys(LANG_NAMES).sort());
+    expect(Object.keys(LANGS).sort()).toEqual(Object.keys(LANG_NAMES).sort());
+    // each one but English: its own file (src/langs/<code>.ts)
+    const langs = readdirSync(join(__dirname, "langs")).map((f) => f.replace(".ts", ""));
+    expect(langs.sort()).toEqual(Object.keys(LANG_NAMES).filter((c) => c !== "en").sort());
   });
 
   for (const f of files) {

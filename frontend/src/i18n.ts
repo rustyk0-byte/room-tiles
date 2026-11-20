@@ -9,34 +9,43 @@
 //
 // English (en.json) is the full set; a key missing in another language falls
 // back to English, an unknown key to itself (so a typo shows, never a blank).
-// ADDING A LANGUAGE = adding its file here and to LANGS; CHANGING WORDING =
-// editing a file. Use the local way of saying a thing, not a word-for-word
-// translation. i18n.test.ts checks every file: valid, only known keys, the
-// same placeholders as English, the plural forms the language needs.
+// English is in the bundle; every other language is its own small file
+// (src/langs/<code>.ts: these strings + the status wording), loaded when a
+// device shows it - the page downloads one language, not seven. Opening the
+// language setting loads the rest, so switching stays instant; until a new
+// language is in, the old one stays on screen.
+// ADDING A LANGUAGE = its i18n file, src/langs/<code>.ts, LOADERS and
+// LANG_NAMES; CHANGING WORDING = editing a file. Use the local way of saying
+// a thing, not a word-for-word translation. i18n.test.ts checks every file:
+// valid, only known keys, the same placeholders as English, the plural forms
+// the language needs.
 
 import en from "../i18n/en.json";
-import de from "../i18n/de.json";
-import fr from "../i18n/fr.json";
-import es from "../i18n/es.json";
-import it from "../i18n/it.json";
-import nl from "../i18n/nl.json";
-import pt from "../i18n/pt.json";
+import enWording from "../../custom_components/room_tiles/wording/en.json";
 
 type Table = Record<string, string>;
 interface LangFile {
   _about?: string;
   strings: Table;
 }
+interface LangModule {
+  strings: LangFile;
+  wording: LangFile;
+}
 
-/** language code -> its strings (English first: the full set) */
-export const LANGS: Record<string, Table> = {
-  en: (en as LangFile).strings,
-  de: (de as LangFile).strings,
-  fr: (fr as LangFile).strings,
-  es: (es as LangFile).strings,
-  it: (it as LangFile).strings,
-  nl: (nl as LangFile).strings,
-  pt: (pt as LangFile).strings,
+/** language code -> its strings, once loaded (English always) */
+export const LANGS: Record<string, Table> = { en: (en as LangFile).strings };
+/** language code -> the integration's status wording (words.ts), once loaded */
+export const WORDING: Record<string, Table> = { en: (enWording as LangFile).strings };
+
+// one file per language (esbuild makes each its own chunk)
+const LOADERS: Record<string, () => Promise<LangModule>> = {
+  de: () => import("./langs/de"),
+  fr: () => import("./langs/fr"),
+  es: () => import("./langs/es"),
+  it: () => import("./langs/it"),
+  nl: () => import("./langs/nl"),
+  pt: () => import("./langs/pt"),
 };
 
 /** Each language's own name (the per-device language setting). */
@@ -52,22 +61,73 @@ export const LANG_NAMES: Record<string, string> = {
 
 let lang = "en";
 let plural = new Intl.PluralRules("en");
+let wanted = "en";
+let ready = true;
+let first = true;
+const loading: Record<string, Promise<void>> = {};
+const listeners = new Set<() => void>();
 
 /** "de-AT" -> "de"; "pt-BR" stays "pt-BR" if there's a file for it. */
 export function baseLanguage(code?: string | null): string {
   const c = (code || "en").replace("_", "-");
-  if (LANGS[c]) return c;
+  if (c in LANG_NAMES) return c;
   const base = c.split("-")[0].toLowerCase();
-  return LANGS[base] ? base : "en";
+  return base in LANG_NAMES ? base : "en";
 }
 
-/** HA's language (hass.locale.language), set by the panel. */
+/** Loads a language's file (once). A file that can't be had - a page left
+ *  open across an update - leaves the language out: English shows. */
+export function loadLanguage(code: string): Promise<void> {
+  if (LANGS[code] || !LOADERS[code]) return Promise.resolve();
+  return (loading[code] ??= LOADERS[code]()
+    .then((m) => {
+      LANGS[code] = m.strings.strings;
+      WORDING[code] = m.wording.strings;
+    })
+    .catch(() => {
+      delete loading[code];
+    }));
+}
+
+/** Every language in the background (the language setting opened). */
+export function loadAllLanguages(): void {
+  for (const code of Object.keys(LOADERS)) void loadLanguage(code);
+}
+
+function use(code: string): void {
+  lang = LANGS[code] ? code : "en";
+  plural = new Intl.PluralRules(lang);
+}
+
+/** HA's language (hass.locale.language) or the device's, set by the panel.
+ *  True when the wording changed now; a language still loading switches
+ *  when it's in (onLanguage) - the old one stays until then. */
 export function setLanguage(code?: string | null): boolean {
   const next = baseLanguage(code);
+  const firstCall = first;
+  first = false;
+  wanted = next;
   if (next === lang) return false;
-  lang = next;
-  plural = new Intl.PluralRules(lang);
-  return true;
+  if (LANGS[next] || !LOADERS[next]) {
+    use(next);
+    return true;
+  }
+  if (firstCall) ready = false; // (a page's first language: nothing drawn in English meanwhile)
+  void loadLanguage(next).then(() => {
+    ready = true;
+    if (wanted === next && lang !== next) use(next);
+    for (const f of listeners) f();
+  });
+  return false;
+}
+
+/** False only while the first language a page asked for is loading. */
+export const languageReady = (): boolean => ready;
+
+/** Called when a language that was loading is in (redraw). */
+export function onLanguage(f: () => void): () => void {
+  listeners.add(f);
+  return () => listeners.delete(f);
 }
 
 export const language = (): string => lang;

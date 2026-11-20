@@ -102,14 +102,6 @@ Upload firmware), one image per board in the folder.
 
 ## 2. Early users
 
-- **Full localization with a string table** (a release gate). No
-  user-facing text hard-coded anywhere - dashboard, panel firmware,
-  notifications, Repairs, config flow, help pages: every string comes from
-  one string table per language (frontend/i18n/<lang>.json; English the
-  full set, de / es / fr / it / nl / pt shipped as drafts - the README asks
-  for native corrections). Left:
-  - Later: load only the active language (all seven are in the dashboard
-    bundle today - ~720 KB, ~190 KB gzip).
 - **Map pictures for colorful theme packs**: markers, names and room names
   are 4-bit sprites (16 colors each) - fine for one color per marker, but a
   theme pack with multi-colored icons or gradients would band. Measure

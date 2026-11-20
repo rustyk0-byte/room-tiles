@@ -45,7 +45,11 @@ await build({
   format: "esm",
   target: "es2022",
   minify: true,
-  outfile: join(out, "demo.js"),
+  // (each language but English its own file in lang/, as in build.mjs)
+  splitting: true,
+  outdir: out,
+  entryNames: "[name]",
+  chunkNames: "lang/[name]-[hash]",
   define: {
     BUILD_ID: JSON.stringify("demo"),
     THEME_DATA: JSON.stringify(themeData()),

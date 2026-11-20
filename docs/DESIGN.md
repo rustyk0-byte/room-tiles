@@ -296,8 +296,7 @@ and tile. Room Tiles must do all of this itself, behind the scenes:
   known tokens, the same placeholders as English).
   The SAME goes for the dashboard: every piece of UI text - labels, tooltips,
   hints, help, aria-labels - is translated through a token table, nothing
-  shown to a person is left in code (docs/TODO.md "Full localization
-  with a string table").
+  shown to a person is left in code.
 - **Every display shows its own language**, whatever HA's language is. A
   panel and a dashboard device each pick a language; the sensors' text
   (`tile`, `status`...) is in HA's language, so each sensor also gives the
@@ -1094,9 +1093,13 @@ show and use what the integration holds; nothing about a house is compiled in.
   Appliances, Short names and the device options live in the settings menu.
 - **Language**: the dashboard follows Home Assistant's (the user's profile);
   Settings › This device › Language overrides it on this device (stored in
-  the browser). All languages are in the bundle (i18n.ts), so switching is
-  instant. The integration's own texts (status lines, notifications) stay
-  in HA's language.
+  the browser). English is in the bundle; every other language is its own
+  small file (its text + the status wording, ~20 KB gzip), loaded when a
+  device shows it - a page downloads one language, not seven (i18n.ts).
+  Opening the settings menu loads the rest, so switching stays instant; a
+  page's first language is waited for (never a flash of English), a later
+  switch keeps the old one until the new one is in. The integration's own
+  texts (status lines, notifications) stay in HA's language.
 - **Scene and script tiles** (kinds `scene` / `script`): the middle is one
   big play button - scene teal, script orange; a tap turns the scene on /
   runs the script (one tap, no confirm, like a light). A scene has no state

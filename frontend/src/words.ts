@@ -10,27 +10,10 @@
 //                                     filled with the words
 //   {min: minutes}                    time left: time.minutes / time.hours
 //   [word, word, ...]                 one after another ("\n": a new line)
-// The wording itself is the integration's (wording/<lang>.json): one place.
+// The wording itself is the integration's (wording/<lang>.json): one place;
+// i18n.ts loads a language's wording with its strings.
 
-import en from "../../custom_components/room_tiles/wording/en.json";
-import de from "../../custom_components/room_tiles/wording/de.json";
-import fr from "../../custom_components/room_tiles/wording/fr.json";
-import es from "../../custom_components/room_tiles/wording/es.json";
-import it from "../../custom_components/room_tiles/wording/it.json";
-import nl from "../../custom_components/room_tiles/wording/nl.json";
-import pt from "../../custom_components/room_tiles/wording/pt.json";
-import { language } from "./i18n";
-
-type Table = Record<string, string>;
-const WORDING: Record<string, Table> = {
-  en: (en as { strings: Table }).strings,
-  de: (de as { strings: Table }).strings,
-  fr: (fr as { strings: Table }).strings,
-  es: (es as { strings: Table }).strings,
-  it: (it as { strings: Table }).strings,
-  nl: (nl as { strings: Table }).strings,
-  pt: (pt as { strings: Table }).strings,
-};
+import { WORDING, language } from "./i18n";
 
 function token(key: string, lang: string): string {
   const base = lang.split("-")[0].toLowerCase();

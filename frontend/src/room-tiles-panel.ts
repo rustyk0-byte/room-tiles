@@ -30,7 +30,7 @@ import {
   themeNames,
   type ThemeName,
 } from "./theme";
-import { LANG_NAMES, num, pct, setLanguage, t, th, tn } from "./i18n";
+import { LANG_NAMES, languageReady, loadAllLanguages, num, onLanguage, pct, setLanguage, t, th, tn } from "./i18n";
 import { localText, localTile } from "./words";
 import { STATIC_BASE, applianceStyles, parseUnits, renderAppliance } from "./appliance";
 import { ARRANGE_OPS, arrange, MAX_ADD, numbered, pointBox, ringLayout, type ArrangeOp } from "./arrange";
@@ -503,6 +503,8 @@ export class RoomTilesPanel extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    // a language that was loading is in: redraw in it (i18n.ts)
+    this._langOff = onLanguage(() => this.requestUpdate());
     // the top bar's time: redrawn when the minute changes
     this._clockTimer = window.setInterval(() => {
       const minute = Math.floor(Date.now() / 60000);
@@ -571,6 +573,7 @@ export class RoomTilesPanel extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this._langOff?.();
     window.clearInterval(this._clockTimer);
     this._clockFit?.disconnect();
     this._clockBox = undefined;
@@ -604,6 +607,8 @@ export class RoomTilesPanel extends LitElement {
     // placing markers: the "Here:" row shows any selection - one it doesn't
     // cover (Shift-click, Select all...) becomes the row
     // the settings menu opened: Room Tiles looks for new or changed installed themes
+    // ... and every language starts loading, so picking one there is instant
+    if (changed.has("_menu") && this._menu) loadAllLanguages();
     if (changed.has("_menu") && this._menu) void this.hass?.connection.sendMessagePromise?.({ type: "room_tiles/themes_check" }).catch(() => undefined);
     const st = this._markerStack;
     if (changed.has("_sel") && this._mapEdit && this._sel.length && !(st && this._sel.every((id) => st.includes(id))))
@@ -2403,6 +2408,8 @@ export class RoomTilesPanel extends LitElement {
   }
 
   /** This device's language: one of LANG_NAMES, or "" for Home Assistant's. */
+  private _langOff?: () => void;
+
   private _setLanguage(code: string): void {
     this._language = code;
     save(STORE_LANGUAGE, code);
@@ -2665,6 +2672,7 @@ export class RoomTilesPanel extends LitElement {
   }
 
   protected render(): TemplateResult {
+    if (!languageReady()) return html``; // (its first language loading: a blink, never English)
     if (this._error === UPDATED)
       return this._screen(t("screen.updated"), undefined, html`<button class="screen-btn primary" @click=${() => location.reload()}>${t("screen.reload")}</button>`);
     if (this._error) return this._screen(t("screen.not_running"), t("screen.not_running_sub"));

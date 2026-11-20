@@ -1,7 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { setLanguage } from "./i18n";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { LANG_NAMES, loadLanguage, setLanguage } from "./i18n";
 import { formatMinutes, localText, localTile, wordText } from "./words";
 
+beforeAll(async () => {
+  for (const code of Object.keys(LANG_NAMES)) await loadLanguage(code);
+});
 afterEach(() => setLanguage("en"));
 
 describe("status words in this device's language", () => {
