@@ -60,12 +60,17 @@ HOME: dict[str, dict[str, list[tuple[str, str, dict]]]] = {
                 "target_temp_low": 68, "target_temp_high": 75, "min_temp": 50, "max_temp": 90, "supported_features": 2, "hvac_action": "idle",
             }),
             ("lock.front_door", "locked", {"friendly_name": "Front Door"}),
+            ("light.reading_lamp", "on", {**COLOR, "friendly_name": "Reading Lamp", "brightness": 200, "color_mode": "color_temp", "color_temp_kelvin": 2700}),
+            ("switch.fireplace", "on", {"friendly_name": "Fireplace"}),
+            ("light.tv_backlight", "on", {**COLOR, "friendly_name": "TV Backlight", "brightness": 140, "hs_color": [225, 70]}),
+            ("scene.movie_night", "2026-11-19T20:30:00+00:00", {"friendly_name": "Movie Night"}),
         ],
         "Kitchen": [
             ("light.kitchen_pendants", "on", {**DIM, "friendly_name": "Pendants", "brightness": 230}),
             ("light.under_cabinet", "on", {**COLOR, "friendly_name": "Under Cabinet", "brightness": 120, "hs_color": [200, 40]}),
             ("light.kitchen_ceiling", "off", {**DIM, "friendly_name": "Ceiling"}),
             ("switch.coffee_maker", "off", {"friendly_name": "Coffee Maker"}),
+            ("scene.dinner", "2026-11-19T23:10:00+00:00", {"friendly_name": "Dinner"}),
         ],
         "Dining Room": [
             ("light.chandelier", "on", {**DIM, "friendly_name": "Chandelier", "brightness": 150}),
@@ -78,7 +83,9 @@ HOME: dict[str, dict[str, list[tuple[str, str, dict]]]] = {
             ("switch.printer", "on", {"friendly_name": "Printer"}),
         ],
         "Laundry": [
-            ("light.laundry", "off", {**ONOFF, "friendly_name": "Light"}),
+            ("light.laundry", "on", {**ONOFF, "friendly_name": "Light"}),
+            ("fan.laundry_vent", "on", {"friendly_name": "Vent Fan", "percentage": 100, "percentage_step": 100}),
+            ("switch.drying_rack", "off", {"friendly_name": "Drying Rack"}),
         ],
         "Garage": [
             ("cover.garage_door", "closed", {"friendly_name": "Garage Door", "device_class": "garage", "supported_features": 3}),
