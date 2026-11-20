@@ -230,6 +230,7 @@ export class RtPlanEditor extends LitElement {
   private _vacuum?: string;
 
   private _ro?: ResizeObserver;
+  private _roOn?: Element; // (the svg it watches: a new observer after a reattach watches it again)
   private _pointers = new Map<number, { x: number; y: number }>();
   private _pinch?: { dist: number; mid: { x: number; y: number }; cam: Camera };
   private _press?: Press;
@@ -246,6 +247,7 @@ export class RtPlanEditor extends LitElement {
       const h = svgEl?.clientHeight || 1;
       if (w !== this._size.w || h !== this._size.h) this._size = { w, h };
     });
+    if (this.hasUpdated) this.requestUpdate(); // (attached again: updated() hands the svg to the new observer)
   }
 
   disconnectedCallback(): void {
@@ -253,12 +255,8 @@ export class RtPlanEditor extends LitElement {
     window.removeEventListener("keydown", this._onKey);
     window.removeEventListener("beforeunload", this._onBeforeUnload);
     this._ro?.disconnect();
+    this._roOn = undefined;
     if (this._traceUrl) URL.revokeObjectURL(this._traceUrl);
-  }
-
-  protected firstUpdated(): void {
-    const svgEl = this.renderRoot.querySelector("svg");
-    if (svgEl) this._ro?.observe(svgEl);
   }
 
   protected willUpdate(changed: PropertyValues): void {
@@ -1409,6 +1407,13 @@ export class RtPlanEditor extends LitElement {
   /** Map settings' map order: the lit map scrolled into view (the row only,
    *  sideways) when the dialog opens or the order changes. */
   protected updated(changed: PropertyValues): void {
+    // the map's size watched - after every attach (HA detaches a panel left
+    // in a hidden tab, then attaches it again: a new observer)
+    const svgEl = this.renderRoot.querySelector("svg");
+    if (svgEl && svgEl !== this._roOn) {
+      this._roOn = svgEl;
+      this._ro?.observe(svgEl);
+    }
     if (changed.has("_flashLayers") && this._flashLayers)
       this.renderRoot.querySelector("#marker-layers")?.scrollIntoView({ block: "nearest" });
     const row = this.renderRoot.querySelector<HTMLElement>(".order-row");
