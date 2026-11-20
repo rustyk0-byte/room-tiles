@@ -40,6 +40,7 @@ import { assetUrl } from "./theme";
 import "./controls";
 import { lightSwatch } from "./colorpicker";
 import { areaAt, iconOn, layersOf, markerActive, MAX_LAYERS } from "./map";
+import { mergeLayerRanges, mergeMarkers } from "./map-merge";
 import { queueInfo, queueMaps, queueProblem, queueView, roomState, ROOM_STATES, tileMap, type QueueInfo } from "./vacqueue";
 import { areaName, canBeTile, fullName, profileSources } from "./picker";
 import { NAV_IN_TOOLBAR_FROM, navFit, type NavFit } from "./nav-fit";
@@ -320,7 +321,13 @@ export class RoomTilesPanel extends LitElement {
    *  the layer being edited (docs/UI.md: undo / redo) */
   /** placing markers: the draft (markers, and the layers - where each
    *  starts is set here), undo / redo snapshots of both */
-  private _mapEdit?: { map: string; draft: MapMarker[]; layers: MapLayer[]; undo: EditSnap[]; redo: EditSnap[]; layer: string; next: number };
+  // (base / baseLayers: the markers and layers when editing began - a save
+  // puts in only this editor's changes over what HA has by then: map-merge.ts)
+  private _mapEdit?: {
+    map: string; draft: MapMarker[]; layers: MapLayer[]; undo: EditSnap[]; redo: EditSnap[]; layer: string; next: number;
+    base: MapMarker[]; baseLayers: MapLayer[];
+  };
+  private _mapSaving = false; // (a save under way: no edits meanwhile - they'd be lost)
   private _editMapCache?: { base: MapData; layers: MapLayer[]; out: MapData };
   private _sel: string[] = []; // selected markers (map editing)
   private _addArea?: string; // the area the Add picker starts with
@@ -1157,7 +1164,11 @@ export class RoomTilesPanel extends LitElement {
     const draft = ((this._doc?.markers as MapMarker[] | undefined) ?? []).filter((m) => m.map === map.id).map((m) => ({ ...m }));
     const pick = want ?? this._mapLayerId;
     const layer = pick && map.layers?.some((l) => l.id === pick) ? pick : map.layers?.[0]?.id ?? "house";
-    this._mapEdit = { map: map.id, draft, layers: layersOf(map).map((l) => ({ ...l })), undo: [], redo: [], layer, next: 1 };
+    const layers = layersOf(map).map((l) => ({ ...l }));
+    this._mapEdit = {
+      map: map.id, draft, layers, undo: [], redo: [], layer, next: 1,
+      base: draft.map((m) => ({ ...m })), baseLayers: layers.map((l) => ({ ...l })),
+    };
     this._popup = undefined;
     // a zoom that doesn't suit the layer (e.g. a Map tile's room view): to
     // where the layer starts
@@ -1167,7 +1178,7 @@ export class RoomTilesPanel extends LitElement {
   /** One undoable step: snapshot, then change a copy of the draft. */
   private _mapChange(fn: (draft: MapMarker[]) => MapMarker[] | void): void {
     const ed = this._mapEdit;
-    if (!ed) return;
+    if (!ed || this._mapSaving) return;
     const copy = ed.draft.map((m) => ({ ...m }));
     const out = fn(copy) ?? copy;
     this._mapEdit = { ...ed, draft: out, undo: [...ed.undo, { draft: ed.draft, layers: ed.layers }].slice(-100), redo: [] };
@@ -1179,7 +1190,7 @@ export class RoomTilesPanel extends LitElement {
   private _setLayerRange(id: string, patch: { min_zoom?: number; max_zoom?: number | null }): void {
     const ed = this._mapEdit;
     const l = ed?.layers.find((x) => x.id === id);
-    if (!ed || !l) return;
+    if (!ed || !l || this._mapSaving) return;
     const r2 = (v: number) => Math.round(v * 100) / 100;
     let min = l.min_zoom;
     let max = l.max_zoom ?? null;
@@ -1209,14 +1220,14 @@ export class RoomTilesPanel extends LitElement {
 
   private _mapUndo(): void {
     const ed = this._mapEdit;
-    if (!ed?.undo.length) return;
+    if (!ed?.undo.length || this._mapSaving) return;
     const prev = ed.undo[ed.undo.length - 1];
     this._mapEdit = { ...ed, draft: prev.draft, layers: prev.layers, undo: ed.undo.slice(0, -1), redo: [...ed.redo, { draft: ed.draft, layers: ed.layers }] };
   }
 
   private _mapRedo(): void {
     const ed = this._mapEdit;
-    if (!ed?.redo.length) return;
+    if (!ed?.redo.length || this._mapSaving) return;
     const next = ed.redo[ed.redo.length - 1];
     this._mapEdit = { ...ed, draft: next.draft, layers: next.layers, redo: ed.redo.slice(0, -1), undo: [...ed.undo, { draft: ed.draft, layers: ed.layers }] };
   }
@@ -1426,8 +1437,11 @@ export class RoomTilesPanel extends LitElement {
    *  first); else (leaving, after "Save your changes?") the editor ends. */
   private async _saveMapEdit(stay = false): Promise<void> {
     const ed = this._mapEdit;
-    if (!ed || !this.hass) return;
-    const markers = ed.draft.map((m) => ({
+    if (!ed || !this.hass || this._mapSaving) return;
+    // this editor's changes over what HA has now (another dashboard's or a
+    // panel's meanwhile stay)
+    const current = ((this._doc?.markers as MapMarker[] | undefined) ?? []).filter((m) => m.map === ed.map);
+    const markers = mergeMarkers(ed.base, ed.draft, current).map((m) => ({
       ...(m.id.startsWith("new-") ? {} : { id: m.id }), // new ones get their id from HA
       entity: m.entity,
       x: Math.round(m.x),
@@ -1435,6 +1449,8 @@ export class RoomTilesPanel extends LitElement {
       layer: m.layer,
       show_name: m.show_name,
     }));
+    this._mapSaving = true;
+    this.requestUpdate();
     try {
       await this.hass.callService("room_tiles", "set_markers", { map: ed.map, markers });
       // the whole-map view takes in every marker: refit the bounds as the
@@ -1445,8 +1461,10 @@ export class RoomTilesPanel extends LitElement {
         const fields: Record<string, unknown> = {};
         const bounds = fitBounds(map, markers.map((m) => [m.x, m.y] as [number, number]));
         if (bounds.some((v, i) => v !== map.bounds[i])) fields.bounds = bounds;
-        // where the layers start (set here) - names / order / adding stay in Map settings
-        if (JSON.stringify(layersOf({ ...map, layers: ed.layers })) !== JSON.stringify(layersOf(map))) fields.layers = ed.layers;
+        // where the layers start (set here) - names / order / adding stay in
+        // Map settings: only the ranges changed here, into HA's layers now
+        const layers = mergeLayerRanges(ed.baseLayers, ed.layers, layersOf(map));
+        if (layers && JSON.stringify(layers) !== JSON.stringify(layersOf(map))) fields.layers = layers;
         if (Object.keys(fields).length) await this.hass.callService("room_tiles", "set_map", { map: ed.map, ...fields });
       }
       if (stay) {
@@ -1469,6 +1487,9 @@ export class RoomTilesPanel extends LitElement {
       this._endMapEdit();
     } catch (err) {
       alert(t("panel.err_save_map", { error: String((err as { message?: string })?.message ?? err) }));
+    } finally {
+      this._mapSaving = false;
+      this.requestUpdate();
     }
   }
 
@@ -1486,7 +1507,7 @@ export class RoomTilesPanel extends LitElement {
   private _addMarkers(entities: string[]): void {
     const ed = this._mapEdit;
     const rtMap = this.renderRoot.querySelector<RtMap>("rt-map");
-    if (!ed || !entities.length) return;
+    if (!ed || !entities.length || this._mapSaving) return;
     const [x, y] = rtMap?.viewCenter() ?? [0, 0];
     const spots = ringLayout(entities.length, x, y, rtMap?.markerSize() ?? 0);
     const added: MapMarker[] = entities.map((entity, i) => ({
@@ -1509,7 +1530,7 @@ export class RoomTilesPanel extends LitElement {
    *  a tap once; held, it repeats - faster - as one undo step. */
   private _markerNudge(dx: number, dy: number, again = false, times = 1): void {
     const ed = this._mapEdit;
-    if (!ed || !this._sel.length) return;
+    if (!ed || !this._sel.length || this._mapSaving) return;
     const sel = new Set(this._sel);
     const move = (d: MapMarker[]) => d.map((m) => (sel.has(m.id) ? { ...m, x: Math.round(m.x) + dx * times, y: Math.round(m.y) + dy * times } : m));
     if (!again) this._mapChange(move);
@@ -2278,7 +2299,7 @@ export class RoomTilesPanel extends LitElement {
         })}
         <span class="grow"></span>
         <button class="pill" @click=${() => this._cancelMapEdit()}>${t("common.cancel")}</button>
-        <button class="pill primary" ?disabled=${!ed.undo.length} @click=${() => this._saveMapEdit(true)}>${t("common.save_changes")}</button>
+        <button class="pill primary" ?disabled=${!ed.undo.length || this._mapSaving} @click=${() => this._saveMapEdit(true)}>${t("common.save_changes")}</button>
       </div>
       ${(() => {
         // the line under the bar, like the map editor's: the tool and what it does
