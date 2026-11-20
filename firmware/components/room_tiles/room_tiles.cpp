@@ -68,6 +68,7 @@ static int knob_steps(uint32_t gap_ms) {
 static const uint32_t RESUME_WINDOW_MS = 15 * 1000;
 static const size_t MAX_BODY = 6 * 1024 * 1024;  // bigger than this is refused
 static const uint32_t RETRY_MS = 30000;
+static const uint32_t THEME_RETRY_MAX_MS = 30 * 60 * 1000;
 // a theme picked on the panel: how long the boot screen waits for its download
 static const uint32_t THEME_WAIT_MS = 20000;
 // Home Assistant gone this long: the boot screen ("Connecting to Home
@@ -1325,19 +1326,23 @@ void RoomTiles::loop() {
     return;
   const bool firmware = this->generic_ && !this->want_build_.empty() && this->want_build_ != this->build_ &&
                         (this->want_build_ != this->failed_build_ || millis() - this->failed_at_ > FIRMWARE_RETRY_MS);
+  if (this->retry_at_ != 0 && (int32_t) (millis() - this->retry_at_) < 0)
+    return;  // (a job that couldn't start or failed: a moment first - any job)
   if (firmware && this->mismatched_) {
     this->start_job_(JOB_FIRMWARE);  // too old for HA's Room Tiles (its 426 offer): nothing else works
     return;
   }
-  if (this->retry_at_ != 0 && (int32_t) (millis() - this->retry_at_) < 0)
-    return;
+  // the theme that failed: again only after its wait (longer each time)
+  const uint32_t theme_wait = this->theme_fails_ == 0 ? 0
+                              : std::min<uint32_t>(THEME_RETRY_MAX_MS, RETRY_MS << std::min<int>(this->theme_fails_ - 1, 6));
+  const bool theme_due = this->want_theme_ != this->failed_theme_ || millis() - this->failed_theme_at_ >= theme_wait;
   if (this->revision_ != this->fetched_revision_) {
     this->start_job_(JOB_PAYLOAD);
   } else if (firmware && (!this->want_auto_ || this->unused_())) {
     this->start_job_(JOB_FIRMWARE);  // an update HA offers: before packs (it may want new ones)
   } else if (!this->want_strings_.empty() && this->want_strings_ != this->assets_.pack_id(PACK_STRINGS)) {
     this->start_job_(JOB_STRINGS);  // small and changes the words: first
-  } else if (!this->want_theme_.empty() && this->want_theme_ != this->assets_.pack_id(PACK_THEME)) {
+  } else if (!this->want_theme_.empty() && this->want_theme_ != this->assets_.pack_id(PACK_THEME) && theme_due) {
     this->start_job_(JOB_THEME);
   }
 }
@@ -1421,9 +1426,11 @@ void RoomTiles::start_job_(Job job) {
   }
   if (job == JOB_THEME) {
     // the boot screen while it downloads (its progress bar), not just once
-    // it's saved
+    // it's saved - but a try again after a failure leaves the board up
+    // until the pack is in hand (READY takes it down to save it)
     this->theme_asked_ms_ = 0;
-    this->take_board_down_();
+    if (this->failed_theme_ != this->want_theme_)
+      this->take_board_down_();
   }
   this->step_.store(BUSY);
   // downloads block (DNS, connect, read) and so do flash writes: own task
@@ -1919,6 +1926,16 @@ void RoomTiles::finish_pack_() {
   // nothing: plain colours until the retry)
   this->assets_.load(kind, !written);  // (just written: it was checked in memory)
   this->assets_changed_();
+  if (kind == PACK_THEME) {
+    if (written) {
+      this->theme_fails_ = 0;
+      this->failed_theme_.clear();
+    } else {
+      this->theme_fails_ = this->failed_theme_ == this->want_theme_ ? (uint8_t) std::min(this->theme_fails_ + 1, 20) : 1;
+      this->failed_theme_ = this->want_theme_;
+      this->failed_theme_at_ = millis();
+    }
+  }
   if (written)
     this->show_summary_();
   else

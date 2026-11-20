@@ -345,6 +345,11 @@ class RoomTiles : public Component {
   bool unused_() const;
   std::string failed_build_;
   uint32_t failed_at_{0};
+  // a theme pack that failed (download, check, write): tried again later and
+  // later (30 s, 1 min, 2 min ... 30 min), the board left up meanwhile
+  std::string failed_theme_;
+  uint32_t failed_theme_at_{0};
+  uint8_t theme_fails_{0};
   bool strip_{false};
   bool map_{true};
   bool have_model_{false};
