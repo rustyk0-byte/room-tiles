@@ -3,8 +3,7 @@
 Open work in priority order. Decisions and rules live in DESIGN.md / UI.md;
 this is only the list. Remove an item when it's built.
 
-Public since 2026-11-18 (v0.1.3 out). Next: the release with installed
-themes, then **Reports: what's left** (section 2). Section 1's rest waits on beta testers
+Public since 2026-11-18 (v0.1.6 out). Section 1's rest waits on beta testers
 or the first users.
 
 ## 1. Installing and updating panels
@@ -16,8 +15,8 @@ cable; after that, panels update with Room Tiles itself.
 1. Open the Room Tiles install page in Chrome / Edge, pick the board (photos:
    7" V1.0, 7" V1.2, 10.1" ...), plug in USB-C, Install (~2 min).
 2. Wi-Fi: the install page asks for the network right after flashing
-   (Improv over USB); or the panel's hotspot, from a phone. (Picking it on
-   the panel itself comes after the first release - section 6.)
+   (Improv over USB); on the 7" / 10.1", right on the panel's screen; or
+   the panel's hotspot, from a phone.
 3. HA shows "Discovered: Room Tiles Panel" - Add (one click; HA sets the
    encryption key).
 4. The panel asks which area it's in; its board appears.
@@ -245,45 +244,16 @@ Upload firmware), one image per board in the folder.
   developer-only demo mode that serves the demo home to one panel.
 ## 3. Round panel
 
-Installed 2026-11-18 through the browser install page and updated through
-the Marketplace since (0.1.0 - 0.1.2). Found and fixed on the way: theme
-changes out of memory, settings without a close (now the color picker's X),
-the strip forgetting each room's place, the picture breaking up while a
-theme was saved, a room pick lost while HA restarted, the knob moving only
-the strip. Not on the panel yet: a fast knob turn goes further a click.
-Next: try every screen on the hardware (strip, knob, settings, color
-picker, idle clock).
+Built and tried on the hardware (every screen: the strip, the knob,
+settings, the color picker, the idle clock; the dashboard's round-panel
+settings). Nothing left.
 
-A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
-480x480, 8 MB PSRAM, 16 MB flash, CST826 touch, a rotary knob with a press).
-
-- **The design:** the area's 10 tiles (its 5x2 layout) in one horizontal
-  strip at today's 5x2 tile size (198 x 254: fits the circle - no new art,
-  icon or font sizes; the same theme packs); one tile centered or two halves
-  split down the middle, page dots; each room opens where it was left (kept
-  on the panel, across restarts). Touch first; the knob: a turn = half a
-  step along the strip - or, wherever a list scrolls (a page, the color
-  picker, the language list), about a row of it; turned fast, more a
-  click (up to 4 steps); a press = tap the centered tile. Keeps themes,
-  area switching (tap the area's name), settings, the color picker (round layout),
-  "Connecting to Home Assistant…", When idle (starts on the digital clock
-  after 30 s). Drops the map, the vacuum view and tile editing (edit on the
-  dashboard).
-- **Left:**
-  - Check the dashboard for a round panel: 5x2 only, no map data, idle
-    settings on the dashboard, Help text to match.
 - **Not planned:** a firmware build without the map code - it would save
   ~74 KB of the round image's 2.0 MB (its slot 51% full) and no RAM (the
   map is off at run time); revisit only if the image nears its slot.
 
 ## 4. Panels - smaller items
 
-- Map Help: say that maps are edited in the dashboard (Home Assistant's
-  Room Tiles page), not on the panel.
-- Map top bar: picking another map changes the title's width, so the Map /
-  Layer pills shift under the finger. Anchor them: a fixed start for the
-  groups (room for the longest title, or the groups at a fixed position with
-  the title cut to fit) so a tap never moves the next pill.
 - Measure what the 8-bit (I8) animations cost to draw.
 - Offer ESPHome the one-line mipi_dsi change upstream (its refresh callback
   in IRAM - CONFIG_LCD_DSI_ISR_CACHE_SAFE, no blue flash while flash is
@@ -351,11 +321,6 @@ A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
 - Shared C++ / TypeScript test vectors (tile behavior).
 
 ## 6. After the first release
-
-- **Themes from a link:** "Add theme from link" (a GitHub release zip) -
-  installed themes themselves are built (docs/THEMES.md "Installed
-  themes"). Also: the dashboard's theme list could say when one is getting
-  ready or can't be used (today: Repairs).
 
 - **Wi-Fi set up on the panel, the round panel:** a knob letter wheel for
   the password (the 7" / 10.1" have the on-screen keyboard) - only if people
