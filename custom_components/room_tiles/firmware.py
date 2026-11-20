@@ -64,6 +64,9 @@ MAX_IMAGE = 8 * 1024 * 1024  # (bigger than any firmware slot: not one)
 # (one that doesn't take - it fails, or the panel falls back to its old
 # firmware - isn't tried for ever; the update entity's Install still is)
 AUTO_TRIES = 2
+# an install asked for by hand, or a too-old panel's forced one: fetched at
+# most this often (each failed start rolls the panel back and it asks again)
+INSTALL_TRIES = 3
 NEWER_BY_S = 60  # (a build time a minute later: really newer, not the same build's clock)
 
 

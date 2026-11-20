@@ -765,12 +765,25 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
     assert "auto" not in answer["firmware"]
     r = await client.get(FIRMWARE_URL, params=q(schema=str(PANEL_SCHEMA - 1), build=image.build))
     assert r.status == 200
+    # fetched INSTALL_TRIES times and still too old (it doesn't start): not
+    # offered again - no endless download / roll back loop
+    from custom_components.room_tiles.firmware import INSTALL_TRIES
+
+    for _ in range(INSTALL_TRIES - 1):
+        assert (await client.get(FIRMWARE_URL, params=q(schema=str(PANEL_SCHEMA - 1), build=image.build))).status == 200
+    r = await client.get(URL, params=q(built=when + 3600, schema=str(PANEL_SCHEMA - 1)))
+    assert r.status == 426 and "firmware" not in await r.json()
     # ... but nothing else: its tap is answered "update needed", not done
     import json as _json
 
     tap = _json.dumps({"service": "light.toggle", "entity": "light.x"}).encode()
     r = await client.post(ACTION_URL, params=old_signed(body=tap), data=tap)
     assert r.status == 426
+    # asked for by hand, fetched again and again (it doesn't start): given up
+    store.firmware_install(dev.id, image.build)
+    for _ in range(INSTALL_TRIES + 1):
+        await client.get(FIRMWARE_URL, params=q(build=image.build, built=when - 86400, path=FIRMWARE_URL))
+    assert dev.id not in store.fw_install
     # installed: done
     await client.get(URL, params=q(build=image.build, built=when))
     assert dev.id not in store.fw_install

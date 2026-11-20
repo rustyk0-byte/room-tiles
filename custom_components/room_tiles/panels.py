@@ -897,7 +897,9 @@ class _PanelRequest(HomeAssistantView):
                 running = fw.reported(dict(q))
                 if running is not None:
                     offer = fw.offer(store.fw_images.get(running.board), running)
-                    if offer is not None:
+                    # (fetched INSTALL_TRIES times and still too old: it
+                    # doesn't take - not offered again until a new image)
+                    if offer is not None and store.fw_tries.get((dev.device_id, offer["build"]), 0) < fw.INSTALL_TRIES:
                         answer["firmware"] = offer
             return self._signed(request, dev, web.json_response(answer, status=426))
         panel = store.data.panel(dev.device_id)

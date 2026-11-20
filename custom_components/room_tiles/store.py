@@ -236,9 +236,19 @@ class RoomTilesStore:
     def firmware_downloaded(self, device_id: str, build: str) -> None:
         """A panel fetched an image: counted (firmware.AUTO_TRIES) - and an
         install waiting for the panel to be unused has started."""
+        from .firmware import INSTALL_TRIES
+
         key = (device_id, build)
         self.fw_tries[key] = self.fw_tries.get(key, 0) + 1
         self._save_fw_tries()
+        if self.fw_install.get(device_id) == build and device_id not in self.fw_auto and self.fw_tries[key] > INSTALL_TRIES:
+            # asked for by hand, fetched again and again: it doesn't take (a
+            # build that won't start rolls the panel back) - not offered again
+            # until asked for anew (Install resets the count)
+            del self.fw_install[device_id]
+            self.panel_link.bump()
+            self.firmware_changed()
+            return
         started = self.fw_install.get(device_id) == build and self.fw_fetched.get(device_id) != build
         self.fw_fetched[device_id] = build
         if started:
