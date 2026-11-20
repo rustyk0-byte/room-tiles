@@ -225,4 +225,9 @@ class FirmwareUploadView(HomeAssistantView):
             return web.json_response({"ok": False, "error": "older", "board": kept.board, "label": kept.label})
         if store.fw_rescan is not None:
             await store.fw_rescan()
+        # (the release's own image for that board may be newer still: the
+        # one panels get is the newest of both - say so, never "done")
+        offered = store.fw_images.get(kept.board)
+        if offered is not None and offered.build != kept.build:
+            return web.json_response({"ok": False, "error": "older", "board": kept.board, "label": offered.label})
         return web.json_response({"ok": True, "board": kept.board, "label": kept.label})
