@@ -372,6 +372,7 @@ class RoomTiles : public Component {
   // (millis; 0 = connected), and whether the boot screen says so - after
   // OFFLINE_AFTER_MS, so a short blip doesn't flip the screen
   uint32_t offline_since_{0};
+  uint32_t wifi_lost_since_{0};  // (a saved network not reached since: the boot screen's Change Wi-Fi)
   bool offline_{false};
   bool wifi_setup_mode_{false};  // (no Wi-Fi network yet: watch_wifi_setup_)
   int wifi_button_{0};        // (watch_wifi_button_)

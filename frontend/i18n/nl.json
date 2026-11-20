@@ -800,6 +800,7 @@
     "panel.wifi_connected": "Verbonden met \"{name}\"",
     "panel.wifi_connecting_to": "Verbinden met \"{name}\"…",
     "panel.wifi_failed": "Geen verbinding met \"{name}\". Controleer het wachtwoord en probeer het opnieuw.",
+    "panel.wifi_failed_open": "Geen verbinding met \"{name}\".",
     "panel.wifi_kept": "Geen verbinding met \"{name}\" - nog op \"{old}\".",
     "panel.wifi_looking": "Netwerken zoeken…",
     "panel.wifi_name_ask": "Netwerknaam",

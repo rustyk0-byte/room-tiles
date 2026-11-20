@@ -61,6 +61,7 @@ KEYS = [
     "screen.restart",
     "panel.wifi_connecting_to",
     "panel.wifi_failed",
+    "panel.wifi_failed_open",
     "panel.wifi_kept",
     "panel.wifi_looking",
     "panel.wifi_name_ask",

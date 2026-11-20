@@ -800,6 +800,7 @@
     "panel.wifi_connected": "Verbunden mit „{name}“",
     "panel.wifi_connecting_to": "Verbinde mit „{name}“ …",
     "panel.wifi_failed": "Keine Verbindung mit „{name}“. Prüfe das Passwort und versuche es erneut.",
+    "panel.wifi_failed_open": "Keine Verbindung mit „{name}“.",
     "panel.wifi_kept": "Keine Verbindung mit „{name}“ - weiter mit „{old}“.",
     "panel.wifi_looking": "Suche nach Netzwerken …",
     "panel.wifi_name_ask": "Netzwerkname",

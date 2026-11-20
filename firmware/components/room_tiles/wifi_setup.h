@@ -2,7 +2,8 @@
 // Wi-Fi set up on the panel (docs/DESIGN.md "Wi-Fi set up on the panel"): the
 // networks nearby, a tap on one, its password typed on the screen, Connect.
 // A new panel shows it by itself (no network yet - its hotspot stays up, the
-// phone way beside it); Change Wi-Fi (settings, the boot screen's button)
+// phone way beside it); Change Wi-Fi (settings, the boot screen's button -
+// also when its saved network is gone: a set-up panel never opens a hotspot)
 // opens it too - then the network it had stays until the new one works.
 // The 7" / 10.1" panels (the round panel: the phone way only).
 
@@ -92,6 +93,7 @@ class WifiSetup
   uint32_t try_ms_{0};
   uint32_t try_for_ms_{0};
   bool had_old_{false};
+  bool was_on_old_{false};  // (on the old network when the try began - else "still on" isn't true)
   std::string old_ssid_;
 #ifdef USE_WIFI
   wifi::WiFiAP old_;

@@ -8,7 +8,7 @@
 namespace esphome::room_tiles {
 
 static constexpr int BOOT_LANG_COUNT = 7;
-static constexpr int BOOT_KEY_COUNT = 42;
+static constexpr int BOOT_KEY_COUNT = 43;
 
 // language codes, and each one's name in itself (the language picker)
 static const char *const BOOT_LANGS[BOOT_LANG_COUNT] = {"en", "de", "es", "fr", "it", "nl", "pt"};
@@ -48,6 +48,7 @@ static const char *const BOOT_KEYS[BOOT_KEY_COUNT] = {
     "screen.restart",
     "panel.wifi_connecting_to",
     "panel.wifi_failed",
+    "panel.wifi_failed_open",
     "panel.wifi_kept",
     "panel.wifi_looking",
     "panel.wifi_name_ask",
@@ -95,6 +96,7 @@ static const char *const BOOT_WORDS[BOOT_LANG_COUNT][BOOT_KEY_COUNT] = {
         "Restart",
         "Connecting to \"{name}\"…",
         "Couldn't connect to \"{name}\". Check the password and try again.",
+        "Couldn't connect to \"{name}\".",
         "Couldn't connect to \"{name}\" - still on \"{old}\".",
         "Looking for networks…",
         "Network name",
@@ -139,6 +141,7 @@ static const char *const BOOT_WORDS[BOOT_LANG_COUNT][BOOT_KEY_COUNT] = {
         "Neu starten",
         "Verbinde mit „{name}“ …",
         "Keine Verbindung mit „{name}“. Prüfe das Passwort und versuche es erneut.",
+        "Keine Verbindung mit „{name}“.",
         "Keine Verbindung mit „{name}“ - weiter mit „{old}“.",
         "Suche nach Netzwerken …",
         "Netzwerkname",
@@ -183,6 +186,7 @@ static const char *const BOOT_WORDS[BOOT_LANG_COUNT][BOOT_KEY_COUNT] = {
         "Reiniciar",
         "Conectando a \"{name}\"…",
         "No se pudo conectar a \"{name}\". Revisa la contraseña e inténtalo de nuevo.",
+        "No se pudo conectar a \"{name}\".",
         "No se pudo conectar a \"{name}\": sigue en \"{old}\".",
         "Buscando redes…",
         "Nombre de la red",
@@ -227,6 +231,7 @@ static const char *const BOOT_WORDS[BOOT_LANG_COUNT][BOOT_KEY_COUNT] = {
         "Redémarrer",
         "Connexion à « {name} »…",
         "Connexion à « {name} » impossible. Vérifiez le mot de passe et réessayez.",
+        "Connexion à « {name} » impossible.",
         "Connexion à « {name} » impossible - toujours sur « {old} ».",
         "Recherche des réseaux…",
         "Nom du réseau",
@@ -271,6 +276,7 @@ static const char *const BOOT_WORDS[BOOT_LANG_COUNT][BOOT_KEY_COUNT] = {
         "Riavvia",
         "Connessione a \"{name}\"…",
         "Impossibile connettersi a \"{name}\". Controlla la password e riprova.",
+        "Impossibile connettersi a \"{name}\".",
         "Impossibile connettersi a \"{name}\": resta su \"{old}\".",
         "Ricerca delle reti…",
         "Nome della rete",
@@ -315,6 +321,7 @@ static const char *const BOOT_WORDS[BOOT_LANG_COUNT][BOOT_KEY_COUNT] = {
         "Herstarten",
         "Verbinden met \"{name}\"…",
         "Geen verbinding met \"{name}\". Controleer het wachtwoord en probeer het opnieuw.",
+        "Geen verbinding met \"{name}\".",
         "Geen verbinding met \"{name}\" - nog op \"{old}\".",
         "Netwerken zoeken…",
         "Netwerknaam",
@@ -359,6 +366,7 @@ static const char *const BOOT_WORDS[BOOT_LANG_COUNT][BOOT_KEY_COUNT] = {
         "Reiniciar",
         "A ligar a \"{name}\"…",
         "Não foi possível ligar a \"{name}\". Verifique a palavra-passe e tente de novo.",
+        "Não foi possível ligar a \"{name}\".",
         "Não foi possível ligar a \"{name}\" - continua em \"{old}\".",
         "A procurar redes…",
         "Nome da rede",

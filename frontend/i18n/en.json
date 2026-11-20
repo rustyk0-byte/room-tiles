@@ -806,6 +806,7 @@
     "panel.wifi_connected": "Connected to \"{name}\"",
     "panel.wifi_connecting_to": "Connecting to \"{name}\"…",
     "panel.wifi_failed": "Couldn't connect to \"{name}\". Check the password and try again.",
+    "panel.wifi_failed_open": "Couldn't connect to \"{name}\".",
     "panel.wifi_kept": "Couldn't connect to \"{name}\" - still on \"{old}\".",
     "panel.wifi_looking": "Looking for networks…",
     "panel.wifi_name_ask": "Network name",

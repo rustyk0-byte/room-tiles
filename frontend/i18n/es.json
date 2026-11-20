@@ -801,6 +801,7 @@
     "panel.wifi_connected": "Conectado a \"{name}\"",
     "panel.wifi_connecting_to": "Conectando a \"{name}\"…",
     "panel.wifi_failed": "No se pudo conectar a \"{name}\". Revisa la contraseña e inténtalo de nuevo.",
+    "panel.wifi_failed_open": "No se pudo conectar a \"{name}\".",
     "panel.wifi_kept": "No se pudo conectar a \"{name}\": sigue en \"{old}\".",
     "panel.wifi_looking": "Buscando redes…",
     "panel.wifi_name_ask": "Nombre de la red",

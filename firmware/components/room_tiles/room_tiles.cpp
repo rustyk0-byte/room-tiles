@@ -75,8 +75,9 @@ static const uint32_t THEME_WAIT_MS = 20000;
 // Home Assistant gone this long: the boot screen ("Connecting to Home
 // Assistant…") instead of a board whose states may be old
 static const uint32_t OFFLINE_AFTER_MS = 10000;
-// on Wi-Fi without Home Assistant this long: the boot screen offers Change
-// Wi-Fi (a panel set up on the wrong network never gets to its settings)
+// on Wi-Fi without Home Assistant this long, or off its saved network this
+// long: the boot screen offers Change Wi-Fi (a panel on the wrong network
+// never gets to its settings; a set-up panel opens no hotspot)
 static const uint32_t WIFI_BUTTON_AFTER_MS = 90000;
 static const uint32_t WIFI_ARMED_MS = 5000;  // (its "tap again")
 
@@ -763,16 +764,18 @@ void RoomTiles::watch_connection_() {
 void RoomTiles::watch_wifi_setup_() {
 #ifdef USE_WIFI
   auto *w = wifi::global_wifi_component;
-  // (never set up, or its network gone - a new router, a new password: after
-  // a while without it the hotspot opens again, and the panel says so)
+  // (never set up - no network saved: the hotspot is up, and the panel says
+  // so; a set-up panel that lost its network gets the boot screen's Change
+  // Wi-Fi instead - watch_wifi_button_)
   const bool setup = w != nullptr && w->is_ap_active() && !w->is_connected();
   // a new panel (the 7" / 10.1"): its networks to pick, on the screen,
   // once its language is picked; gone again once it's on one (or the phone did it)
   // (the board's fonts hooked up - its loop runs before the boot's last
   // steps do - and the language picked)
   // A panel that has a network saved isn't new - it's reconnecting (after
-  // a restart, an update) or its network is gone: its hotspot and the
-  // phone line as before, never this screen opening by itself
+  // a restart, an update) or its network is gone: no hotspot then
+  // (identity/generic.yaml ap_timeout 0), the boot screen's Change Wi-Fi -
+  // never this screen opening by itself
   const bool picker_up = setup && !w->has_sta() && !this->strip_ && this->generic_ && this->board_.fonts().bar != nullptr &&
                          this->lang_root_ != nullptr && !this->language_needed();
   if (picker_up && !this->wifi_setup_.is_open())
@@ -1069,17 +1072,28 @@ void RoomTiles::factory_reset() {
 }
 
 // The boot screen's Change Wi-Fi: a generic panel on Wi-Fi that hasn't
-// reached Home Assistant for a while (a hand-built one's networks are in its
-// firmware; no Wi-Fi at all: the hotspot asks by itself)
+// reached Home Assistant for a while, or off its saved network for a while
+// (a hand-built one's networks are in its firmware; a new panel, nothing
+// saved: its hotspot and the networks list ask by themselves)
 void RoomTiles::watch_wifi_button_() {
 #ifdef USE_WIFI
   auto *w = wifi::global_wifi_component;
   auto *api = api::global_api_server;
   const uint32_t now = millis();
+  // its saved network gone a while (a new router, a new password) - there's
+  // no fallback hotspot once a network is saved: this button is the way out
+  if (w != nullptr && w->has_sta() && !w->is_connected()) {
+    if (this->wifi_lost_since_ == 0)
+      this->wifi_lost_since_ = now | 1;
+  } else {
+    this->wifi_lost_since_ = 0;
+  }
+  const bool off_wifi = this->wifi_lost_since_ != 0 && now - this->wifi_lost_since_ >= WIFI_BUTTON_AFTER_MS;
+  const bool on_wifi_no_ha = w != nullptr && w->is_connected() && !(api != nullptr && api->is_connected_with_state_subscription()) &&
+                             this->offline_since_ != 0 && now - this->offline_since_ >= WIFI_BUTTON_AFTER_MS;
   // (the round panel: no room under the add screen's lines - not then)
-  const bool lost = this->generic_ && !this->main_shown_ && !(this->strip_ && this->adding_) && w != nullptr && w->is_connected() &&
-                    !(api != nullptr && api->is_connected_with_state_subscription()) && this->offline_since_ != 0 &&
-                    now - this->offline_since_ >= WIFI_BUTTON_AFTER_MS;
+  const bool lost = this->generic_ && !this->main_shown_ && !(this->strip_ && this->adding_) && (on_wifi_no_ha || off_wifi);
+
   if (this->wifi_armed_ms_ != 0 && now - this->wifi_armed_ms_ > WIFI_ARMED_MS)
     this->wifi_armed_ms_ = 0;
   const int b = !lost ? 0 : this->wifi_armed_ms_ != 0 ? 2 : 1;

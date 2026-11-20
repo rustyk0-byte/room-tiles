@@ -19,8 +19,14 @@ api:
 
 wifi:
   # (no network: the hotspot below until one is set; it's then kept)
-  ap: {}
+  # ap_timeout 0: never a fallback hotspot once a network is saved - not
+  # even in safe mode (a router restarting would let anyone near give the
+  # panel their own network); a panel without one opens it at start anyway
+  ap:
+    ap_timeout: 0s
 
+# (its setup page; ESPHome brings an open firmware upload along with it -
+# switched off by room_tiles: __init__.py)
 captive_portal:
 
 improv_serial:

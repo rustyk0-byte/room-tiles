@@ -800,6 +800,7 @@
     "panel.wifi_connected": "Ligado a \"{name}\"",
     "panel.wifi_connecting_to": "A ligar a \"{name}\"…",
     "panel.wifi_failed": "Não foi possível ligar a \"{name}\". Verifique a palavra-passe e tente de novo.",
+    "panel.wifi_failed_open": "Não foi possível ligar a \"{name}\".",
     "panel.wifi_kept": "Não foi possível ligar a \"{name}\" - continua em \"{old}\".",
     "panel.wifi_looking": "A procurar redes…",
     "panel.wifi_name_ask": "Nome da rede",

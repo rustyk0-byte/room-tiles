@@ -803,6 +803,7 @@
     "panel.wifi_connected": "Connecté à « {name} »",
     "panel.wifi_connecting_to": "Connexion à « {name} »…",
     "panel.wifi_failed": "Connexion à « {name} » impossible. Vérifiez le mot de passe et réessayez.",
+    "panel.wifi_failed_open": "Connexion à « {name} » impossible.",
     "panel.wifi_kept": "Connexion à « {name} » impossible - toujours sur « {old} ».",
     "panel.wifi_looking": "Recherche des réseaux…",
     "panel.wifi_name_ask": "Nom du réseau",

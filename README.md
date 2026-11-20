@@ -331,20 +331,20 @@ for about a minute and restarts once more. Leave it plugged in.
 
 ### Changing Wi-Fi
 
-- **Wi-Fi down for a while** (a router restarting, an outage): the panel
-  shows its own network again - just wait; it goes back to normal once your
-  Wi-Fi is back.
-- **New router or password:** join the panel's network and pick the new one,
-  as above.
+- **Wi-Fi down for a while** (a router restarting, an outage): just wait;
+  the panel goes back to normal once your Wi-Fi is back. (A set-up panel
+  never opens a network of its own then: nobody near can change its Wi-Fi.)
+- **New router or password:** after a minute and a half without its network,
+  the panel shows a **Change Wi-Fi** button - pick the new network (the
+  round panel: tap it twice, then set it up with your phone as above).
 - **Another network:** on the panel, gear › **Change Wi-Fi**. The 7" and
   10.1" list the networks to pick from - the one it's on stays until the new
   one works, so a mistyped password never strands it. (Or **Set up with your
   phone instead**; the round panel: its network is forgotten, then set it up
   with your phone as above.)
 - **Stuck on "Connecting to Home Assistant…"** (the wrong network, like a
-  guest one): after a minute and a half a **Change Wi-Fi** button appears
-  (on the round panel: tap it twice). (Not added to Home Assistant yet? Do
-  that first.)
+  guest one): the same **Change Wi-Fi** button appears after a minute and a
+  half. (Not added to Home Assistant yet? Do that first.)
 
 ## Support
 

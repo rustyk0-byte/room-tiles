@@ -114,7 +114,8 @@ room_tiles:
           lv_obj_remove_flag(id(boot_name), LV_OBJ_FLAG_HIDDEN);
           lv_obj_remove_flag(id(boot_hint), LV_OBJ_FLAG_HIDDEN);
         }
-        // Change Wi-Fi (on Wi-Fi, no Home Assistant for a while)
+        // Change Wi-Fi (no Home Assistant for a while - on Wi-Fi, or its
+        // saved network not reached)
         const int wb = id(rt).wifi_button();
         // (below the add screen's name and hint when they show)
         lv_obj_set_y(id(boot_wifi), name.empty() ? 150 : 240);
@@ -427,8 +428,10 @@ lvgl:
             text_align: CENTER
             text_font: rt_font_body
             text_color: 0x9E9E9E
-        # Change Wi-Fi: shown on Wi-Fi without Home Assistant for a while
-        # (a panel on the wrong network); a second tap forgets the network
+        # Change Wi-Fi: shown on Wi-Fi without Home Assistant for a while (a
+        # panel on the wrong network), or off its saved network for a while
+        # (a new router: a set-up panel opens no hotspot); the round panel:
+        # a second tap forgets the network
         - button:
             id: boot_wifi
             hidden: true

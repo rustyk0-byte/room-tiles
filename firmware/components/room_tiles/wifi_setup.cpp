@@ -743,6 +743,7 @@ void WifiSetup::connect_() {
   w->start_connecting(sta);
   this->try_ms_ = millis();
   this->try_for_ms_ = switching ? TRY_SWITCH_MS : TRY_NEW_MS;
+  this->was_on_old_ = switching;
   ESP_LOGI(TAG, "Trying \"%s\"%s", this->ssid_.c_str(), switching ? " (leaving the network it's on)" : "");
 #endif
   this->show_(View::CONNECTING);
@@ -769,7 +770,10 @@ void WifiSetup::finish_(bool ok) {
   if (this->had_old_) {
     w->set_sta(this->old_);
     w->start_connecting(this->old_);
-    this->error_text_ = this->t_("panel.wifi_kept", "Couldn't connect to \"{name}\" - still on \"{old}\".", this->ssid_, this->old_ssid_);
+    // ("still on" only when it was on it: off Wi-Fi, it goes back to trying it)
+    this->error_text_ = this->was_on_old_ ? this->t_("panel.wifi_kept", "Couldn't connect to \"{name}\" - still on \"{old}\".", this->ssid_, this->old_ssid_)
+                                         : this->locked_ ? this->t_("panel.wifi_failed", "Couldn't connect to \"{name}\". Check the password and try again.", this->ssid_)
+                                                         : this->t_("panel.wifi_failed_open", "Couldn't connect to \"{name}\".", this->ssid_);
   } else {
     w->clear_sta();  // (the hotspot stays: the phone way, or another try)
     this->error_text_ = this->t_("panel.wifi_failed", "Couldn't connect to \"{name}\". Check the password and try again.", this->ssid_);
