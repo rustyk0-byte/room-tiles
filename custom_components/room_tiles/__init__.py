@@ -45,6 +45,7 @@ from .sync import sync_areas
 from .vacuums import vacuum_areas
 from .appliances_ha import found_appliances
 from .store import RoomTilesStore
+from .model import RoomTilesData
 from .websocket import async_register as async_register_websocket
 
 type RoomTilesConfigEntry = ConfigEntry[RoomTilesStore]
@@ -258,14 +259,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoomTilesConfigEntry) ->
     @callback
     def entity_registry_changed(event: Event) -> None:
         sections: set[str] = set()
+        # (on a copy, swapped in: the sensors compare the old objects with
+        # the new to see an edit - changed in place, they'd look the same)
         old = event.data.get("old_entity_id")
-        if event.data.get("action") == "update" and old:
-            sections.update(ops.rename_entity(store.data, old, event.data["entity_id"]))
-        gone = frozenset({event.data["entity_id"]}) if event.data.get("action") == "remove" else frozenset()
+        renamed = event.data.get("action") == "update" and old
+        removed_in_ha = event.data.get("action") == "remove"
+        work = RoomTilesData.from_dict(store.data.as_dict()) if renamed or removed_in_ha else store.data
+        if renamed:
+            sections.update(ops.rename_entity(work, old, event.data["entity_id"]))
+        gone = frozenset({event.data["entity_id"]}) if removed_in_ha else frozenset()
+        where = None
         if gone:
             # DELETED in HA: remove it everywhere in Room Tiles, and say what went
-            removed, where = ops.forget_entity(store.data, event.data["entity_id"])
+            removed, where = ops.forget_entity(work, event.data["entity_id"])
             sections.update(removed)
+        if sections:
+            store.data = work
+        if gone:
             # Room Tiles' own entities (an area's lights when its last light
             # goes...) leave quietly - it removed them itself
             own = event.data["entity_id"].split(".", 1)[-1].startswith("room_tiles_")

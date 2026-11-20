@@ -255,3 +255,23 @@ async def test_an_unknown_error_code_is_asked_about(hass: HomeAssistant, entry) 
     assert entry.runtime_data.data.robots[0].overrides == {"mystery_code": "attention"}
     draft = await build_unknown_robot_state(hass, entry.runtime_data.data, "matic", "mystery_code", "attention")
     assert draft["kind_of_device"] == "vacuum" and draft["answers"] == [{"role": "error", "state": "mystery_code", "answer": "needs_you"}]
+
+
+async def test_a_vacuum_renamed_in_ha_is_followed_at_once(hass: HomeAssistant, entry) -> None:
+    """Its tile sensor listens to the new entity id right away (no reload)."""
+    from homeassistant.helpers import entity_registry as er
+
+    source_entry = MockConfigEntry(domain="matter")
+    source_entry.add_to_hass(hass)
+    reg = er.async_get(hass)
+    reg.async_get_or_create("vacuum", "matter", "robot-1", suggested_object_id="matic", config_entry=source_entry)
+    hass.states.async_set("vacuum.matic", "docked", {"supported_features": 29212})
+    await _call(hass, "set_robot", robot={"id": "matic", "name": "Matic", "vacuum": "vacuum.matic", "preset": "vacuum"})
+    await hass.async_block_till_done()
+
+    reg.async_update_entity("vacuum.matic", new_entity_id="vacuum.robot")
+    await hass.async_block_till_done()
+    assert entry.runtime_data.data.robots[0].vacuum == "vacuum.robot"
+    hass.states.async_set("vacuum.robot", "cleaning", {"supported_features": 29212})
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.room_tiles_matic").attributes["status"] == "Cleaning"
