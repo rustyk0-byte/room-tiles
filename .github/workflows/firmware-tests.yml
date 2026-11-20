@@ -1,0 +1,36 @@
+name: Firmware tests
+
+# The panel firmware's rules that build on a PC (firmware/tests - no ESPHome,
+# no board): seconds, not the boards' image builds (firmware.yml). Only when
+# the panel's code or its tests change (or run by hand).
+on:
+  push:
+    paths:
+      - "firmware/components/room_tiles/**"
+      - "firmware/tests/**"
+      - ".github/workflows/firmware-tests.yml"
+  # (a contributor's pull request: the same checks, before it's reviewed)
+  pull_request:
+    paths:
+      - "firmware/components/room_tiles/**"
+      - "firmware/tests/**"
+      - ".github/workflows/firmware-tests.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: firmware-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firmware/tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: The screen's states (screen_policy)
+        run: |
+          g++ -std=gnu++20 -Wall -Werror -I../components/room_tiles -o screen_policy_test \
+            screen_policy_test.cpp ../components/room_tiles/screen_policy.cpp
+          ./screen_policy_test
