@@ -225,6 +225,38 @@ def async_report_panel_schema(hass: HomeAssistant, device_id: str, name: str, ne
     )
 
 
+ISSUE_PANEL_OLD = "panel_old"
+
+
+@callback
+def async_report_panel_versions(hass: HomeAssistant, found: dict[str, Any]) -> None:
+    """Panels whose firmware release (HA's device registry) is too old for
+    this Room Tiles: 0.1.6 needs one USB reinstall, older ones update
+    themselves (panels.firmware_needs). Gone once the version changes, or
+    the panel does."""
+    from .panels import firmware_needs
+
+    reg = ir.async_get(hass)
+    want: dict[str, tuple[str, str]] = {}
+    for dev in found.values():
+        needs = firmware_needs(dev.version)
+        if needs is not None:
+            want[f"{ISSUE_PANEL_OLD}_{dev.device_id}"] = (needs, dev.name)
+    for (domain, issue_id) in list(reg.issues):
+        if domain == DOMAIN and issue_id.startswith(f"{ISSUE_PANEL_OLD}_") and issue_id not in want:
+            ir.async_delete_issue(hass, DOMAIN, issue_id)
+    for issue_id, (needs, name) in want.items():
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            issue_id,
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key=f"{ISSUE_PANEL_SCHEMA}_{needs}",
+            translation_placeholders={"name": _name(name)},
+        )
+
+
 # ---- fix flows (HA's repairs platform) -------------------------------------------
 
 

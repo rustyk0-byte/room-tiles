@@ -53,6 +53,10 @@
       "title": "Room Tiles bijwerken voor {name}",
       "description": "{name} heeft nieuwere Room Tiles-firmware dan deze versie van Room Tiles, dus het toont alleen een updatemelding. Werk Room Tiles bij in Home Assistant."
     },
+    "panel_needs_reinstall": {
+      "title": "Firmware van {name} opnieuw installeren",
+      "description": "{name} heeft firmware van Room Tiles 0.1.6, die zichzelf niet naar deze versie kan bijwerken. Installeer de firmware één keer opnieuw met een USB-kabel, via de installatiepagina: https://rustyk0-byte.github.io/room-tiles/install/ - daarna werkt hij zichzelf weer bij."
+    },
     "theme_problem": {
       "title": "Room Tiles kan het thema {theme} niet gebruiken",
       "description": "Herstel het in de map room_tiles_themes:\n\n{problems}"

@@ -30,6 +30,7 @@ from .frontend import async_register_panel, async_remove_panel
 from . import arealights, firmware, ops, panels, shortnames, update_watch, wording
 from .ops import flag_short_names
 from .repairs import (
+    async_report_panel_versions,
     async_report_dropped_overrides,
     FOUND_NOTIFICATION,
     async_report_found,
@@ -80,6 +81,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoomTilesConfigEntry) ->
     if panels.sync_panels(store.data, found_panels):
         changed = True
     store.keep_panel_keys(set(found_panels))
+    async_report_panel_versions(hass, found_panels)
     if flag_short_names(store.data) or changed:
         store.async_changed()
     entry.runtime_data = store
@@ -215,6 +217,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoomTilesConfigEntry) ->
         if panels.sync_panels(store.data, found_panels):
             sections.add(ops.SECTION_PANELS)
         store.keep_panel_keys(set(found_panels))
+        async_report_panel_versions(hass, found_panels)
         store.panel_link.devices_seen(found_panels)
         before = [(a.lights, list(a.lights_exclude)) for a in store.data.areas]
         if started:  # overrides: only once every integration has its entities

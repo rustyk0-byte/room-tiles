@@ -685,6 +685,10 @@
       "title": "Update Room Tiles for {name}",
       "description": "{name} has newer Room Tiles firmware than this version of Room Tiles, so it only shows an update notice. Update Room Tiles in Home Assistant."
     },
+    "panel_needs_reinstall": {
+      "title": "Reinstall {name}'s firmware",
+      "description": "{name} has firmware from Room Tiles 0.1.6, which can't update itself to this version. Install the firmware again once with a USB cable, from the install page: https://rustyk0-byte.github.io/room-tiles/install/ - after that it updates itself as usual."
+    },
     "theme_problem": {
       "title": "Room Tiles can't use the theme {theme}",
       "description": "Fix it in the room_tiles_themes folder:\n\n{problems}"

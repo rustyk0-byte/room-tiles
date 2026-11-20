@@ -25,6 +25,7 @@ from custom_components.room_tiles.panels import (
     popup_lists,
     robot_list,
     check_request,
+    find_panels,
     load_packs,
     pack_for,
     adopt_ha_area,
@@ -32,7 +33,6 @@ from custom_components.room_tiles.panels import (
     room_lights,
     resolve,
     schema_mismatch,
-    old_signature,
     request_signature,
     answer_signature,
     sync_panels,
@@ -64,9 +64,9 @@ def signed(method: str, path: str, ts: int | None = None, body: bytes | None = N
 
 
 def old_signed(ts: int | None = None, body: bytes | None = None, schema: str | None = "3", **extra: str) -> dict[str, str]:
-    """An older panel's query (signed the old way)."""
+    """A query from a panel before format 4 (its sig: nothing Room Tiles can check)."""
     t = ts if ts is not None else int(time.time())
-    q = {"name": "panel-1", "ts": str(t), "sig": old_signature(KEY, "panel-1", t, body)}
+    q = {"name": "panel-1", "ts": str(t), "sig": "ab" * 32}
     if schema is not None:
         q["schema"] = schema
     return {**q, **extra}
@@ -78,8 +78,8 @@ def _raw(q: dict[str, str]) -> str:
     return urlencode(q)
 
 
-def _dev(device_id="d1", node="panel-1", area=None, psk=KEY, key=KEY):
-    return PanelDevice(device_id=device_id, node=node, name="Hall panel", area_id=area, psk=psk, key=key)
+def _dev(device_id="d1", node="panel-1", area=None, key=KEY):
+    return PanelDevice(device_id=device_id, node=node, name="Hall panel", area_id=area, key=key)
 
 
 def test_signed_requests_only():
@@ -498,20 +498,32 @@ async def test_panel_fetches_its_payload(hass: HomeAssistant, hass_client_no_aut
     from homeassistant.helpers import issue_registry as ir
 
     issue = f"panel_needs_{dev.id}"
-    for i, (theirs, needs) in enumerate(((None, "firmware"), (str(PANEL_SCHEMA - 1), "firmware"), (str(PANEL_SCHEMA + 1), "integration"))):
-        # (an older panel signs the old way - each signature used once; a
-        # newer one ours, its number says newer)
-        q = old_signed(ts - 10 - i, schema=theirs) if theirs is None else signed("GET", URL, ts - 10 - i, schema=theirs)
-        r = await client.get(URL, params=q)
+    for i, theirs in enumerate((None, "3")):
+        # a panel before format 4: its way out by name alone - "update
+        # needed", unsigned (it checks nothing) - and no Repairs notice: that
+        # could be anyone's request (its notice comes from its version in HA)
+        r = await client.get(URL, params=old_signed(ts - 10 - i, schema=theirs))
         assert r.status == 426 and (await r.json()) == {"schema": PANEL_SCHEMA}  # (no image for it here)
-        assert r.headers["X-RT-Sig"] == answer_signature(KEY, q["sig"], 426, await r.read())
-        found = ir.async_get(hass).async_get_issue(DOMAIN, issue)
-        assert found is not None and found.translation_key == f"panel_needs_{needs}"
-        assert found.translation_placeholders == {"name": "Hall panel"}
+        assert "X-RT-Sig" not in r.headers
+        assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is None
+    # a 0.1.6 panel (format 4): nothing Room Tiles can answer reaches it
+    r = await client.get(URL, params=signed("GET", URL, ts - 5, schema="4"))
+    assert r.status == 403 and "X-RT-Sig" not in r.headers
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is None
+    # a newer panel (signed with its key): Room Tiles needs the update
+    q = signed("GET", URL, ts - 4, schema=str(PANEL_SCHEMA + 1))
+    r = await client.get(URL, params=q)
+    assert r.status == 426 and r.headers["X-RT-Sig"] == answer_signature(KEY, q["sig"], 426, await r.read())
+    found = ir.async_get(hass).async_get_issue(DOMAIN, issue)
+    assert found is not None and found.translation_key == "panel_needs_integration"
+    assert found.translation_placeholders == {"name": "Hall panel"}
     assert (await client.get(URL, params=signed("GET", URL, ts))).status == 200
     assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is None
-    # a stranger's request never makes one
-    assert (await client.get(URL, params={"name": "panel-1", "ts": "0", "sig": "x"})).status == 403
+    # a stranger's request never makes one (one that names no format reads
+    # as a panel before format 4: its 426, nothing else)
+    r = await client.get(URL, params={"name": "panel-1", "ts": "0", "sig": "x"})
+    assert r.status == 426 and ir.async_get(hass).async_get_issue(DOMAIN, issue) is None
+    assert (await client.get(URL, params={"name": "panel-1", "ts": "0", "sig": "x", "schema": str(PANEL_SCHEMA)})).status == 403
 
     # a change panels show moves the revision (and the sensor)
     before = store.panel_link.revision
@@ -761,22 +773,22 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
     assert "firmware" not in body
     # too old for this Room Tiles: the 426 answer carries the image, its
     # download stays open, whatever the setting says
-    r = await client.get(URL, params=q(built=when + 3600, schema=str(PANEL_SCHEMA - 1)))
+    r = await client.get(URL, params=q(built=when + 3600, schema="3"))
     assert r.status == 426
     answer = await r.json()
     assert answer["schema"] == PANEL_SCHEMA and answer["firmware"]["build"] == image.build
     # (an old panel's report isn't signed: nothing of it is kept)
     assert store.fw_reports[dev.id].built != when + 3600
     assert "auto" not in answer["firmware"]
-    r = await client.get(FIRMWARE_URL, params=q(schema=str(PANEL_SCHEMA - 1), build=image.build, path=FIRMWARE_URL))
+    r = await client.get(FIRMWARE_URL, params=q(schema="3", build=image.build, path=FIRMWARE_URL))
     assert r.status == 200
     # fetched INSTALL_TRIES times and still too old (it doesn't start): not
     # offered again - no endless download / roll back loop
     from custom_components.room_tiles.firmware import INSTALL_TRIES
 
     for _ in range(INSTALL_TRIES - 1):
-        assert (await client.get(FIRMWARE_URL, params=q(schema=str(PANEL_SCHEMA - 1), build=image.build, path=FIRMWARE_URL))).status == 200
-    r = await client.get(URL, params=q(built=when + 3600, schema=str(PANEL_SCHEMA - 1)))
+        assert (await client.get(FIRMWARE_URL, params=q(schema="3", build=image.build, path=FIRMWARE_URL))).status == 200
+    r = await client.get(URL, params=q(built=when + 3600, schema="3"))
     assert r.status == 426 and "firmware" not in await r.json()
     # ... but nothing else: its tap is answered "update needed", not done
     import json as _json
@@ -863,23 +875,46 @@ def test_an_older_report_never_replaces_a_newer_one():
 
 
 def test_own_key_from_format_5():
-    """Format 5 on: the panel's own key - never its ESPHome API key. Format
-    4 (COMPAT): its ESPHome API key, only for its way out."""
+    """Format 5 on: the panel's own key, nothing else. Format 4 (0.1.6): never
+    answered (it took only its ESPHome API key - one Room Tiles doesn't read).
+    Before 4: by its name alone, only for its way out."""
     psk, own = b"p" * 32, b"o" * 32
-    found = {"d1": _dev(psk=psk, key=own)}
+    found = {"d1": _dev(key=own)}
     now = 1_800_000_000
     ok = lambda q, old_ok=True: check_request(found, "GET", URL, _raw(q), now, None, old_ok)  # noqa: E731
     assert ok(signed("GET", URL, now, key=own)) is found["d1"]
-    assert ok(signed("GET", URL, now, key=psk)) is None  # (the ESPHome key: never for format 5)
-    assert ok(signed("GET", URL, now, key=psk, schema="4")) is found["d1"]  # (a 0.1.6 panel: its way out)
+    assert ok(signed("GET", URL, now, key=psk)) is None
+    assert ok(signed("GET", URL, now, key=psk, schema="4")) is None
     assert ok(signed("GET", URL, now, key=own, schema="4")) is None
-    # no own key yet: format 5 can't be read; format 4 still can (COMPAT)
-    bare = {"d1": _dev(psk=psk, key=None)}
-    assert check_request(bare, "GET", URL, _raw(signed("GET", URL, now, key=own)), now) is None
-    assert check_request(bare, "GET", URL, _raw(signed("GET", URL, now, key=psk, schema="4")), now) is not None
+    assert ok(old_signed(now)) is found["d1"]
+    assert ok(old_signed(now), old_ok=False) is None
+    assert ok({**old_signed(now), "name": "someone-else"}) is None
+    # no own key yet: format 5 can't be read
+    assert check_request({"d1": _dev(key=None)}, "GET", URL, _raw(signed("GET", URL, now, key=own)), now) is None
     from custom_components.room_tiles.panels import key_service
 
     assert key_service("room-tiles-e2e114") == "room_tiles_e2e114_room_tiles_key"
+
+
+async def test_esphome_key_never_read(hass: HomeAssistant) -> None:
+    """Room Tiles never reads the ESPHome integration's key (only the
+    device's name from its entry)."""
+    import inspect
+
+    from custom_components.room_tiles import panels as panels_mod
+
+    assert "noise_psk" not in inspect.getsource(panels_mod)
+    esp = MockConfigEntry(domain="esphome", data={"device_name": "panel-9", "noise_psk": base64.b64encode(KEY).decode()})
+    esp.add_to_hass(hass)
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=esp.entry_id,
+        connections={(dr.CONNECTION_NETWORK_MAC, "aa:bb:cc:dd:ee:09")},
+        manufacturer="room-tiles",
+        model="panel",
+        name="Nine",
+    )
+    (dev,) = find_panels(hass).values()
+    assert dev.node == "panel-9" and dev.key is None and not hasattr(dev, "psk")
 
 
 async def test_panel_gets_its_own_key(hass: HomeAssistant, hass_client_no_auth, monkeypatch) -> None:
@@ -938,3 +973,38 @@ async def test_panel_gets_its_own_key(hass: HomeAssistant, hass_client_no_auth, 
     dr.async_get(hass).async_remove_device(dev.id)
     await hass.async_block_till_done()
     assert dev.id not in store.panel_keys
+
+
+async def test_old_panel_notices_from_its_version(hass: HomeAssistant) -> None:
+    """Repairs for a panel too old for Room Tiles comes from its firmware's
+    version in HA (from its encrypted ESPHome connection - never from a
+    request anyone could send): 0.1.6 needs one USB reinstall, older ones
+    update themselves; gone once the version changes."""
+    from homeassistant.helpers import issue_registry as ir
+
+    esp = MockConfigEntry(domain="esphome", data={"device_name": "panel-6"})
+    esp.add_to_hass(hass)
+    reg = dr.async_get(hass)
+    dev = reg.async_get_or_create(
+        config_entry_id=esp.entry_id,
+        connections={(dr.CONNECTION_NETWORK_MAC, "aa:bb:cc:dd:ee:06")},
+        manufacturer="room-tiles",
+        model="panel",
+        name="Six",
+        sw_version="0.1.6 (ESPHome 2026.10.2)",
+    )
+    e = MockConfigEntry(domain=DOMAIN)
+    e.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(e.entry_id)
+    await hass.async_block_till_done()
+    issue = ir.async_get(hass).async_get_issue(DOMAIN, f"panel_old_{dev.id}")
+    assert issue is not None and issue.translation_key == "panel_needs_reinstall"
+    reg.async_update_device(dev.id, sw_version="0.1.5 (ESPHome 2026.10.2)")
+    await hass.async_block_till_done()
+    assert ir.async_get(hass).async_get_issue(DOMAIN, f"panel_old_{dev.id}").translation_key == "panel_needs_firmware"
+    reg.async_update_device(dev.id, sw_version="0.1.8 (ESPHome 2026.10.2)")
+    await hass.async_block_till_done()
+    assert ir.async_get(hass).async_get_issue(DOMAIN, f"panel_old_{dev.id}") is None
+    from custom_components.room_tiles.panels import firmware_needs
+
+    assert firmware_needs("") is None and firmware_needs("0.1.7") is None and firmware_needs("dev") is None

@@ -25,20 +25,17 @@
   the signature then also covers the body, and each signature is accepted
   once (no replays). A panel may call a short list of services, only on
   entities on its own boards, and change its own settings - nothing else.
-- **Older panels** (signed the old way, a lower schema): only the way out -
-  every request answered "update needed" (426, with its board's image), and
-  that image's download.
-- **COMPAT (until ~2026-12-04, then removed):** panels from before their own
-  key (formats 3 and 4) sign with their ESPHome API key - read from HA's
-  ESPHome entry (`noise_psk`) ONLY to give them their way out. A format-4
-  panel (0.1.6) takes no answer without it; after the removal one left
-  behind needs a USB reinstall (Repairs says so).
+- **Older panels:** before format 4 they check none of HA's answers - their
+  way out stays: every request answered "update needed" (426, with its
+  board's image) and that image's download, unsigned, by their name alone
+  (nothing in it is private: the images are public). A format-4 panel
+  (0.1.6) took only answers signed with its ESPHome API key - a key Room
+  Tiles never reads (it's the ESPHome integration's): it can't be answered,
+  and Repairs asks for one USB reinstall.
 """
 
 from __future__ import annotations
 
-import base64
-import binascii
 import gzip
 import hashlib
 import hmac
@@ -121,14 +118,14 @@ LANG_NAMES = {
 
 @dataclass
 class PanelDevice:
-    """A panel as HA knows it: its device, ESPHome node name and keys."""
+    """A panel as HA knows it: its device, ESPHome node name and own key."""
 
     device_id: str
     node: str
     name: str
     area_id: str | None
-    psk: bytes | None  # COMPAT: its ESPHome API key - only for panels before KEYED_FROM
     key: bytes | None = None  # its own Room Tiles key (store.panel_key)
+    version: str = ""  # its firmware's release, as HA's ESPHome integration reports it ("0.1.7")
 
 
 @callback
@@ -149,18 +146,10 @@ def find_panels(hass: HomeAssistant, keys: dict[str, str] | None = None) -> dict
                 node=node,
                 name=dev.name_by_user or dev.name or node,
                 area_id=dev.area_id,
-                psk=_psk(entry.data.get("noise_psk")),  # COMPAT: remove with the format-3/4 way out
+                version=str(dev.sw_version or "").split(" ")[0],
                 key=bytes.fromhex(keys[dev.id]) if keys and dev.id in keys else None,
             )
     return out
-
-
-def _psk(value: Any) -> bytes | None:
-    try:
-        key = base64.b64decode(str(value or ""), validate=True)
-    except (binascii.Error, ValueError):
-        return None
-    return key if len(key) == 32 else None
 
 
 def sync_panels(data: RoomTilesData, found: dict[str, PanelDevice]) -> bool:
@@ -303,34 +292,25 @@ def pack_for(packs: dict[str, Pack], kind: str, settings: dict[str, Any]) -> Pac
 
 
 # MIRRORED: firmware/components/room_tiles/signing.cpp sign_request - a change here must be made there too.
-def request_signature(psk: bytes, method: str, path: str, query: str, body: bytes | None = None) -> str:
+def request_signature(key: bytes, method: str, path: str, query: str, body: bytes | None = None) -> str:
     """A panel's request, signed whole: its method, path, query (as sent,
     without ?, and without its own sig) and its body's hash ("" for a GET)."""
     msg = f"RT2\n{method.upper()}\n{path}\n{query}\n" + (hashlib.sha256(body).hexdigest() if body is not None else "")
-    return hmac.new(psk, msg.encode(), hashlib.sha256).hexdigest()
+    return hmac.new(key, msg.encode(), hashlib.sha256).hexdigest()
 
 
 # MIRRORED: firmware/components/room_tiles/signing.cpp answer_ok - a change here must be made there too.
-def answer_signature(psk: bytes, request_sig: str, status: int, body: bytes) -> str:
+def answer_signature(key: bytes, request_sig: str, status: int, body: bytes) -> str:
     """HA's answer to a panel, signed with that panel's key: tied to the
     request it answers (its sig), the status and the body - the panel takes
     nothing (data, an update offer, a pack, an image) that isn't."""
     msg = f"RT2-ANSWER\n{request_sig.lower()}\n{status}\n{hashlib.sha256(body).hexdigest()}"
-    return hmac.new(psk, msg.encode(), hashlib.sha256).hexdigest()
+    return hmac.new(key, msg.encode(), hashlib.sha256).hexdigest()
 
 
 ANSWER_HEADER = "X-RT-Sig"
 ACTION_MAX_BYTES = 64 * 1024
 SCREENSHOT_MAX_BYTES = 1280 * 800 * 2  # (the biggest panel screen, RGB565)
-
-
-def old_signature(psk: bytes, node: str, ts: int, body: bytes | None = None) -> str:
-    """How panels before PANEL_SCHEMA 4 sign (only their name and time, and
-    a POST's body): taken only on the way out of an old panel - its update."""
-    msg = f"{node}\n{ts}"
-    if body is not None:
-        msg += "\n" + hashlib.sha256(body).hexdigest()
-    return hmac.new(psk, msg.encode(), hashlib.sha256).hexdigest()
 
 
 SIGNED_WHOLE_FROM = 4  # (the panel format that signs whole requests - for good, whatever PANEL_SCHEMA becomes)
@@ -345,9 +325,31 @@ def _schema(schema: str) -> int:
 
 
 def signing_key(dev: PanelDevice, schema: str) -> bytes | None:
-    """The key a panel of this format signs with: its own (KEYED_FROM on),
-    else - COMPAT - its ESPHome API key."""
-    return dev.key if _schema(schema) >= KEYED_FROM else dev.psk
+    """The key a panel of this format signs with: its own (KEYED_FROM on);
+    none before (see the module doc)."""
+    return dev.key if _schema(schema) >= KEYED_FROM else None
+
+
+def firmware_needs(version: str) -> str | None:
+    """What a panel's firmware release needs (HA's device registry - from the
+    panel's encrypted ESPHome connection, so nothing on the network can fake
+    it): "reinstall" for 0.1.6 (it takes no answer Room Tiles can sign),
+    "firmware" before it (it updates itself), None otherwise / unknown."""
+    try:
+        have = tuple(int(x) for x in version.split("."))
+    except ValueError:
+        return None
+    if len(have) != 3:
+        return None
+    if have == (0, 1, 6):
+        return "reinstall"
+    return "firmware" if have < (0, 1, 6) else None
+
+
+def needs_reinstall(schema: str) -> bool:
+    """A format-4 panel (0.1.6): it takes no answer Room Tiles can sign - a
+    USB reinstall is its way out."""
+    return SIGNED_WHOLE_FROM <= _schema(schema) < KEYED_FROM
 
 
 def signs_old(schema: str) -> bool:
@@ -389,9 +391,9 @@ def check_request(
     old_ok: bool = False,
 ) -> PanelDevice | None:
     """The panel this request is from, if all of it is signed by that panel's
-    key and its time is close to HA's; else None. `old_ok`: an older panel's
-    old signature counts too (only for its way out: the 426 answer, its
-    update's download)."""
+    own key and its time is close to HA's; else None. `old_ok`: a panel from
+    before format 4 counts by its name alone (it signs nothing Room Tiles can
+    check) - only for its way out: the 426 answer, its update's download."""
     import re
     from urllib.parse import parse_qsl
 
@@ -399,12 +401,15 @@ def check_request(
     q = dict(pairs)
     if len(q) != len(pairs):
         return None  # (a key twice: what's checked here and what's used later must be one value)
-    node, sig = q.get("name", ""), q.get("sig", "").lower()
-    if not re.fullmatch(r"[0-9a-f]{64}", sig):
-        return None
+    node = q.get("name", "")
     dev = next((p for p in panels.values() if p.node == node), None)
-    key = signing_key(dev, q.get("schema", "")) if dev is not None else None
-    if dev is None or key is None:
+    if dev is None:
+        return None
+    if signs_old(q.get("schema", "")):
+        return dev if old_ok else None
+    key = signing_key(dev, q.get("schema", ""))
+    sig = q.get("sig", "").lower()
+    if key is None or not re.fullmatch(r"[0-9a-f]{64}", sig):
         return None
     try:
         t = int(q.get("ts", ""))
@@ -412,13 +417,8 @@ def check_request(
         return None
     if abs(now - t) > MAX_SKEW_S:
         return None
-    if signs_old(q.get("schema", "")):
-        # a panel from before whole-request signing: its old signature, and
-        # only where it may use it
-        good = old_signature(key, node, t, body) if old_ok else ""
-    else:
-        good = request_signature(key, method, path, unsigned_query(raw_query), body)
-    return dev if good and hmac.compare_digest(good, sig) else None
+    good = request_signature(key, method, path, unsigned_query(raw_query), body)
+    return dev if hmac.compare_digest(good, sig) else None
 
 
 # ---- what a panel may do -------------------------------------------------------------
@@ -930,8 +930,13 @@ class _PanelRequest(HomeAssistantView):
             if dev is not None:
                 hass.async_create_task(async_send_key(hass, store, dev))
             return web.Response(status=401)
-        # an older panel (signed the old way): only the way out - a 426 from
-        # any request (below), and its update's download (any_schema)
+        if needs_reinstall(q.get("schema", "")):
+            # a 0.1.6 panel: nothing Room Tiles can answer reaches it (Repairs
+            # asks for one USB reinstall - by its firmware's version in HA:
+            # repairs.async_report_panel_versions)
+            return web.Response(status=403)
+        # a panel from before format 4: only the way out - a 426 from any
+        # request (below), and its update's download (any_schema)
         dev = check_request(found, request.method, request.path, request.rel_url.raw_query_string, time.time(), body, old_ok=True)
         if dev is None:
             # its own key, not the one the panel has (HA restored from an
@@ -940,25 +945,23 @@ class _PanelRequest(HomeAssistantView):
             if mine is not None and _schema(q.get("schema", "")) >= KEYED_FROM:
                 hass.async_create_task(async_send_key(hass, store, mine))
             return web.Response(status=403)
-        # an older panel's signature covers only its name and time: each used
-        # once at each address; so is any POST's, and the firmware download's
-        # (each counts as a try)
+        # each POST's signature is good once, and so is a firmware download's
+        # (each counts as a try) - a panel from before format 4 signs
+        # nothing: only its 426 and its image, never anything that's done
         old = signs_old(q.get("schema", ""))
-        # (by address too: an old panel asks for its image right after its
-        # 426 - the same second, the same old signature - and must get it)
-        # (an old signature doesn't cover the address: one use in all - the
-        # address only for the others, whose signature does)
-        replay_key = q.get("sig", "") if old else f"{request.path}|{q.get('sig', '')}"
-        if (old or body is not None or self.any_schema) and not REPLAYS.first_time(replay_key, time.time()):
+        replay_key = f"{request.path}|{q.get('sig', '')}"
+        if not old and (body is not None or self.any_schema) and not REPLAYS.first_time(replay_key, time.time()):
             return self._signed(request, dev, web.Response(status=409, text="already done"))
-        if (old or body is not None or self.any_schema) and int(q.get("ts", "0")) < STARTED:
+        if not old and (body is not None or self.any_schema) and int(q.get("ts", "0")) < STARTED:
             # (what's used once: never signed before this run started either -
             # the guard above starts empty)
             return self._signed(request, dev, web.Response(status=409, text="signed before Home Assistant started"))
         from .repairs import async_report_panel_schema
 
         needs = None if self.any_schema else schema_mismatch(q.get("schema", ""))
-        if not self.any_schema:
+        if not self.any_schema and not old:
+            # (signed requests only: one that isn't - before format 4 - could
+            # be anyone's; those panels' notice comes from their version in HA)
             async_report_panel_schema(hass, dev.device_id, dev.name, needs)
         if needs is not None:
             # 426 Upgrade Required: our number, so the panel can say which side
@@ -988,8 +991,10 @@ class _PanelRequest(HomeAssistantView):
     @staticmethod
     def _signed(request: web.Request, dev: PanelDevice, resp: web.Response) -> web.Response:
         """The answer signed for the panel that asked (answer_signature)."""
+        key = signing_key(dev, request.query.get("schema", ""))
+        if key is None:
+            return resp  # (a panel from before format 4: it checks nothing)
         body = resp.body if isinstance(resp.body, (bytes, bytearray)) else b""
-        key = signing_key(dev, request.query.get("schema", "")) or b""
         resp.headers[ANSWER_HEADER] = answer_signature(key, request.query.get("sig", ""), resp.status, bytes(body))
         return resp
 
