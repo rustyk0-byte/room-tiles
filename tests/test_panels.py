@@ -696,3 +696,15 @@ def test_a_round_panel_gets_the_round_theme_pack():
     assert pack_for(packs, "theme", {"theme": "light", "round": True}).id == "light-1"  # (no round cut yet)
     out = payload(RoomTilesData(), Panel(id="d1", theme="dark"), _dev(), "7", "en", packs, round_panel=True)
     assert out["packs"]["theme"]["id"] == "dark-round-1" and out["panel"]["round"] is True
+
+
+def test_a_refused_settings_change_changes_nothing():
+    from custom_components.room_tiles.panels import apply_settings
+
+    data = RoomTilesData.from_dict({"areas": [{"id": "kitchen", "name": "Kitchen"}]})
+    p = Panel(id="d1")
+    assert apply_settings(data, p, {"settings": {"theme": "light", "area": "gone_area"}}) == "no area gone_area"
+    assert (p.theme, p.area) == (None, None)
+    assert apply_settings(data, p, {"settings": {"theme": "light", "area": "kitchen"}}) is None
+    assert (p.theme, p.area) == ("light", "kitchen")
+    assert apply_settings(data, p, {"settings": {"theme": None}}) is None and p.theme is None

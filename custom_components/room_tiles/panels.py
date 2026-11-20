@@ -569,19 +569,20 @@ def apply_settings(data: RoomTilesData, panel: Panel, body: Any) -> str | None:
     if not isinstance(body, dict) or not isinstance(body.get("settings"), dict):
         return "no settings"
     want = body["settings"]
+    # every key checked first: a refused change changes nothing
     for key, value in want.items():
         if key not in PANEL_SETTINGS:
             return f"unknown setting {key}"
         if value is None:
-            setattr(panel, key, None)  # back to the default
-        elif key == "area" and (data.area(str(value)) is None):
+            continue  # (back to the default)
+        if key == "area" and (data.area(str(value)) is None):
             return f"no area {value}"
-        elif key == "layout" and value not in LAYOUTS:
+        if key == "layout" and value not in LAYOUTS:
             return f"no layout {value}"
-        elif key == "theme" and value not in all_themes():
+        if key == "theme" and value not in all_themes():
             return f"no theme {value}"
-        else:
-            setattr(panel, key, str(value))
+    for key, value in want.items():
+        setattr(panel, key, None if value is None else str(value))
     return None
 
 
