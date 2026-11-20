@@ -1346,6 +1346,11 @@ bool RoomTiles::unused_() const {
 void RoomTiles::download_again() {
   if (this->step_.load() != IDLE)
     return;  // one is downloading already
+  // the pictures go from under the screen: nothing may draw from them -
+  // the board and the idle clock down first (the boot screen until the new
+  // theme is in)
+  this->clock_.hide();
+  this->take_board_down_();
   this->assets_.forget(PACK_THEME);
   this->assets_.forget(PACK_STRINGS);
   this->assets_changed_();
