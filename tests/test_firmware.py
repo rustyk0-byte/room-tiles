@@ -20,7 +20,7 @@ from custom_components.room_tiles.firmware import (
     tidy_folder,
 )
 
-SCHEMA = 4
+from custom_components.room_tiles.const import PANEL_SCHEMA as SCHEMA  # noqa: E402 - (images for this Room Tiles' panel format)
 
 ELF = bytes(range(32))
 

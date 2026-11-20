@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 
 from .backups import prune, wrap
-from .const import BACKUP_DIR, DEV_BUILD, FW_TRIES_KEY, STORAGE_KEY, STORAGE_MINOR_VERSION, STORAGE_VERSION
+from .const import BACKUP_DIR, DEV_BUILD, FW_TRIES_KEY, PANEL_KEYS_KEY, STORAGE_KEY, STORAGE_MINOR_VERSION, STORAGE_VERSION
 from .migrate import migrate
 from .model import RoomTilesData
 from .appliance_presets import PRESETS
@@ -91,6 +91,12 @@ class RoomTilesStore:
         # restart (firmware.AUTO_TRIES); its own small file
         self._fw_tries_store: Store[dict[str, Any]] = Store(hass, 1, FW_TRIES_KEY)
         self._fw_tries_pending = False
+        # each panel's own key (made here, handed to the panel over its
+        # ESPHome connection - panels.async_send_key): device id -> 64 hex.
+        # Its own file: never in exports, the dashboard or a payload
+        self._keys_store: Store[dict[str, Any]] = Store(hass, 1, PANEL_KEYS_KEY)
+        self._keys_pending = False
+        self.panel_keys: dict[str, str] = {}
         self.data = RoomTilesData()
         # worked out from HA, sent to clients, never saved: area id -> the
         # lights its button switches (arealights.py)
@@ -151,6 +157,12 @@ class RoomTilesStore:
     async def async_load(self) -> None:
         raw = await self._store.async_load()
         self.data = RoomTilesData.from_dict(raw)
+        keys = await self._keys_store.async_load() or {}
+        self.panel_keys = {
+            str(d): str(k).lower()
+            for d, k in (keys.get("keys") or {}).items()
+            if isinstance(k, str) and len(k) == 64 and all(c in "0123456789abcdefABCDEF" for c in k)
+        }
         tries = await self._fw_tries_store.async_load() or {}
         for row in tries.get("tries", []):
             try:
@@ -306,6 +318,31 @@ class RoomTilesStore:
         return {"tries": [[d, b, n] for (d, b), n in sorted(self.fw_tries.items())]}
 
     @callback
+    def panel_key(self, device_id: str, create: bool = False) -> str | None:
+        """A panel's own key (64 hex) - made when there's none yet and `create`."""
+        key = self.panel_keys.get(device_id)
+        if key is None and create:
+            import secrets
+
+            key = self.panel_keys[device_id] = secrets.token_hex(32)
+            self._save_keys()
+        return key
+
+    @callback
+    def keep_panel_keys(self, device_ids: set[str]) -> None:
+        """A panel gone from HA: its key goes too (re-added: a new one)."""
+        gone = [d for d in self.panel_keys if d not in device_ids]
+        for d in gone:
+            del self.panel_keys[d]
+        if gone:
+            self._save_keys()
+
+    @callback
+    def _save_keys(self) -> None:
+        self._keys_pending = True
+        self._keys_store.async_delay_save(lambda: {"keys": dict(self.panel_keys)}, 1)
+
+    @callback
     def _save_fw_tries(self) -> None:
         """The tries saved (delayed; written at once on unload)."""
         self._fw_tries_pending = True
@@ -357,6 +394,9 @@ class RoomTilesStore:
         if self._fw_tries_pending:
             self._fw_tries_pending = False
             await self._fw_tries_store.async_save(self._fw_tries_doc())
+        if self._keys_pending:
+            self._keys_pending = False
+            await self._keys_store.async_save({"keys": dict(self.panel_keys)})
 
     @callback
     def async_add_listener(self, listener: Listener) -> Callable[[], None]:

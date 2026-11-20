@@ -25,7 +25,7 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
 
 from .defaults import fill_defaults
-from .const import BACKUP_DIR, DEV_BUILD, DOMAIN, FW_TRIES_KEY, RECORDINGS_KEY, STORAGE_KEY, STORAGE_VERSION
+from .const import BACKUP_DIR, DEV_BUILD, DOMAIN, FW_TRIES_KEY, PANEL_KEYS_KEY, RECORDINGS_KEY, STORAGE_KEY, STORAGE_VERSION
 from .frontend import async_register_panel, async_remove_panel
 from . import arealights, firmware, ops, panels, shortnames, update_watch, wording
 from .ops import flag_short_names
@@ -79,6 +79,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoomTilesConfigEntry) ->
     store.panel_link.devices_seen(found_panels)
     if panels.sync_panels(store.data, found_panels):
         changed = True
+    store.keep_panel_keys(set(found_panels))
     if flag_short_names(store.data) or changed:
         store.async_changed()
     entry.runtime_data = store
@@ -213,6 +214,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoomTilesConfigEntry) ->
         found_panels = panels.find_panels(hass)
         if panels.sync_panels(store.data, found_panels):
             sections.add(ops.SECTION_PANELS)
+        store.keep_panel_keys(set(found_panels))
         store.panel_link.devices_seen(found_panels)
         before = [(a.lights, list(a.lights_exclude)) for a in store.data.areas]
         if started:  # overrides: only once every integration has its entities
@@ -369,6 +371,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: RoomTilesConfigEntry) -
     if await hass.async_add_executor_job(copy):
         await Store(hass, STORAGE_VERSION, STORAGE_KEY).async_remove()
     await Store(hass, 1, FW_TRIES_KEY).async_remove()
+    await Store(hass, 1, PANEL_KEYS_KEY).async_remove()
     await Store(hass, 1, RECORDINGS_KEY).async_remove()
     from homeassistant.components import persistent_notification
 

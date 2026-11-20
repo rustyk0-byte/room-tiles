@@ -9,13 +9,18 @@
   attribute is where HA answers. The panel subscribes to it over the ESPHome
   API (which it holds open anyway), then fetches its payload over HTTP:
   GET <url>/api/room_tiles/panel?name=<node>&ts=<unix time>&schema=<n>[&...]&sig=<hex>
-  where sig = HMAC-SHA256(the panel's API encryption key, the whole request:
-  request_signature) - the key HA's ESPHome integration already holds for
-  it, so nothing new is shared and only that panel is answered; nothing of
-  a request (its path, its values) can be changed and sent again. HA's
-  answer is signed back (answer_signature): the panel takes nothing that
-  isn't from HA. (Plain HTTP: the payload can be read on the wire - it holds
-  no secrets - but not changed.)
+  where sig = HMAC-SHA256(the panel's own key, the whole request:
+  request_signature): only that panel is answered, and nothing of a request
+  (its path, its values) can be changed and sent again. HA's answer is
+  signed back (answer_signature): the panel takes nothing that isn't from
+  HA. (Plain HTTP: the payload can be read on the wire - it holds no
+  secrets - but not changed.)
+- **The panel's key:** made by Room Tiles (32 random bytes, its own
+  storage - store.panel_key), handed to the panel through the panel's
+  ESPHome action `room_tiles_key` (async_send_key: over the panel's
+  encrypted ESPHome connection - nothing else can reach it). A panel without
+  one (new, reset) asks with an unsigned `&hello=1` request; one whose
+  signature doesn't check out gets it again too.
 - **Taps:** POST <url>/api/room_tiles/panel/action (same query), JSON body;
   the signature then also covers the body, and each signature is accepted
   once (no replays). A panel may call a short list of services, only on
@@ -23,6 +28,11 @@
 - **Older panels** (signed the old way, a lower schema): only the way out -
   every request answered "update needed" (426, with its board's image), and
   that image's download.
+- **COMPAT (until ~2026-12-04, then removed):** panels from before their own
+  key (formats 3 and 4) sign with their ESPHome API key - read from HA's
+  ESPHome entry (`noise_psk`) ONLY to give them their way out. A format-4
+  panel (0.1.6) takes no answer without it; after the removal one left
+  behind needs a USB reinstall (Repairs says so).
 """
 
 from __future__ import annotations
@@ -111,18 +121,20 @@ LANG_NAMES = {
 
 @dataclass
 class PanelDevice:
-    """A panel as HA knows it: its device, ESPHome node name and API key."""
+    """A panel as HA knows it: its device, ESPHome node name and keys."""
 
     device_id: str
     node: str
     name: str
     area_id: str | None
-    psk: bytes | None
+    psk: bytes | None  # COMPAT: its ESPHome API key - only for panels before KEYED_FROM
+    key: bytes | None = None  # its own Room Tiles key (store.panel_key)
 
 
 @callback
-def find_panels(hass: HomeAssistant) -> dict[str, PanelDevice]:
-    """Room Tiles panels in HA's device registry, by device id."""
+def find_panels(hass: HomeAssistant, keys: dict[str, str] | None = None) -> dict[str, PanelDevice]:
+    """Room Tiles panels in HA's device registry, by device id (`keys`:
+    their own keys - store.panel_keys - when the caller checks requests)."""
     out: dict[str, PanelDevice] = {}
     reg = dr.async_get(hass)
     for entry in hass.config_entries.async_entries("esphome"):
@@ -137,7 +149,8 @@ def find_panels(hass: HomeAssistant) -> dict[str, PanelDevice]:
                 node=node,
                 name=dev.name_by_user or dev.name or node,
                 area_id=dev.area_id,
-                psk=_psk(entry.data.get("noise_psk")),
+                psk=_psk(entry.data.get("noise_psk")),  # COMPAT: remove with the format-3/4 way out
+                key=bytes.fromhex(keys[dev.id]) if keys and dev.id in keys else None,
             )
     return out
 
@@ -321,6 +334,20 @@ def old_signature(psk: bytes, node: str, ts: int, body: bytes | None = None) -> 
 
 
 SIGNED_WHOLE_FROM = 4  # (the panel format that signs whole requests - for good, whatever PANEL_SCHEMA becomes)
+KEYED_FROM = 5  # (the panel format that signs with its own Room Tiles key)
+
+
+def _schema(schema: str) -> int:
+    try:
+        return int(schema)
+    except ValueError:
+        return 0
+
+
+def signing_key(dev: PanelDevice, schema: str) -> bytes | None:
+    """The key a panel of this format signs with: its own (KEYED_FROM on),
+    else - COMPAT - its ESPHome API key."""
+    return dev.key if _schema(schema) >= KEYED_FROM else dev.psk
 
 
 def signs_old(schema: str) -> bool:
@@ -376,7 +403,8 @@ def check_request(
     if not re.fullmatch(r"[0-9a-f]{64}", sig):
         return None
     dev = next((p for p in panels.values() if p.node == node), None)
-    if dev is None or dev.psk is None:
+    key = signing_key(dev, q.get("schema", "")) if dev is not None else None
+    if dev is None or key is None:
         return None
     try:
         t = int(q.get("ts", ""))
@@ -387,9 +415,9 @@ def check_request(
     if signs_old(q.get("schema", "")):
         # a panel from before whole-request signing: its old signature, and
         # only where it may use it
-        good = old_signature(dev.psk, node, t, body) if old_ok else ""
+        good = old_signature(key, node, t, body) if old_ok else ""
     else:
-        good = request_signature(dev.psk, method, path, unsigned_query(raw_query), body)
+        good = request_signature(key, method, path, unsigned_query(raw_query), body)
     return dev if good and hmac.compare_digest(good, sig) else None
 
 
@@ -685,6 +713,41 @@ REPLAYS = _Replays()
 STARTED = time.time()
 
 
+# ---- the panel's own key ---------------------------------------------------------------
+
+KEY_ACTION = "room_tiles_key"  # MIRRORED: firmware/room_tiles.yaml api actions - the same name there
+KEY_RESEND_S = 10  # (a panel asking again and again: its key at most this often)
+_KEY_SENT: dict[str, float] = {}
+
+
+def key_service(node: str) -> str:
+    """The panel's ESPHome action as HA names it (esphome manager.build_service_name)."""
+    return f"{node.replace('-', '_')}_{KEY_ACTION}"
+
+
+async def async_send_key(hass: HomeAssistant, store: Any, dev: PanelDevice) -> bool:
+    """Hand the panel its own key (made now if it has none) through its
+    ESPHome action - over its encrypted ESPHome connection, so only that
+    panel gets it. False when it can't now (not connected, too soon after
+    the last; it asks again)."""
+    now = time.monotonic()
+    if now - _KEY_SENT.get(dev.device_id, -KEY_RESEND_S) < KEY_RESEND_S:
+        return False
+    service = key_service(dev.node)
+    if not hass.services.has_service("esphome", service):
+        _LOGGER.debug("%s: no %s action yet (not connected, or older firmware)", dev.name, KEY_ACTION)
+        return False
+    _KEY_SENT[dev.device_id] = now
+    key = store.panel_key(dev.device_id, create=True)
+    try:
+        await hass.services.async_call("esphome", service, {"key": key}, blocking=True)
+    except Exception as err:  # noqa: BLE001 - (the panel gone mid-call: it asks again)
+        _LOGGER.warning("%s: couldn't hand over its key: %s", dev.name, err)
+        return False
+    _LOGGER.info("%s: its key handed over", dev.name)
+    return True
+
+
 # ---- what a panel gets ---------------------------------------------------------------
 
 
@@ -859,12 +922,23 @@ class _PanelRequest(HomeAssistantView):
         if store is None:
             return web.Response(status=503)
         q = request.query
+        found = find_panels(hass, store.panel_keys)
+        if _schema(q.get("schema", "")) >= KEYED_FROM and (q.get("hello") == "1" or "sig" not in q):
+            # a panel without its key yet (new, reset) asks for it: sent over
+            # its ESPHome connection - the answer itself says nothing
+            dev = next((p for p in found.values() if p.node == q.get("name")), None)
+            if dev is not None:
+                hass.async_create_task(async_send_key(hass, store, dev))
+            return web.Response(status=401)
         # an older panel (signed the old way): only the way out - a 426 from
         # any request (below), and its update's download (any_schema)
-        dev = check_request(
-            find_panels(hass), request.method, request.path, request.rel_url.raw_query_string, time.time(), body, old_ok=True
-        )
+        dev = check_request(found, request.method, request.path, request.rel_url.raw_query_string, time.time(), body, old_ok=True)
         if dev is None:
+            # its own key, not the one the panel has (HA restored from an
+            # older backup, a key lost): it gets this one again
+            mine = next((p for p in found.values() if p.node == q.get("name")), None)
+            if mine is not None and _schema(q.get("schema", "")) >= KEYED_FROM:
+                hass.async_create_task(async_send_key(hass, store, mine))
             return web.Response(status=403)
         # an older panel's signature covers only its name and time: each used
         # once at each address; so is any POST's, and the firmware download's
@@ -915,7 +989,8 @@ class _PanelRequest(HomeAssistantView):
     def _signed(request: web.Request, dev: PanelDevice, resp: web.Response) -> web.Response:
         """The answer signed for the panel that asked (answer_signature)."""
         body = resp.body if isinstance(resp.body, (bytes, bytearray)) else b""
-        resp.headers[ANSWER_HEADER] = answer_signature(dev.psk or b"", request.query.get("sig", ""), resp.status, bytes(body))
+        key = signing_key(dev, request.query.get("schema", "")) or b""
+        resp.headers[ANSWER_HEADER] = answer_signature(key, request.query.get("sig", ""), resp.status, bytes(body))
         return resp
 
     async def _signed_big(self, request: web.Request, dev: PanelDevice, resp: web.Response) -> web.Response:
@@ -993,7 +1068,8 @@ class PanelFirmwareView(_PanelRequest):
         # an install that doesn't take (the build won't start, the panel rolls
         # back and asks again): at most INSTALL_TRIES - checked BEFORE it's
         # sent (never one more written to flash)
-        forced = signs_old(request.query.get("schema", ""))
+        # (forced: a panel too old for this Room Tiles - its way out, by its tries per hour)
+        forced = schema_mismatch(request.query.get("schema", "")) == "firmware"
         if not store.firmware_may_fetch(dev.device_id, image.build, forced):
             return self._signed(request, dev, web.Response(status=404))
         data = await hass.async_add_executor_job(image.path.read_bytes)

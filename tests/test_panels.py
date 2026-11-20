@@ -1,6 +1,7 @@
 """Wall panels: which devices are panels, their settings, signed payload requests."""
 
 import base64
+import json
 import time
 
 from homeassistant.core import HomeAssistant
@@ -62,7 +63,7 @@ def signed(method: str, path: str, ts: int | None = None, body: bytes | None = N
     return q
 
 
-def old_signed(ts: int | None = None, body: bytes | None = None, schema: str | None = str(PANEL_SCHEMA - 1), **extra: str) -> dict[str, str]:
+def old_signed(ts: int | None = None, body: bytes | None = None, schema: str | None = "3", **extra: str) -> dict[str, str]:
     """An older panel's query (signed the old way)."""
     t = ts if ts is not None else int(time.time())
     q = {"name": "panel-1", "ts": str(t), "sig": old_signature(KEY, "panel-1", t, body)}
@@ -77,8 +78,8 @@ def _raw(q: dict[str, str]) -> str:
     return urlencode(q)
 
 
-def _dev(device_id="d1", node="panel-1", area=None, psk=KEY):
-    return PanelDevice(device_id=device_id, node=node, name="Hall panel", area_id=area, psk=psk)
+def _dev(device_id="d1", node="panel-1", area=None, psk=KEY, key=KEY):
+    return PanelDevice(device_id=device_id, node=node, name="Hall panel", area_id=area, psk=psk, key=key)
 
 
 def test_signed_requests_only():
@@ -95,7 +96,7 @@ def test_signed_requests_only():
     assert ok(signed("GET", URL, now + 301)) is None
     assert ok({**good, "ts": "soon"}) is None
     # a panel HA has no key for can't be read
-    assert check_request({"d1": _dev(psk=None)}, "GET", URL, _raw(good), now) is None
+    assert check_request({"d1": _dev(key=None)}, "GET", URL, _raw(good), now) is None
     # the whole request is signed: no value, path or method can be changed
     assert ok({**good, "board": "other"}) is None
     assert ok({**good, "built": "99999999999"}) is None
@@ -459,6 +460,7 @@ async def test_panel_fetches_its_payload(hass: HomeAssistant, hass_client_no_aut
     assert await hass.config_entries.async_setup(e.entry_id)
     await hass.async_block_till_done()
     store = e.runtime_data
+    store.panel_keys[dev.id] = KEY.hex()  # (handed to the panel: async_send_key)
     assert store.data.panel(dev.id) is not None  # found at setup
 
     link = hass.states.get(LINK_ENTITY)
@@ -499,7 +501,7 @@ async def test_panel_fetches_its_payload(hass: HomeAssistant, hass_client_no_aut
     for i, (theirs, needs) in enumerate(((None, "firmware"), (str(PANEL_SCHEMA - 1), "firmware"), (str(PANEL_SCHEMA + 1), "integration"))):
         # (an older panel signs the old way - each signature used once; a
         # newer one ours, its number says newer)
-        q = old_signed(ts - 10 - i, schema=theirs) if needs == "firmware" else signed("GET", URL, ts - 10 - i, schema=theirs)
+        q = old_signed(ts - 10 - i, schema=theirs) if theirs is None else signed("GET", URL, ts - 10 - i, schema=theirs)
         r = await client.get(URL, params=q)
         assert r.status == 426 and (await r.json()) == {"schema": PANEL_SCHEMA}  # (no image for it here)
         assert r.headers["X-RT-Sig"] == answer_signature(KEY, q["sig"], 426, await r.read())
@@ -569,6 +571,7 @@ async def test_panel_taps_reach_ha(hass: HomeAssistant, hass_client_no_auth) -> 
     assert await hass.config_entries.async_setup(e.entry_id)
     await hass.async_block_till_done()
     store = e.runtime_data
+    store.panel_keys[dev.id] = KEY.hex()  # (handed to the panel: async_send_key)
     kitchen = store.data.areas[0]
     from custom_components.room_tiles.model import Tile
 
@@ -715,6 +718,7 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
     assert await hass.config_entries.async_setup(e.entry_id)
     await hass.async_block_till_done()
     store = e.runtime_data
+    store.panel_keys[dev.id] = KEY.hex()  # (handed to the panel: async_send_key)
     image = store.fw_images[board]
     client = await hass_client_no_auth()
 
@@ -728,9 +732,9 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
         extra = {"board": board, "build": build, "generic": "1"}
         if built is not None:
             extra["built"] = str(built)
-        if schema != str(PANEL_SCHEMA):  # (an older panel: the old way)
+        if int(schema) < 4:  # (a panel from before whole-request signing: the old way)
             return old_signed(schema=schema, **extra, **more)
-        return signed("GET", path, **extra, **more)
+        return signed("GET", path, schema=schema, **extra, **more)  # (format 4: COMPAT - its ESPHome key, here the same)
 
     when = int(image.built_ts)
     # running something newer (flashed by hand): left alone
@@ -764,14 +768,14 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
     # (an old panel's report isn't signed: nothing of it is kept)
     assert store.fw_reports[dev.id].built != when + 3600
     assert "auto" not in answer["firmware"]
-    r = await client.get(FIRMWARE_URL, params=q(schema=str(PANEL_SCHEMA - 1), build=image.build))
+    r = await client.get(FIRMWARE_URL, params=q(schema=str(PANEL_SCHEMA - 1), build=image.build, path=FIRMWARE_URL))
     assert r.status == 200
     # fetched INSTALL_TRIES times and still too old (it doesn't start): not
     # offered again - no endless download / roll back loop
     from custom_components.room_tiles.firmware import INSTALL_TRIES
 
     for _ in range(INSTALL_TRIES - 1):
-        assert (await client.get(FIRMWARE_URL, params=q(schema=str(PANEL_SCHEMA - 1), build=image.build))).status == 200
+        assert (await client.get(FIRMWARE_URL, params=q(schema=str(PANEL_SCHEMA - 1), build=image.build, path=FIRMWARE_URL))).status == 200
     r = await client.get(URL, params=q(built=when + 3600, schema=str(PANEL_SCHEMA - 1)))
     assert r.status == 426 and "firmware" not in await r.json()
     # ... but nothing else: its tap is answered "update needed", not done
@@ -856,3 +860,81 @@ def test_an_older_report_never_replaces_a_newer_one():
     RoomTilesStore.firmware_seen(store, "d1", old, 1000)
     assert store.fw_reports["d1"] is new
     seen.append(1)
+
+
+def test_own_key_from_format_5():
+    """Format 5 on: the panel's own key - never its ESPHome API key. Format
+    4 (COMPAT): its ESPHome API key, only for its way out."""
+    psk, own = b"p" * 32, b"o" * 32
+    found = {"d1": _dev(psk=psk, key=own)}
+    now = 1_800_000_000
+    ok = lambda q, old_ok=True: check_request(found, "GET", URL, _raw(q), now, None, old_ok)  # noqa: E731
+    assert ok(signed("GET", URL, now, key=own)) is found["d1"]
+    assert ok(signed("GET", URL, now, key=psk)) is None  # (the ESPHome key: never for format 5)
+    assert ok(signed("GET", URL, now, key=psk, schema="4")) is found["d1"]  # (a 0.1.6 panel: its way out)
+    assert ok(signed("GET", URL, now, key=own, schema="4")) is None
+    # no own key yet: format 5 can't be read; format 4 still can (COMPAT)
+    bare = {"d1": _dev(psk=psk, key=None)}
+    assert check_request(bare, "GET", URL, _raw(signed("GET", URL, now, key=own)), now) is None
+    assert check_request(bare, "GET", URL, _raw(signed("GET", URL, now, key=psk, schema="4")), now) is not None
+    from custom_components.room_tiles.panels import key_service
+
+    assert key_service("room-tiles-e2e114") == "room_tiles_e2e114_room_tiles_key"
+
+
+async def test_panel_gets_its_own_key(hass: HomeAssistant, hass_client_no_auth, monkeypatch) -> None:
+    """A panel without its key asks (hello): it's made, kept, and handed over
+    through the panel's ESPHome action; one with the wrong key gets it again;
+    the key is never in an export."""
+    from custom_components.room_tiles import panels as panels_mod
+
+    monkeypatch.setattr(panels_mod, "KEY_RESEND_S", 0)
+    esp = MockConfigEntry(domain="esphome", data={"device_name": "panel-1", "noise_psk": base64.b64encode(KEY).decode()})
+    esp.add_to_hass(hass)
+    dev = dr.async_get(hass).async_get_or_create(
+        config_entry_id=esp.entry_id,
+        connections={(dr.CONNECTION_NETWORK_MAC, "aa:bb:cc:dd:ee:01")},
+        manufacturer="room-tiles",
+        model="panel",
+        name="Hall panel",
+    )
+    sent: list[str] = []
+
+    async def take(call) -> None:
+        sent.append(call.data["key"])
+
+    hass.services.async_register("esphome", "panel_1_room_tiles_key", take)
+    e = MockConfigEntry(domain=DOMAIN)
+    e.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(e.entry_id)
+    await hass.async_block_till_done()
+    store = e.runtime_data
+    assert store.panel_keys == {}
+    client = await hass_client_no_auth()
+    S = str(PANEL_SCHEMA)
+    # 1. a new panel asks: 401 (nothing in it), and its key goes over ESPHome
+    r = await client.get(URL, params={"name": "panel-1", "schema": S, "hello": "1"})
+    assert r.status == 401 and await r.read() == b""
+    await hass.async_block_till_done()
+    assert len(sent) == 1 and sent[0] == store.panel_keys[dev.id] and len(sent[0]) == 64
+    # an unknown name gets nothing sent
+    assert (await client.get(URL, params={"name": "nobody", "schema": S, "hello": "1"})).status == 401
+    await hass.async_block_till_done()
+    assert len(sent) == 1
+    # 2. signed with it: answered, and the answer signed with it too
+    own = bytes.fromhex(sent[0])
+    q = signed("GET", URL, key=own, board="b", build="00" * 8, generic="1", built="1800000000")
+    r = await client.get(URL, params=q)
+    assert r.status == 200
+    assert r.headers["X-RT-Sig"] == answer_signature(own, q["sig"], 200, await r.read())
+    # 3. the wrong key (an older one): refused, and the right one sent again (the same)
+    r = await client.get(URL, params=signed("GET", URL, key=b"z" * 32))
+    assert r.status == 403
+    await hass.async_block_till_done()
+    assert sent == [sent[0], sent[0]]
+    # 4. never in an export, nor the dashboard's data
+    assert sent[0] not in json.dumps(store.data.as_dict())
+    # 5. the panel gone from HA: its key goes too
+    dr.async_get(hass).async_remove_device(dev.id)
+    await hass.async_block_till_done()
+    assert dev.id not in store.panel_keys

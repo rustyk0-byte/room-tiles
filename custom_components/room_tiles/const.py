@@ -26,6 +26,7 @@ DEV_BUILD = (Path(__file__).resolve().parents[2] / "assets" / "build_panel.py").
 # public release is the baseline.)
 STORAGE_KEY = DOMAIN
 FW_TRIES_KEY = f"{DOMAIN}.firmware_tries"  # (store.py: automatic installs' tries, kept across restarts)
+PANEL_KEYS_KEY = f"{DOMAIN}.panel_keys"  # (store.py: each panel's own key - never in exports)
 RECORDINGS_KEY = f"{DOMAIN}.recordings"  # (cycles.py: "Report a problem" recordings of the next cycle)
 STORAGE_VERSION = 1
 STORAGE_MINOR_VERSION = 11  # 1.11 (2026-11-12): wall panels and their own settings - see migrate.py
@@ -116,4 +117,4 @@ SHAPE_STYLES: tuple[str, ...] = ("floor", "water", "grass", "deck", "paving")
 # any change the other side can't read. Every panel request says its number
 # (?schema=); HA answers another number with 426 and its own in the body - the
 # panel then says which side needs an update, and HA lists it in Repairs.
-PANEL_SCHEMA = 4  # (4: the whole request signed - panels.py request_signature)
+PANEL_SCHEMA = 5  # (5: each panel's own Room Tiles key - panels.py KEYED_FROM)
