@@ -678,22 +678,6 @@ export class RoomTilesPanel extends LitElement {
     if (msg.data.themes) this._installedThemes(msg.data.themes.themes);
     // back after the Restart bar's restart: onto the new dashboard
     if (msg.type === "full" && this._restarting && !this._doc?.restart_needed) location.reload();
-    const waiting = this._docWaiters;
-    this._docWaiters = [];
-    for (const w of waiting) w();
-  }
-
-  private _docWaiters: (() => void)[] = [];
-
-  /** Resolves once HA has sent the document again (or after `ms`). */
-  private _nextDoc(ms = 4000): Promise<void> {
-    return new Promise((resolve) => {
-      const t = window.setTimeout(resolve, ms);
-      this._docWaiters.push(() => {
-        window.clearTimeout(t);
-        resolve();
-      });
-    });
   }
 
   // ---- stale page check ----------------------------------------------------------
@@ -1441,12 +1425,17 @@ export class RoomTilesPanel extends LitElement {
     // this editor's changes over what HA has now (another dashboard's or a
     // panel's meanwhile stay)
     const current = ((this._doc?.markers as MapMarker[] | undefined) ?? []).filter((m) => m.map === ed.map);
+    // (a layer deleted meanwhile in Map settings: its markers go to the
+    // map's first layer - never a save that can't succeed)
+    const mapNow = (this._doc?.maps as MapData[] | undefined)?.find((m) => m.id === ed.map);
+    const layerIds = new Set(layersOf(mapNow).map((l) => l.id));
+    const firstLayer = layersOf(mapNow)[0]?.id ?? "house";
     const markers = mergeMarkers(ed.base, ed.draft, current).map((m) => ({
       ...(m.id.startsWith("new-") ? {} : { id: m.id }), // new ones get their id from HA
       entity: m.entity,
       x: Math.round(m.x),
       y: Math.round(m.y),
-      layer: m.layer,
+      layer: layerIds.has(m.layer) ? m.layer : firstLayer,
       show_name: m.show_name,
     }));
     this._mapSaving = true;
@@ -1473,7 +1462,8 @@ export class RoomTilesPanel extends LitElement {
         const tool = this._markerTool;
         const sel = this._sel;
         const stack = this._markerStack;
-        await this._nextDoc();
+        // (the new document arrived before the saves answered - Room Tiles
+        // sends it while handling them: nothing more to wait for)
         const fresh = (this._doc?.maps as MapData[] | undefined)?.find((m) => m.id === ed.map);
         if (!fresh || this._mapEdit?.map !== ed.map) return;
         const ids = new Set(((this._doc?.markers as MapMarker[] | undefined) ?? []).map((m) => m.id));
