@@ -123,6 +123,7 @@ export class RtShortNames extends LitElement {
    *  language's rules + English's) - into the field, not saved. */
   private async _suggest(r: Row): Promise<void> {
     if (!this.hass) return;
+    const row = `${r.kind}:${r.id}`;
     this._busy = true;
     try {
       const res = await this.hass.connection.sendMessagePromise?.<{ response?: { short_name?: string } }>({
@@ -132,13 +133,16 @@ export class RtShortNames extends LitElement {
         service_data: { [r.kind === "area" ? "area" : "entity"]: r.id },
         return_response: true,
       });
+      // (only into the row it was asked for: another row opened meanwhile
+      // keeps its own field)
+      if (this._editing !== row) return;
       const short = res?.response?.short_name;
       if (short) {
         this._value = short;
         this._error = "";
       }
     } catch (err) {
-      this._error = (err as { message?: string })?.message ?? String(err);
+      if (this._editing === row) this._error = (err as { message?: string })?.message ?? String(err);
     } finally {
       this._busy = false;
     }
