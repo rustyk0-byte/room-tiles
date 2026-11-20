@@ -32,3 +32,14 @@ def test_theme_room_matches_the_partition_table():
     cpp = (ROOT / "firmware" / "components" / "room_tiles" / "assets.cpp").read_text(encoding="utf-8")
     m = re.search(r"STRINGS_REGION\s*=\s*(\d+)\s*\*\s*1024", cpp)
     assert m and int(m.group(1)) * 1024 == panel.STRINGS_REGION
+
+
+def test_prune_leaves_work_in_progress_alone(tmp_path):
+    """A build's .tmp folder or an "Add from link" download (dot-named) may be
+    in use beside a prune: only unused finished builds go."""
+    from custom_components.room_tiles.themes.installed import prune
+
+    for name in ("kept-1", "old-2", ".link-abc", ".kept-3.tmp"):
+        (tmp_path / name).mkdir()
+    prune(tmp_path, {"kept-1"})
+    assert sorted(p.name for p in tmp_path.iterdir()) == [".kept-3.tmp", ".link-abc", "kept-1"]

@@ -314,9 +314,11 @@ def build(found: Found, base: dict, cache: Path) -> Built:
 
 
 def prune(cache: Path, keep: set[str]) -> None:
-    """Drop cached builds no theme uses any more (`keep`: their folders' names)."""
+    """Drop cached builds no theme uses any more (`keep`: their folders' names).
+    Work in progress is left alone: builds and "Add from link" downloads
+    (dot-named folders) may be running beside a prune."""
     if not cache.is_dir():
         return
     for entry in cache.iterdir():
-        if entry.is_dir() and entry.name not in keep:
+        if entry.is_dir() and entry.name not in keep and not entry.name.startswith("."):
             shutil.rmtree(entry, ignore_errors=True)
