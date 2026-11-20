@@ -77,7 +77,11 @@ async def _export(call: ServiceCall) -> dict[str, Any]:
     hass = call.hass
     store = _store(hass)
     path = _json_file(hass, call.data["file"])
-    await hass.async_add_executor_job(_write_json, path, store.data.as_dict())
+    # (with its storage version: a later Room Tiles brings it up to date on import)
+    from .backups import wrap
+    from .const import STORAGE_MINOR_VERSION, STORAGE_VERSION
+
+    await hass.async_add_executor_job(_write_json, path, wrap(STORAGE_VERSION, STORAGE_MINOR_VERSION, store.data.as_dict()))
     return {"file": str(path)}
 
 
@@ -101,8 +105,11 @@ async def _import(call: ServiceCall) -> dict[str, Any]:
     try:
         # (a removal / upgrade copy: HA's storage file, maybe an older
         # version - unwrapped and migrated; an export as it is)
-        data = RoomTilesData.from_dict(unwrap(raw))
-    except (ModelError, TypeError, ValueError, KeyError) as err:
+        doc = unwrap(raw)
+        if not isinstance(doc, dict):  # (an empty list would read as an empty setup)
+            raise ValueError("not a Room Tiles setup")
+        data = RoomTilesData.from_dict(doc)
+    except (ModelError, TypeError, ValueError, KeyError, AttributeError) as err:
         raise ServiceValidationError(f"'{call.data['file']}' is not valid Room Tiles data: {err}") from err
 
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")

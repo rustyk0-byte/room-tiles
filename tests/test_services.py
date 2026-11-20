@@ -29,12 +29,14 @@ async def _call(hass, service, **data):
 async def test_export_then_import_round_trip(hass: HomeAssistant, entry) -> None:
     res = await _call(hass, "export_data", file="rt.json")
     path = Path(res["file"])
-    doc = json.loads(path.read_text())
+    saved = json.loads(path.read_text())
+    assert saved["version"] and saved["minor_version"]  # (its storage version: brought up to date on import)
+    doc = saved["data"]
     assert [a["name"] for a in doc["areas"]] == ["Kitchen"]
 
     doc["areas"][0]["short_name"] = "Cook"
     doc["areas"].append({"id": "not_in_ha", "name": "Ghost"})
-    path.write_text(json.dumps(doc))
+    path.write_text(json.dumps(saved))
     res = await _call(hass, "import_data", file="rt.json")
     assert res["areas"] == 1  # the area HA doesn't have was dropped
     assert entry.runtime_data.data.areas[0].short_name == "Cook"
@@ -55,6 +57,10 @@ async def test_missing_and_non_json_files(hass: HomeAssistant, entry) -> None:
     Path(hass.config.path("text.json")).write_text("not json")
     with pytest.raises(ServiceValidationError, match="not valid JSON"):
         await _call(hass, "import_data", file="text.json")
+    for odd in ([], "text", {"version": 1, "minor_version": 5, "data": []}):
+        Path(hass.config.path("odd.json")).write_text(json.dumps(odd))
+        with pytest.raises(ServiceValidationError, match="not valid Room Tiles data"):
+            await _call(hass, "import_data", file="odd.json")
 
 
 async def test_paths_outside_config_refused(hass: HomeAssistant, entry) -> None:
@@ -72,9 +78,10 @@ async def test_actions_refuse_without_setup(hass: HomeAssistant) -> None:
 
 async def test_import_trims_file_name_and_refreshes_area_lights(hass: HomeAssistant, entry) -> None:
     res = await _call(hass, "export_data", file="rt.json")
-    doc = json.loads(Path(res["file"]).read_text())
+    saved = json.loads(Path(res["file"]).read_text())
+    doc = saved["data"]
     doc["areas"][0]["lights"] = "light.group"
-    Path(res["file"]).write_text(json.dumps(doc))
+    Path(res["file"]).write_text(json.dumps(saved))
     hass.states.async_set("light.group", "off")
     await _call(hass, "import_data", file="  rt.json  ")
     area_id = doc["areas"][0]["id"]
