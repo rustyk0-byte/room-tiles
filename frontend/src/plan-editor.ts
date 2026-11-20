@@ -183,6 +183,10 @@ export class RtPlanEditor extends LitElement {
   private _touchNote = touchNoteShown(); // "best on a tablet or computer" (phones)
 
   private _draft?: MapData;
+  // the map as Room Tiles had it when this draft was taken (or last saved):
+  // a save sends only the parts changed here - what another dashboard
+  // changed meanwhile in the rest stays
+  private _base?: MapData;
   private _undo: MapData[] = [];
   private _redo: MapData[] = [];
   private _tool: Tool = "select";
@@ -264,7 +268,16 @@ export class RtPlanEditor extends LitElement {
     // Select all...) becomes the row
     if (changed.has("_sel") && this._sel.length && !(this._stack && this._sel.every((r) => this._stack!.includes(r))))
       this._stack = [...this._sel];
+    if (changed.has("map") && this.map && this._draft?.id === this.map.id && !this._undo.length && !this._busy && !this._chain &&
+      !this._press && !this._pointers.size) {
+      // saved somewhere else (or this save came back) with nothing unsaved
+      // here: the draft follows it
+      this._draft = cloneMap(this.map);
+      this._draft.layers = this._draft.layers?.length ? this._draft.layers : [{ id: "house", name: tr("editor.layer_main"), min_zoom: 1 }];
+      this._base = cloneMap(this.map);
+    }
     if (changed.has("map") && this.map && this._draft?.id !== this.map.id) {
+      this._base = cloneMap(this.map);
       this._draft = cloneMap(this.map);
       this._draft.layers = this._draft.layers?.length ? this._draft.layers : [{ id: "house", name: tr("editor.layer_main"), min_zoom: 1 }];
       this._undo = [];
@@ -1253,24 +1266,25 @@ export class RtPlanEditor extends LitElement {
     if (this._chain) this._finish();
     this._busy = true;
     this._error = "";
+    // edits made while it saves stay unsaved (still to save, undoable)
+    const saving = this._draft!;
+    const undone = this._undo.length;
     try {
-      const m = this._draft!;
-      await this.hass.callService("room_tiles", "set_map", {
-        map: m.id,
-        name: m.name,
-        ha_floor: m.ha_floor,
-        wall_width: m.wall_width,
-        bounds: fitBounds(m, this._markerPts()),
-        walls: m.walls,
-        windows: m.windows,
-        openings: m.openings,
-        shapes: m.shapes,
-        zones: m.zones,
-        links: m.links,
-        layers: m.layers,
-      });
-      this._undo = [];
-      this._redo = [];
+      const m = saving;
+      // only what changed here since the draft was taken: the rest as Room
+      // Tiles has it now (another dashboard's changes meanwhile stay)
+      const fields: Record<string, unknown> = {};
+      const base = this._base as unknown as Record<string, unknown> | undefined;
+      const mine = m as unknown as Record<string, unknown>;
+      for (const f of ["name", "ha_floor", "wall_width", "walls", "windows", "openings", "shapes", "zones", "links", "layers"]) {
+        if (!base || JSON.stringify(mine[f]) !== JSON.stringify(base[f])) fields[f] = mine[f];
+      }
+      const bounds = fitBounds(m, this._markerPts());
+      if (JSON.stringify(bounds) !== JSON.stringify(this.map?.bounds)) fields.bounds = bounds;
+      await this.hass.callService("room_tiles", "set_map", { map: m.id, ...fields });
+      this._base = cloneMap(m);
+      this._undo = this._undo.slice(undone);
+      if (this._draft === saving) this._redo = [];
       return true;
     } catch (err) {
       this._error = tr("editor.err_save", { error: String((err as { message?: string })?.message ?? err) });
