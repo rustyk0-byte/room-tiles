@@ -290,6 +290,12 @@ A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
   written), then drop the copy in firmware/components/mipi_dsi.
 - Keep in mind: 16-bit sprite sheets (faster drawing, ~3x size) if the asset
   area ever has room.
+- With the next panel protocol change (a PANEL_SCHEMA bump): sign the whole
+  request - method, path and the query (board, build, pack...) - not only the
+  name, time and body. A request caught on the network can now be resent
+  within 5 minutes with other query values (what HA takes from them is
+  checked: firmware.reported). Not alone: panels on the old firmware
+  couldn't sign the request for their own update.
 
 ## 5. Dashboard - later
 
