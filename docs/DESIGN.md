@@ -875,13 +875,18 @@ show and use what the integration holds; nothing about a house is compiled in.
   other numbers - but **an older panel always has its way out**: whatever
   it signed with then (before format 4: only its name, time and body), HA
   takes it for the 426 answer and its image's download - nothing else
-  (no taps, settings, screenshots, data). A rule for good, not a shim -
-  with one end date: formats 3 and 4 signed with the panel's ESPHome API
-  key, which Room Tiles reads from HA's ESPHome entry ONLY for that way out
-  (COMPAT, removed about two weeks after format 5 ships - integrations
-  don't read each other's secrets). After that a format-4 panel left
-  behind takes no answer (it checks them with that key) and needs one USB
-  reinstall; formats before 4 still get their update (they check nothing).
+  (no taps, settings, screenshots, data). A rule for good, not a shim.
+  Before format 4 a panel checks none of HA's answers: it's taken by its
+  name alone for that way out - the 426 and the image, unsigned (nothing
+  private: the images are public; the most anyone else could do is use up
+  its tries for an hour). Format 4 (0.1.6) took only answers signed with
+  its ESPHome API key - one Room Tiles never reads (integrations don't read
+  each other's secrets): it can't be answered (403) and needs one USB
+  reinstall. **Repairs for a panel too old** comes from its firmware's
+  release in HA's device registry (`sw_version` - from the panel's
+  encrypted ESPHome connection, so a request can't fake it): 0.1.6 "reinstall
+  over USB", older "it updates itself" (repairs.async_report_panel_versions);
+  a request nobody can check never makes a notice.
 - **Each panel's own key** (format 5): Room Tiles makes it (32 random
   bytes), keeps it in its own storage (`.storage/room_tiles.panel_keys` -
   never in an export, the dashboard or a payload; a panel gone from HA:
