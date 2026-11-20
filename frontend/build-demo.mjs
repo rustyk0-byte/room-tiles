@@ -1,5 +1,4 @@
-// Build the browser demo (src/demo.ts, docs/TODO.md "Landing page + browser
-// demo") into a folder that works on any static web host:
+// Build the browser demo (src/demo.ts) into a folder that works on any static web host:
 //
 //   node build-demo.mjs <demo data dir> <out dir>
 //

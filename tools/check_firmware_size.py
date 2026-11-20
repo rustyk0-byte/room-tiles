@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fail when a panel firmware image takes more than 80% of its firmware slot
-(docs/TODO.md phase A): the flash layout is frozen, so the room left in a
+(docs/DESIGN.md "Flash layout"): the flash layout is frozen, so the room left in a
 slot is all future firmware gets - this says so long before it's gone.
 
     tools/check_firmware_size.py <firmware.ota.bin> <partitions.csv> [--max 80]

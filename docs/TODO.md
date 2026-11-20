@@ -3,8 +3,8 @@
 Open work in priority order. Decisions and rules live in DESIGN.md / UI.md;
 this is only the list. Remove an item when it's built.
 
-Public since 2026-11-18 (v0.1.6 out). Section 1's rest waits on beta testers
-or the first users.
+Public since 2026-11-18. Section 1's rest waits on beta testers or the
+first users.
 
 ## 1. Installing and updating panels
 
@@ -78,9 +78,7 @@ Upload firmware), one image per board in the folder.
   panel in Home Assistant", the first downloads all worked. Left: the area
   picker on a panel HA has never seen (a re-added one gets its old HA area
   back), each line in another language, the 10.1" screen (a Factory Reset
-  there - no USB needed); the round one untested (section 3). (The
-  reset screen's tiles flashing for its 1.5 s: fixed, not built yet -
-  hold_boot_screen_.)
+  there - no USB needed); the round one untested (section 3).
 - **F. Safety - proven 2026-11-17 on a 7" V1.0:** an image that crashes 10 s
   after starting (a throwaway branch), installed through Room Tiles'
   automatic update, came back on the old build both times (ESP-IDF

@@ -296,8 +296,8 @@ and tile. Room Tiles must do all of this itself, behind the scenes:
   known tokens, the same placeholders as English).
   The SAME goes for the dashboard: every piece of UI text - labels, tooltips,
   hints, help, aria-labels - is translated through a token table, nothing
-  shown to a person is left in code (docs/TODO.md "Localize the whole
-  dashboard").
+  shown to a person is left in code (docs/TODO.md "Full localization
+  with a string table").
 - **Every display shows its own language**, whatever HA's language is. A
   panel and a dashboard device each pick a language; the sensors' text
   (`tile`, `status`...) is in HA's language, so each sensor also gives the

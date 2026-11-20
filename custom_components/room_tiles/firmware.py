@@ -1,5 +1,5 @@
-"""Panel firmware: images Room Tiles installs on its panels (docs/TODO.md
-Step 4 "Installing and updating panels", phase E).
+"""Panel firmware: images Room Tiles installs on its panels (docs/DESIGN.md
+"Firmware updates through Room Tiles").
 
 - **Where images come from:** `firmware_images/` beside this file (a
   release's own, built for every board) and `<config>/room_tiles_firmware/`

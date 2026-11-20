@@ -1,5 +1,5 @@
-# A generic Room Tiles image (docs/TODO.md Step 4 "Installing and updating
-# panels", phase B): nothing about one panel or one home inside, so one image
+# A generic Room Tiles image (docs/DESIGN.md "Firmware updates through Room
+# Tiles"): nothing about one panel or one home inside, so one image
 # fits every panel of a board.
 # - the name gets the chip's ID: room-tiles-a1b2c3 (HA's device name stays
 #   changeable)
@@ -7,7 +7,8 @@
 #   says "add this panel in Home Assistant" until then)
 # - no Wi-Fi network: until it has one the panel opens a hotspot named like
 #   the panel; its page (captive portal) takes the network and password. Also
-#   Improv over USB (the install page). Later: Wi-Fi on the panel's screen.
+#   Improv over USB (the install page), and on the 7" / 10.1" the panel's
+#   own screen.
 
 esphome:
   name: room-tiles

@@ -1,4 +1,4 @@
-// The browser demo (docs/TODO.md "Landing page + browser demo"): the real
+// The browser demo: the real
 // dashboard on a made-up home, in a plain web page - no Home Assistant.
 // tools/demo/make_demo.py writes what Room Tiles sends the dashboard for
 // that home (data/*.json); this page plays the part of HA: the states, the

@@ -1,5 +1,5 @@
-// The landing page's pictures, taken from the browser demo (docs/TODO.md
-// "Landing page + browser demo") in a headless browser - the Screenshots
+// The landing page's pictures, taken from the browser demo in a headless
+// browser - the Screenshots
 // workflow runs it:
 //
 //   node tools/demo/screenshots.mjs <demo url, ending in /> <out dir>

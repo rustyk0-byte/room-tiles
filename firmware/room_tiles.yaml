@@ -1,8 +1,7 @@
-# Room Tiles panel firmware (docs/TODO.md "Step 3"): boots to the Room Tiles
-# screen, fetches its data, theme pack and wording from the Room Tiles
-# integration, then shows its area's tile board (components/room_tiles draws
-# it at runtime): every tile kind; the area picker, tile editing and the map
-# come next (milestones 5-6).
+# Room Tiles panel firmware (docs/DESIGN.md "Panel firmware"): boots to the
+# Room Tiles screen, fetches its data, theme pack and wording from the Room
+# Tiles integration, then shows its area's tile board, the map and the panel's
+# settings (components/room_tiles draws them at runtime).
 #
 # Who the panel is - its name, API key and Wi-Fi - is NOT here: a device file
 # includes one identity package beside this one:

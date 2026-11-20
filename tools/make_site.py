@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the GitHub Pages site (docs/TODO.md "Landing page + browser demo"):
+"""Build the GitHub Pages site:
 
     <out>/            the landing page (tools/site/)
     <out>/demo/       the browser demo (frontend/build-demo.mjs)

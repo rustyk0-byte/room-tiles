@@ -1,5 +1,4 @@
-"""The browser demo's made-up home (docs/TODO.md "Landing page + browser
-demo"): the real Room Tiles integration, run in Home Assistant's test
+"""The browser demo's made-up home: the real Room Tiles integration, run in Home Assistant's test
 harness with made-up floors, areas, devices and states, and what the
 dashboard is sent written out as JSON - so the demo always shows what
 Room Tiles really sends.

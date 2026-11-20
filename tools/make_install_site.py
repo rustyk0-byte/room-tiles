@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the install page's site (docs/TODO.md phase C) from CI's panel
+"""Build the install page's site from CI's panel
 images: install/ (the page) + firmware/ (each board's factory image) +
 manifests/<panel>.json (ESP Web Tools) + boards.json (the page's list).
 

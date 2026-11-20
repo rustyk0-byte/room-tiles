@@ -1,5 +1,4 @@
-// Room Tiles panel: the round panel's board (480x480; docs/TODO.md "Round
-// panel"). The area's tiles - its 5x2 layout, in order, empty slots left out -
+// Room Tiles panel: the round panel's board (480x480). The area's tiles - its 5x2 layout, in order, empty slots left out -
 // in one horizontal strip at the 5x2 tile size (198 x 254: it fits the
 // circle). The strip snaps every half tile: one tile centered, or two halves
 // split down the middle. The area's name on top (a tap: the area list), page
