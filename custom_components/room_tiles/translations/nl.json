@@ -72,7 +72,7 @@
       "fields": {
         "file": {
           "name": "Bestand",
-          "description": "Naam van een .json-bestand, relatief ten opzichte van de configuratiemap."
+          "description": "Een .json-bestand in de configuratiemap of in room_tiles_backups/."
         }
       }
     },
@@ -82,7 +82,7 @@
       "fields": {
         "file": {
           "name": "Bestand",
-          "description": "Naam van een .json-bestand, relatief ten opzichte van de configuratiemap."
+          "description": "Een .json-bestand in de configuratiemap of in room_tiles_backups/."
         }
       }
     },

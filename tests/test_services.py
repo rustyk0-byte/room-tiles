@@ -162,3 +162,12 @@ async def test_import_keeps_every_panel(hass: HomeAssistant, entry) -> None:
     assert entry.runtime_data.data.panel(dev.id) is not None
     await _call(hass, "import_data", file=Path(res["file"]).name)
     assert entry.runtime_data.data.panel(dev.id) is not None
+
+
+async def test_only_room_tiles_own_places(hass: HomeAssistant, entry) -> None:
+    """Not HA's own JSON files (.storage, .cloud, an integration's manifest)."""
+    for name in (".cloud/production_auth.json", ".storage/core.config_entries.json", "custom_components/x/manifest.json"):
+        with pytest.raises(ServiceValidationError, match="must be in the config folder itself"):
+            await _call(hass, "export_data", file=name)
+    res = await _call(hass, "export_data", file="room_tiles_backups/mine.json")
+    assert Path(res["file"]).exists()

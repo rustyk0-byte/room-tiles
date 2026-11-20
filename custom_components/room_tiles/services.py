@@ -46,11 +46,16 @@ def _config_file(hass: HomeAssistant, name: str) -> Path:
 
 
 def _json_file(hass: HomeAssistant, name: str) -> Path:
-    """Export / import: a .json file inside the config folder - nothing else
-    (HA's own files can't be overwritten)."""
+    """Export / import: a .json file right in the config folder, or in
+    room_tiles_backups/ (its removal and before-import copies) - nowhere
+    else: HA's own files (.storage, .cloud, custom_components...) can't be
+    overwritten or read."""
     path = _config_file(hass, name)
     if path.suffix.lower() != ".json":
         raise ServiceValidationError(f"'{name}' must be a .json file")
+    root = Path(hass.config.config_dir).resolve()
+    if path.parent not in (root, root / BACKUP_DIR):
+        raise ServiceValidationError(f"'{name}' must be in the config folder itself or in {BACKUP_DIR}/")
     return path
 
 

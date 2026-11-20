@@ -72,7 +72,7 @@
       "fields": {
         "file": {
           "name": "Fichier",
-          "description": "Nom d’un fichier .json, relatif au dossier de configuration."
+          "description": "Un fichier .json dans le dossier de configuration ou dans room_tiles_backups/."
         }
       }
     },
@@ -82,7 +82,7 @@
       "fields": {
         "file": {
           "name": "Fichier",
-          "description": "Nom d’un fichier .json, relatif au dossier de configuration."
+          "description": "Un fichier .json dans le dossier de configuration ou dans room_tiles_backups/."
         }
       }
     },

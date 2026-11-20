@@ -72,7 +72,7 @@
       "fields": {
         "file": {
           "name": "Archivo",
-          "description": "Nombre de un archivo .json, relativo a la carpeta de configuración."
+          "description": "Un archivo .json en la carpeta de configuración o en room_tiles_backups/."
         }
       }
     },
@@ -82,7 +82,7 @@
       "fields": {
         "file": {
           "name": "Archivo",
-          "description": "Nombre de un archivo .json, relativo a la carpeta de configuración."
+          "description": "Un archivo .json en la carpeta de configuración o en room_tiles_backups/."
         }
       }
     },
