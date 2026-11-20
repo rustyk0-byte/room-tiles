@@ -98,7 +98,9 @@ async def to_code(config):
     for ota in CORE.config.get("ota") or [] if config[CONF_GENERIC] else []:
         if ota.get("platform") == "web_server" and not ota[CONF_ID].is_manual:
             web_ota = await cg.get_variable(ota[CONF_ID])
-            cg.add(web_ota.mark_failed())
+            # (the log then says it's off on purpose, not "unspecified")
+            msg = cg.RawExpression('LOG_STR("off on purpose - the setup hotspot takes no firmware")')
+            cg.add(web_ota.mark_failed(msg))
     # the image's tag: Room Tiles reads it from a firmware file to know its
     # board, panel format and release (custom_components/room_tiles/firmware.py
     # IMAGE_TAG) - an image for another format is never offered
