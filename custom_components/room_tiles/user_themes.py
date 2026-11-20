@@ -185,7 +185,7 @@ class UserThemes:
         except LinkError as err:
             return {"error": err.code}
         try:
-            async with session.get(zip_url, timeout=aiohttp_timeout(180)) as resp:
+            async with await self._get_public(session, zip_url) as resp:
                 if resp.status == 404:
                     return {"error": "not_found"}
                 if resp.status != 200:
@@ -228,6 +228,29 @@ class UserThemes:
         if "error" not in result:
             self.check_soon()
         return result
+
+    async def _get_public(self, session: Any, url: str) -> Any:
+        """GET `url` the safe way for a link someone pasted: https only, and
+        never into the home network (a redirect is followed only after the
+        same check - at most 5). Raises on anything else (download_failed:
+        nothing tells what answered where)."""
+        import ipaddress
+        from urllib.parse import urljoin, urlsplit
+
+        for _hop in range(6):
+            parts = urlsplit(url)
+            if parts.scheme != "https" or not parts.hostname:
+                raise LinkError("download_failed")
+            addresses = await self.hass.async_add_executor_job(_addresses, parts.hostname, parts.port or 443)
+            if not addresses or not all(ipaddress.ip_address(a).is_global for a in addresses):
+                raise LinkError("download_failed")
+            resp = await session.get(url, timeout=aiohttp_timeout(180), allow_redirects=False)
+            if resp.status in (301, 302, 303, 307, 308) and resp.headers.get("Location"):
+                url = urljoin(url, resp.headers["Location"])
+                resp.release()
+                continue
+            return resp
+        raise LinkError("download_failed")
 
     async def _zip_url(self, session: Any, url: str) -> tuple[str, str]:
         """The zip to download for a link, and the theme's folder in it ("":
@@ -312,6 +335,16 @@ class UserThemes:
             "building": sorted(self.building),
             "problems": [{"theme": b.source, "problems": b.problems} for b in self.broken],
         }
+
+
+def _addresses(host: str, port: int) -> list[str]:
+    """Where a host name leads (blocking: the executor)."""
+    import socket
+
+    try:
+        return [info[4][0] for info in socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)]
+    except OSError:
+        return []
 
 
 class LinkError(Exception):

@@ -162,10 +162,20 @@ def _zip_bytes(files: dict) -> bytes:
     return buf.getvalue()
 
 
-async def test_add_a_theme_from_a_link(hass: HomeAssistant, entry, aioclient_mock) -> None:
+async def test_add_a_theme_from_a_link(hass: HomeAssistant, entry, aioclient_mock, monkeypatch) -> None:
     """The dashboard's "Add from link": a zip, or a GitHub repository's latest
     release - looked at, then kept in the themes folder and built."""
+    from custom_components.room_tiles import user_themes as ut
+
+    monkeypatch.setattr(ut, "_addresses", lambda host, port: ["192.168.1.1"] if host == "router.example" else ["140.82.112.3"])
     themes = entry.runtime_data.user_themes
+    # never into the home network: not directly, not through a redirect
+    aioclient_mock.get("https://router.example/t.zip", content=b"x")
+    assert await themes.async_add_from_link("https://router.example/t.zip") == {"error": "download_failed"}
+    aioclient_mock.get("https://example.com/hop.zip", status=302, headers={"Location": "https://router.example/t.zip"})
+    assert await themes.async_add_from_link("https://example.com/hop.zip") == {"error": "download_failed"}
+    aioclient_mock.get("https://example.com/plain.zip", status=302, headers={"Location": "http://example.com/t.zip"})
+    assert await themes.async_add_from_link("https://example.com/plain.zip") == {"error": "download_failed"}
     mint = _zip_bytes({"mint/theme.json": json.dumps({"format": 1, "id": "mint", "name": {"en": "Mint"}})})
     aioclient_mock.get("https://example.com/mint.zip", content=mint)
     assert await themes.async_add_from_link("http://example.com/mint.zip") == {"error": "not_https"}
@@ -177,6 +187,9 @@ async def test_add_a_theme_from_a_link(hass: HomeAssistant, entry, aioclient_moc
     # again: it's there already (unless replacing)
     assert (await themes.async_add_from_link("https://example.com/mint.zip"))["error"] == "exists"
     assert "error" not in await themes.async_add_from_link("https://example.com/mint.zip", replace=True)
+    # a redirect to a public https address is followed
+    aioclient_mock.get("https://example.com/moved.zip", status=302, headers={"Location": "https://example.com/mint.zip"})
+    assert "error" not in await themes.async_add_from_link("https://example.com/moved.zip", replace=True)
     # a GitHub repository: its latest release's zip
     berry = _zip_bytes({"theme.json": json.dumps({"format": 1, "id": "berry", "name": {"en": "Berry"}})})
     aioclient_mock.get(
