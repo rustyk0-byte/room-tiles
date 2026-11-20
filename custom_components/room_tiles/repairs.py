@@ -158,6 +158,12 @@ def async_report_dropped_overrides(hass: HomeAssistant, dropped: list[str]) -> N
     )
 
 
+def _code(text: str) -> str:
+    """Text from outside (a device's state...) as Markdown code: shown as it
+    is, never as a link or formatting."""
+    return "`" + " ".join(text.replace("`", "'").split())[:120] + "`"
+
+
 ISSUE_APPLIANCE_QUESTION = "appliance_question"
 
 
@@ -169,7 +175,11 @@ def async_update_appliance_questions(hass: HomeAssistant, appliance_id: str, nam
     if not questions:
         ir.async_delete_issue(hass, DOMAIN, issue_id)
         return
-    lines = [f'- {q["label"]}: "{q["state"]}"' for q in questions]
+    # (what devices report, shown as code: never links or formatting in HA's
+    # Markdown; at most MAX_LISTED - a counter in a state can't grow it)
+    lines = [f'- {_code(str(q["label"]))}: {_code(str(q["state"]))}' for q in questions]
+    if len(lines) > MAX_LISTED:
+        lines = lines[:MAX_LISTED] + [f"- ... and {len(lines) - MAX_LISTED} more"]
     ir.async_create_issue(
         hass,
         DOMAIN,
