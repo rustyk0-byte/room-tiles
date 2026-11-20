@@ -108,6 +108,11 @@ async def _import(call: ServiceCall) -> dict[str, Any]:
     # areas follow HA: names / floors refreshed, areas HA doesn't have dropped,
     # HA areas missing from the file added (hidden unless auto-add is on)
     sync_areas(hass, data)
+    # panels follow HA too: one for every panel device there is now (a file
+    # from before a panel was added, or another home's, has none for it)
+    from . import panels
+
+    panels.sync_panels(data, panels.find_panels(hass))
     ops.flag_short_names(data)
     store.data = data
     store.async_changed()

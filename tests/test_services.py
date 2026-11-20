@@ -142,3 +142,23 @@ async def test_only_json_files(hass: HomeAssistant, entry) -> None:
         with pytest.raises(ServiceValidationError, match="must be a .json file"):
             await _call(hass, "export_data", file=name)
     assert Path(hass.config.path("configuration.yaml")).read_text() == "homeassistant:\n"
+
+
+async def test_import_keeps_every_panel(hass: HomeAssistant, entry) -> None:
+    """A file from before a panel was added has no entry for it: after the
+    import the panel is still known (its payload works)."""
+    import base64
+
+    from homeassistant.helpers import device_registry as dr
+
+    res = await _call(hass, "export_data", file="no-panels.json")  # (no panel yet)
+    esp = MockConfigEntry(domain="esphome", data={"device_name": "panel-1", "noise_psk": base64.b64encode(b"k" * 32).decode()})
+    esp.add_to_hass(hass)
+    dev = dr.async_get(hass).async_get_or_create(
+        config_entry_id=esp.entry_id, connections={(dr.CONNECTION_NETWORK_MAC, "aa:bb:cc:dd:ee:01")},
+        manufacturer="room-tiles", model="panel", name="Hall panel",
+    )
+    await hass.async_block_till_done()
+    assert entry.runtime_data.data.panel(dev.id) is not None
+    await _call(hass, "import_data", file=Path(res["file"]).name)
+    assert entry.runtime_data.data.panel(dev.id) is not None
