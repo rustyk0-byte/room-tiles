@@ -287,7 +287,9 @@ void AssetStore::load_theme_() {
     this->is_i8x_[slot] = format == 3;
     d.header.w = w;
     d.header.h = h;
-    d.header.stride = stride;
+    // (I8X: one index a pixel - its rows are its width, whatever the entry
+    // says: what was checked is what's read, also when it stays I8)
+    d.header.stride = format == 3 ? w : stride;
     d.data_size = size;
     d.data = p + offset;
     this->have_image_[slot] = true;
