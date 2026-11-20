@@ -275,6 +275,7 @@ export class RtPlanEditor extends LitElement {
       this._draft = cloneMap(this.map);
       this._draft.layers = this._draft.layers?.length ? this._draft.layers : [{ id: "house", name: tr("editor.layer_main"), min_zoom: 1 }];
       this._base = cloneMap(this.map);
+      this._redo = []; // (its steps were of the older map: a redo would put that back)
     }
     if (changed.has("map") && this.map && this._draft?.id !== this.map.id) {
       this._base = cloneMap(this.map);
@@ -329,7 +330,7 @@ export class RtPlanEditor extends LitElement {
       this._chain = c.pts.length ? { ...c } : undefined;
       return;
     }
-    if (!this._undo.length || !this._draft) return;
+    if (!this._undo.length || !this._draft || this._busy) return; // (not while saving)
     if (c) this._chain = c.pts.length > 2 ? { ...c, pts: c.pts.slice(0, -1) } : undefined;
     this._redo = [...this._redo, this._draft];
     this._draft = this._undo[this._undo.length - 1];
@@ -338,7 +339,7 @@ export class RtPlanEditor extends LitElement {
   }
 
   private _redoStep(): void {
-    if (!this._redo.length || !this._draft) return;
+    if (!this._redo.length || !this._draft || this._busy) return;
     this._chain = undefined;
     this._undo = [...this._undo, this._draft];
     this._draft = this._redo[this._redo.length - 1];
@@ -1111,6 +1112,7 @@ export class RtPlanEditor extends LitElement {
     if (this._dialog) {
       if (e.key === "Escape") {
         if (this._dialog === "settings") this._closeSettings();
+        else if (this._dialog === "unsaved" && this._leaving) this._leaving(false); // (as Keep editing)
         else this._dialog = undefined;
       }
       return;
@@ -1268,7 +1270,6 @@ export class RtPlanEditor extends LitElement {
     this._error = "";
     // edits made while it saves stay unsaved (still to save, undoable)
     const saving = this._draft!;
-    const undone = this._undo.length;
     try {
       const m = saving;
       // only what changed here since the draft was taken: the rest as Room
@@ -1282,9 +1283,27 @@ export class RtPlanEditor extends LitElement {
       const bounds = fitBounds(m, this._markerPts());
       if (JSON.stringify(bounds) !== JSON.stringify(this.map?.bounds)) fields.bounds = bounds;
       await this.hass.callService("room_tiles", "set_map", { map: m.id, ...fields });
-      this._base = cloneMap(m);
-      this._undo = this._undo.slice(undone);
-      if (this._draft === saving) this._redo = [];
+      // (HA's answer to this very save came while saving - skipped then)
+      if (this._draft === saving) {
+        // nothing changed meanwhile: the map as HA has it now (what others
+        // saved in the parts not sent here included)
+        this._undo = [];
+        this._redo = [];
+        if (this.map && this.map.id === m.id) {
+          this._draft = cloneMap(this.map);
+          this._draft.layers = this._draft.layers?.length ? this._draft.layers : m.layers;
+          this._base = cloneMap(this.map);
+        } else {
+          this._base = cloneMap(m);
+        }
+      } else {
+        // edited meanwhile: those edits stay unsaved - the history from the
+        // saved state on (found by the snapshot itself: the history is
+        // capped, its length says nothing)
+        const i = this._undo.indexOf(saving);
+        this._undo = i >= 0 ? this._undo.slice(i) : this._undo;
+        this._base = cloneMap(saving);
+      }
       return true;
     } catch (err) {
       this._error = tr("editor.err_save", { error: String((err as { message?: string })?.message ?? err) });
@@ -1577,6 +1596,8 @@ export class RtPlanEditor extends LitElement {
               if (await this._save()) {
                 if (this._leaving) this._leaving(true);
                 else this._emit("close");
+              } else {
+                this._leaving?.(false); // (not saved: staying - a later leave asks afresh)
               }
             }}
           ></rt-unsaved>`
