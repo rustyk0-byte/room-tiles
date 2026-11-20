@@ -511,6 +511,13 @@ export class RtMap extends LitElement {
     super.disconnectedCallback();
     this._ro?.disconnect();
     if (this._anim) cancelAnimationFrame(this._anim);
+    this._anim = undefined;
+    // (a zoom cut short: straight to where it was going - what the view
+    // and the remembered view say match what's shown after a reattach)
+    if (this._flyTo) {
+      this._cam = this._flyTo;
+      this._flyTo = undefined;
+    }
   }
 
   protected willUpdate(changed: PropertyValues): void {
@@ -835,6 +842,17 @@ export class RtMap extends LitElement {
     this._pointers.clear();
     this._press = undefined;
     this._pinch = undefined;
+    this._dropDrag();
+  }
+
+  /** An edit drag or box given up (a pinch began, the fingers were reset):
+   *  nothing left drawn that won't be saved. */
+  private _dropDrag(): void {
+    if (this._edgeAnim) cancelAnimationFrame(this._edgeAnim);
+    this._edgeAnim = undefined;
+    this._dragAt = undefined;
+    this._drag = undefined;
+    this._box = undefined;
   }
 
   private _down(e: PointerEvent, marker?: MapMarker): void {
@@ -848,6 +866,7 @@ export class RtMap extends LitElement {
       // pinch
       clearTimeout(this._press?.timer);
       this._press = undefined;
+      this._dropDrag(); // (a marker drag or box under way: given up)
       const [a, b] = [...this._pointers.values()];
       this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y), cam: { ...this._cam }, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
       return;
