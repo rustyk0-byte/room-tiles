@@ -171,6 +171,10 @@ async def test_add_a_theme_from_a_link(hass: HomeAssistant, entry, aioclient_moc
     # _PublicResolver is tested on its own)
     monkeypatch.setattr(ut, "_public_session", lambda hass: aioclient_mock.create_session(hass.loop))
     themes = entry.runtime_data.user_themes
+    # an address written as numbers in the home network: refused (never looked up)
+    assert await themes.async_add_from_link("https://192.168.1.50/t.zip") == {"error": "download_failed"}
+    aioclient_mock.get("https://example.com/toip.zip", status=302, headers={"Location": "https://10.0.0.1:8443/x"})
+    assert await themes.async_add_from_link("https://example.com/toip.zip") == {"error": "download_failed"}
     # a redirect to plain http: refused
     aioclient_mock.get("https://example.com/plain.zip", status=302, headers={"Location": "http://example.com/t.zip"})
     assert await themes.async_add_from_link("https://example.com/plain.zip") == {"error": "download_failed"}

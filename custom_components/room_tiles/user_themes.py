@@ -129,7 +129,7 @@ class UserThemes:
                 is_fixable=False,
                 severity=ir.IssueSeverity.WARNING,
                 translation_key=ISSUE,
-                translation_placeholders={"theme": _md(b.source), "problems": "\n".join(f"- {_md(p)}" for p in b.problems)},
+                translation_placeholders={"theme": _plain(b.source), "problems": "\n".join(f"- {_md(p)}" for p in b.problems)},
             )
         for gone in self._issues - now:
             ir.async_delete_issue(self.hass, DOMAIN, gone)
@@ -241,12 +241,18 @@ class UserThemes:
         (_public_session: public addresses only): https only, a redirect
         followed only after the same check - at most 5. Raises on anything
         else (download_failed: nothing tells what answered where)."""
+        import ipaddress
         from urllib.parse import urljoin, urlsplit
 
         for _hop in range(6):
             parts = urlsplit(url)
             if parts.scheme != "https" or not parts.hostname:
                 raise LinkError("download_failed")
+            try:  # (an address written as numbers is never looked up: checked here)
+                if not ipaddress.ip_address(parts.hostname).is_global:
+                    raise LinkError("download_failed")
+            except ValueError:
+                pass  # (a name: _PublicResolver checks where it leads)
             resp = await session.get(url, timeout=aiohttp_timeout(180), allow_redirects=False)
             if resp.status in (301, 302, 303, 307, 308) and resp.headers.get("Location"):
                 url = urljoin(url, resp.headers["Location"])
@@ -338,6 +344,11 @@ class UserThemes:
             "building": sorted(self.building),
             "problems": [{"theme": b.source, "problems": b.problems} for b in self.broken],
         }
+
+
+def _plain(text: str) -> str:
+    """A theme's own name for a Repairs title (plain text there): one line."""
+    return " ".join(text.split())[:80]
 
 
 def _md(text: str) -> str:
