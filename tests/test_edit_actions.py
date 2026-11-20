@@ -53,6 +53,17 @@ async def test_marker_actions(hass: HomeAssistant, entry) -> None:
     assert (m.x, m.y, m.show_name, m.layer) == (41.0, 50.0, True, "house")  # the map's first layer
     await _call(hass, "remove_marker", marker=mid)
     assert entry.runtime_data.data.markers == []
+    # numbers that aren't (NaN, infinity): refused, nothing kept
+    import voluptuous as vol
+
+    for bad in ("nan", "inf"):
+        with pytest.raises((vol.Invalid, ServiceValidationError)):
+            await _call(hass, "add_marker", response=True, map=map_id, entity="light.counter", x=bad, y=50)
+        with pytest.raises((vol.Invalid, ServiceValidationError)):
+            await _call(hass, "set_map", map=map_id, bounds=[0, 0, bad, 100])
+        with pytest.raises((vol.Invalid, ServiceValidationError)):
+            await _call(hass, "set_map", map=map_id, wall_width=bad)
+    assert entry.runtime_data.data.markers == [] and entry.runtime_data.data.maps[0].bounds[2] != float("inf")
 
 
 async def test_websocket_feed(hass: HomeAssistant, entry, hass_ws_client) -> None:

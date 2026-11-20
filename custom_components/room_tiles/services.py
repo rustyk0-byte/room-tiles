@@ -179,7 +179,15 @@ AUTO_BOARD_SCHEMA = vol.Schema(
         vol.Optional("layout"): vol.In(list(LAYOUTS)),  # none: both boards
     }
 )
-_COORD = vol.Coerce(float)
+def _finite(v: float) -> float:
+    import math
+
+    if not math.isfinite(v):
+        raise vol.Invalid("must be a finite number")
+    return v
+
+
+_COORD = vol.All(vol.Coerce(float), _finite)
 ADD_MARKER_SCHEMA = vol.Schema(
     {
         vol.Required("map"): cv.string,
@@ -381,8 +389,8 @@ SET_MARKERS_SCHEMA = vol.Schema(
                 {
                     vol.Optional("id"): cv.string,
                     vol.Required("entity"): cv.entity_id,
-                    vol.Required("x"): vol.Coerce(float),
-                    vol.Required("y"): vol.Coerce(float),
+                    vol.Required("x"): _COORD,
+                    vol.Required("y"): _COORD,
                     vol.Optional("layer"): cv.string,
                     vol.Optional("show_name", default=False): cv.boolean,
                 },
@@ -615,7 +623,7 @@ async def _split_appliance(call: ServiceCall) -> dict[str, Any]:
 
 SET_POOL_SCHEMA = vol.Schema({vol.Required("pool"): dict})
 REMOVE_POOL_SCHEMA = vol.Schema({vol.Required("pool"): cv.string})
-POOL_TARGET_SCHEMA = vol.Schema({vol.Required("entity"): cv.entity_id, vol.Required("temperature"): vol.Coerce(float)})
+POOL_TARGET_SCHEMA = vol.Schema({vol.Required("entity"): cv.entity_id, vol.Required("temperature"): _COORD})
 POOL_HEATER_SCHEMA = vol.Schema({vol.Required("entity"): cv.entity_id, vol.Required("heater"): cv.boolean})
 POOL_ON_SCHEMA = vol.Schema(
     {vol.Required("entity"): cv.entity_id, vol.Required("on"): cv.boolean, vol.Optional("with_heater"): cv.boolean}

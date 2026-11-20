@@ -186,3 +186,20 @@ def test_separate_pool_and_spa_cannot_share_one_heater():
         PoolSystem.from_dict(base)
     ok = {**base, "pool": {**base["pool"], "heater": None}}
     assert PoolSystem.from_dict(ok).spa.heater == "climate.h"
+
+
+def test_numbers_must_be_finite():
+    """NaN / infinity never get in: the panels' JSON can't carry them and HA's
+    storage would turn them into null (Room Tiles then couldn't load)."""
+    import math
+
+    import pytest
+
+    from custom_components.room_tiles.model import ModelError, RoomTilesData
+
+    base = {"maps": [{"id": "house", "name": "House", "bounds": [0, 0, 100, 100]}]}
+    for bad in (math.nan, math.inf):
+        with pytest.raises(ModelError):
+            RoomTilesData.from_dict({**base, "markers": [{"id": "m", "map": "house", "entity": "light.x", "x": bad, "y": 1}]})
+        with pytest.raises(ModelError):
+            RoomTilesData.from_dict({"maps": [{"id": "house", "name": "House", "bounds": [0, 0, bad, 100]}]})

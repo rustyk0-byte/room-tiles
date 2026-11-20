@@ -54,10 +54,24 @@ def _req(d: dict[str, Any], key: str, typ: type | tuple[type, ...]) -> Any:
     return v
 
 
+def _num(v: Any) -> float:
+    """A number that is one: never NaN or infinity (the panels' JSON can't
+    carry them, and HA's storage would write them as null)."""
+    import math
+
+    try:
+        f = float(v)
+    except (TypeError, ValueError) as err:
+        raise ModelError(f"'{v}' is not a number") from err
+    if not math.isfinite(f):
+        raise ModelError(f"'{v}' is not a finite number")
+    return f
+
+
 def _pt(v: Any) -> tuple[float, float]:
     if not (isinstance(v, (list, tuple)) and len(v) == 2):
         raise ModelError("a point must be [x, y]")
-    return (float(v[0]), float(v[1]))
+    return (_num(v[0]), _num(v[1]))
 
 
 def _short(v: Any, what: str, required: bool = True) -> str | None:
@@ -322,11 +336,11 @@ class Layer:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Layer:
-        z = float(d.get("min_zoom", 1.0))
+        z = _num(d.get("min_zoom", 1.0))
         if z < 0:
             raise ModelError("a layer's min_zoom can't be negative")
         top = d.get("max_zoom")
-        end = None if top is None else float(top)
+        end = None if top is None else _num(top)
         if end is not None and end <= z:
             raise ModelError("a layer's max_zoom must be above its min_zoom")
         return cls(id=_req(d, "id", str), name=_req(d, "name", str), min_zoom=z, max_zoom=end)
@@ -357,7 +371,7 @@ def _segs(v: Any) -> list[Segment]:
     for s in v:
         if not (isinstance(s, (list, tuple)) and len(s) == 4):
             raise ModelError("a segment must be [x1, y1, x2, y2]")
-        out.append((float(s[0]), float(s[1]), float(s[2]), float(s[3])))
+        out.append((_num(s[0]), _num(s[1]), _num(s[2]), _num(s[3])))
     return out
 
 
@@ -384,7 +398,7 @@ class Map:
         b = d.get("bounds")
         if not (isinstance(b, (list, tuple)) and len(b) == 4):
             raise ModelError("map bounds must be [x0, y0, x1, y1]")
-        x0, y0, x1, y1 = (float(v) for v in b)
+        x0, y0, x1, y1 = (_num(v) for v in b)
         if x1 <= x0 or y1 <= y0:
             raise ModelError("map bounds are empty")
         return cls(
@@ -393,7 +407,7 @@ class Map:
             bounds=(x0, y0, x1, y1),
             ha_floor=d.get("ha_floor"),
             generated=bool(d.get("generated", False)),
-            wall_width=float(d.get("wall_width", 6.0)),
+            wall_width=_num(d.get("wall_width", 6.0)),
             walls=_segs(d.get("walls")),
             windows=_segs(d.get("windows")),
             openings=_segs(d.get("openings")),
@@ -452,8 +466,8 @@ class Marker:
             id=_req(d, "id", str),
             map=_req(d, "map", str),
             entity=_req(d, "entity", str),
-            x=float(_req(d, "x", (int, float))),
-            y=float(_req(d, "y", (int, float))),
+            x=_num(_req(d, "x", (int, float))),
+            y=_num(_req(d, "y", (int, float))),
             layer=str(d.get("layer") or LAYER_HOUSE),
             show_name=bool(d.get("show_name", False)),
         )
@@ -614,8 +628,8 @@ class ApplianceUnit:
             clear=list(clear),
             drawer=bool(d.get("drawer", False)),
             overrides={str(k).lower(): str(v) for k, v in overrides.items()},
-            power_on_w=float(d.get("power_on_w", 5.0)),
-            power_off_min=float(d.get("power_off_min", 3.0)),
+            power_on_w=_num(d.get("power_on_w", 5.0)),
+            power_off_min=_num(d.get("power_off_min", 3.0)),
         )
 
     def as_dict(self) -> dict[str, Any]:
