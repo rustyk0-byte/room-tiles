@@ -133,16 +133,19 @@ export class RtColorPicker extends LitElement {
       const sup = supports(this._state);
       this._tab = this._state?.attributes.color_mode === "color_temp" || !sup.color ? "temp" : "color";
       this._holdUntil = 0;
+      this._lastSent = ""; // (another light: nothing sent to it yet)
     }
     // follow HA unless the user just changed something - and keep holding
     // through in-between reports (groups) until HA shows what was sent
     if (changed.has("hass") && this._sentData && Date.now() <= this._holdUntil && this._confirmed()) {
       this._sentData = undefined;
       this._holdUntil = 0;
+      this._lastSent = ""; // (HA has it: the same value again is a new call)
       this._emitHold(undefined); // tile: follow HA again
     }
     if ((changed.has("hass") || changed.has("entity")) && Date.now() > this._holdUntil && !this._dragging) {
       this._sentData = undefined;
+      this._lastSent = ""; // (following HA: the light may have changed elsewhere)
       const a = this._state?.attributes ?? {};
       if (Array.isArray(a.hs_color)) [this._hue, this._sat] = a.hs_color;
       if (typeof a.brightness === "number") this._bri = Math.max(1, Math.round((a.brightness / 255) * 100));
