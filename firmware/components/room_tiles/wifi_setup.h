@@ -77,6 +77,7 @@ class WifiSetup
   View view_{View::LIST};
   bool changing_{false};
   std::vector<Network> networks_;
+  std::vector<Network> shown_;  // (the rows as drawn - what a tap picks)
   bool scanning_{false};
   uint32_t scan_ms_{0};
   uint8_t rescans_{0};        // (looked again by itself: while nothing found)

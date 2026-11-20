@@ -182,8 +182,9 @@ void WifiSetup::scan_() {
   } else if (!w->has_sta()) {
     w->start_scanning();
   } else {
-    // (a network saved, not on it yet: ESPHome is connecting - its own
-    // scans fill the list; one of ours would interrupt it)
+    // (a network saved, not on it: ESPHome keeps trying it, scanning on
+    // each round - those scans fill the list; one of ours would be refused
+    // mid-connect. "Looking..." meanwhile, never "No networks found")
     ESP_LOGD(TAG, "Connecting: the list comes from ESPHome's scans");
   }
   this->scanning_ = true;
@@ -347,14 +348,16 @@ void WifiSetup::build_list_() {
     current = wifi::global_wifi_component->wifi_ssid_to(buf);
   }
 #endif
-  std::vector<size_t> order;
-  for (size_t i = 0; i < this->networks_.size(); i++)
-    if (this->networks_[i].ssid == current)
-      order.insert(order.begin(), i);
+  // (the rows as drawn: a tap picks the row's own network, whatever a scan
+  // has changed in networks_ meanwhile)
+  this->shown_.clear();
+  for (const Network &n : this->networks_)
+    if (n.ssid == current)
+      this->shown_.insert(this->shown_.begin(), n);
     else
-      order.push_back(i);
-  for (size_t i : order) {
-    const Network &n = this->networks_[i];
+      this->shown_.push_back(n);
+  for (size_t i = 0; i < this->shown_.size(); i++) {
+    const Network &n = this->shown_[i];
     lv_obj_t *r = row(n.ssid, n.locked ? LOCKED[bars(n.rssi)] : OPEN[bars(n.rssi)]);
     if (!current.empty() && n.ssid == current) {
       lv_obj_t *on = lv_label_create(r);
@@ -370,10 +373,10 @@ void WifiSetup::build_list_() {
         [](lv_event_t *e) {
           auto *self = static_cast<WifiSetup *>(lv_event_get_user_data(e));
           const size_t k = (size_t) (uintptr_t) lv_obj_get_user_data(lv_event_get_current_target_obj(e));
-          if (k >= self->networks_.size())
+          if (k >= self->shown_.size())
             return;
-          self->ssid_ = self->networks_[k].ssid;
-          self->locked_ = self->networks_[k].locked;
+          self->ssid_ = self->shown_[k].ssid;
+          self->locked_ = self->shown_[k].locked;
           self->other_ = false;
           self->typed_.clear();
           self->error_text_.clear();
@@ -816,7 +819,9 @@ void WifiSetup::loop() {
     return;
   }
   if (this->view_ == View::LIST) {
-    if (this->scanning_ && now - this->scan_ms_ > SCAN_GIVE_UP_MS) {
+    // (off a saved network ESPHome's own rounds scan - slower: no give-up)
+    const bool esphome_scans = w != nullptr && w->has_sta() && !w->is_connected();
+    if (this->scanning_ && !esphome_scans && now - this->scan_ms_ > SCAN_GIVE_UP_MS) {
       this->scanning_ = false;  // (no answer: say so, try again later)
       if (this->status_ != nullptr && this->networks_.empty())
         lv_label_set_text(this->status_, this->t_("panel.wifi_none", "No networks found").c_str());
