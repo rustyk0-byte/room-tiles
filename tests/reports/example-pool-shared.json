@@ -1,0 +1,170 @@
+{
+  "source": "example-issue.md",
+  "report": {
+    "kind": "model",
+    "room_tiles": "0.1.8",
+    "home_assistant": "2026.11.2",
+    "integration": {
+      "domain": "iaqualink",
+      "version": "2026.11.2"
+    },
+    "device": {
+      "manufacturer": "Jandy",
+      "model": "Example shared pool and spa"
+    },
+    "kind_of_device": "pool",
+    "preset": "iaqualink",
+    "layout": "shared",
+    "outcome": "works",
+    "checklist": {
+      "water_temp": "works",
+      "target": "works",
+      "heater": "works",
+      "spa_mode": "works",
+      "pump": "works",
+      "switching": "works",
+      "chill": "not_tried",
+      "time_to_target": "not_tried"
+    },
+    "recording": [
+      {
+        "t": 0,
+        "role": "spa_mode",
+        "state": "off"
+      },
+      {
+        "t": 0,
+        "role": "pump",
+        "state": "on"
+      },
+      {
+        "t": 0,
+        "role": "pool_temp",
+        "state": "80"
+      },
+      {
+        "t": 0,
+        "role": "pool_heater",
+        "state": "heat",
+        "attributes": {
+          "hvac_action": "heating",
+          "temperature": 84
+        }
+      },
+      {
+        "t": 0,
+        "role": "spa_heater",
+        "state": "off",
+        "attributes": {
+          "hvac_action": "off",
+          "temperature": 100
+        }
+      },
+      {
+        "t": 5400,
+        "role": "pool_heater",
+        "state": "heat",
+        "attributes": {
+          "hvac_action": "idle",
+          "temperature": 84
+        }
+      },
+      {
+        "t": 7200,
+        "role": "spa_mode",
+        "state": "on"
+      },
+      {
+        "t": 7260,
+        "role": "pool_temp",
+        "state": "unavailable"
+      },
+      {
+        "t": 7262,
+        "role": "spa_temp",
+        "state": "92"
+      },
+      {
+        "t": 7263,
+        "role": "spa_heater",
+        "state": "heat",
+        "attributes": {
+          "hvac_action": "heating",
+          "temperature": 100
+        }
+      },
+      {
+        "t": 9000,
+        "role": "spa_heater",
+        "state": "heat",
+        "attributes": {
+          "hvac_action": "idle",
+          "temperature": 100
+        }
+      },
+      {
+        "t": 10800,
+        "role": "spa_mode",
+        "state": "off"
+      },
+      {
+        "t": 10802,
+        "role": "spa_temp",
+        "state": "unavailable"
+      },
+      {
+        "t": 10860,
+        "role": "pool_temp",
+        "state": "84"
+      },
+      {
+        "t": 14400,
+        "role": "pump",
+        "state": "off"
+      },
+      {
+        "t": 14401,
+        "role": "pool_temp",
+        "state": "unavailable"
+      }
+    ]
+  },
+  "expect": [
+    {
+      "t": 0,
+      "shown": "pool heating, spa standby"
+    },
+    {
+      "t": 5400,
+      "shown": "pool idle, spa standby"
+    },
+    {
+      "t": 7200,
+      "shown": "pool standby, spa switching"
+    },
+    {
+      "t": 7262,
+      "shown": "pool standby, spa off"
+    },
+    {
+      "t": 7263,
+      "shown": "pool standby, spa heating"
+    },
+    {
+      "t": 9000,
+      "shown": "pool standby, spa idle"
+    },
+    {
+      "t": 10800,
+      "shown": "pool switching, spa standby"
+    },
+    {
+      "t": 10860,
+      "shown": "pool idle, spa standby"
+    },
+    {
+      "t": 14401,
+      "shown": "pool pump_off, spa standby"
+    }
+  ]
+}

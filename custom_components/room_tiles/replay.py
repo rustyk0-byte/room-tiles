@@ -7,7 +7,10 @@ tests/test_reports.py (every case replays the same, release after release).
 A report (report.py) has `kind_of_device`, `preset`, its user's `answers`
 and `recording`: rows of {"t": seconds from the start, "role", "state"}.
 The roles are Room Tiles' own (cycles.py subject): an appliance's
-"status" / "door" / "time_left", a vacuum's "vacuum" / "error".
+"status" / "door" / "time_left", a vacuum's "vacuum" / "error", a pool
+system's "spa_mode" / "pump" and each body's "<body>_temp" /
+"<body>_heater" (a climate: its mode, `hvac_action` and `temperature` in
+"attributes") / "<body>_pump" - a pool's report also has its `layout`.
 """
 
 from __future__ import annotations
@@ -86,4 +89,62 @@ def replay(report: dict[str, Any]) -> list[dict[str, Any]]:
                 continue
             note(r["t"], view(vac, err, overrides=overrides).cls)
         return out
+    if kind == "pool":
+        _pool(report, rows, note)
+        return out
     raise ReplayError(f"replaying a {kind or 'device'}'s report isn't supported yet")
+
+
+def _pool(report: dict[str, Any], rows: list[dict[str, Any]], note: Any) -> None:
+    """A pool system: each body's state after every change, e.g.
+    "pool heating, spa standby" (pool_ha.py builds the same input live)."""
+    from .pool import LAYOUTS, ON_OFF, BodyInput, PoolLogic, SystemInput
+
+    layout = report.get("layout")
+    if layout not in LAYOUTS:
+        raise ReplayError(f"the report has no pool layout ({layout!r})")
+    logic = PoolLogic(layout)
+    roles = {str(r["role"]) for r in rows}
+    last: dict[str, dict[str, Any]] = {}  # role -> its latest row
+    dropped: dict[str, float] = {}  # a switch that dropped out -> since when
+    watch = ("spa_mode", "pump") if layout == "shared" else tuple(f"{b}_pump" for b in logic.bodies())
+
+    def state(role: str) -> Any:
+        return last.get(role, {}).get("state")
+
+    def attr(role: str, key: str) -> Any:
+        return (last.get(role, {}).get("attributes") or {}).get(key)
+
+    for i, r in enumerate(rows):
+        role, now = str(r["role"]), float(r.get("t") or 0)
+        last[role] = r
+        if role in watch:
+            if str(r.get("state")) in ON_OFF:
+                dropped.pop(role, None)
+            else:
+                dropped.setdefault(role, now)
+        if i + 1 < len(rows) and float(rows[i + 1].get("t") or 0) == now:
+            continue  # (rows of one moment - the start's snapshot - go in together)
+        bodies = {}
+        for b in logic.bodies():
+            heater = f"{b}_heater"
+            has_heater = heater in roles
+            temp = state(f"{b}_temp") if f"{b}_temp" in roles else attr(heater, "current_temperature")
+            bodies[b] = BodyInput(
+                temp=temp,
+                heater_mode=state(heater) if has_heater else None,
+                heater_action=attr(heater, "hvac_action") if has_heater else None,
+                target=attr(heater, "temperature") if has_heater else None,
+                pump=state(f"{b}_pump") if f"{b}_pump" in roles else None,
+                has_heater=has_heater,
+            )
+        inp = SystemInput(
+            layout=layout,
+            bodies=bodies,
+            spa_mode=state("spa_mode"),
+            pump=state("pump"),
+            now=now,
+            dropped_at=max(dropped.values()) if dropped else None,
+        )
+        results = logic.update(inp)
+        note(r["t"], ", ".join(f"{b} {results[b].state}" for b in logic.bodies()))
