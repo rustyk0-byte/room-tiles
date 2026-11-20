@@ -1,6 +1,8 @@
 #include "signing.h"
 
+#include <cctype>
 #include <cstdio>
+#include <cstring>
 #include <ctime>
 
 #include <mbedtls/md.h>
@@ -17,6 +19,35 @@ static const time_t TIME_VALID = 1700000000;
 static void hex(const uint8_t *in, size_t n, char *out) {
   for (size_t i = 0; i < n; i++)
     snprintf(out + i * 2, 3, "%02x", in[i]);
+}
+
+bool answer_ok(const std::string &request_sig, int status, const uint8_t *body, size_t size, const char *answer_sig) {
+#ifdef USE_API_NOISE
+  if (answer_sig == nullptr || strlen(answer_sig) != 64)
+    return false;
+  noise::psk_t key;
+  api::global_api_server->get_noise_ctx().load_psk(key);
+  if (noise::NoiseContext::is_all_zeros(key))
+    return false;
+  uint8_t digest[32];
+  char digest_hex[65];
+  mbedtls_sha256(body, size, digest, 0);
+  hex(digest, 32, digest_hex);
+  const std::string msg = "RT2-ANSWER\n" + request_sig + "\n" + std::to_string(status) + "\n" + digest_hex;
+  uint8_t mac[32];
+  if (mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), key.data(), key.size(),
+                      reinterpret_cast<const unsigned char *>(msg.data()), msg.size(), mac) != 0)
+    return false;
+  char want[65];
+  hex(mac, 32, want);
+  // (every byte compared: how much matched never shows in the time taken)
+  uint8_t diff = 0;
+  for (int i = 0; i < 64; i++)
+    diff |= (uint8_t) (want[i] ^ (char) tolower((unsigned char) answer_sig[i]));
+  return diff == 0;
+#else
+  return false;
+#endif
 }
 
 bool has_api_key() {

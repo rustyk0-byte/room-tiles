@@ -29,6 +29,12 @@ inline SignResult sign_request(const char *method, const char *path, const std::
                       body != nullptr ? body->size() : 0, query);
 }
 
+// MIRRORED: custom_components/room_tiles/panels.py answer_signature - a change here must be made there too.
+/// HA's answer is from HA: `answer_sig` (its X-RT-Sig header, hex) = HMAC-SHA256(API key,
+/// "RT2-ANSWER\n<the request's sig>\n<status>\n<sha256 of the body, hex>"). Nothing HA
+/// answers (data, an update offer, a pack, an image) is taken without it.
+bool answer_ok(const std::string &request_sig, int status, const uint8_t *body, size_t size, const char *answer_sig);
+
 /// The panel has its API key (HA sets it when it adds the panel).
 bool has_api_key();
 

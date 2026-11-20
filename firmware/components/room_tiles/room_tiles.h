@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include <esp_http_client.h>
+
 #include "esphome/components/light/light_state.h"
 #include "esphome/core/automation.h"
 #include "esphome/core/component.h"
@@ -234,6 +236,8 @@ class RoomTiles : public Component {
   enum Step : int { IDLE = 0, BUSY, READY, WRITE, WRITTEN, FAILED };
 
   static void job_task_(void *arg);
+  // (the download's answer headers: HA's signature of its answer)
+  static esp_err_t job_http_event_(esp_http_client_event_t *evt);
   bool sign_(const char *path, const std::string &params, std::string &query);
   void start_job_(Job job);
   void finish_payload_();
@@ -286,6 +290,8 @@ class RoomTiles : public Component {
   Job job_{JOB_NONE};
   std::atomic<int> step_{IDLE};
   std::string job_url_;
+  std::string job_sig_;      // the request's signature (HA's answer is signed against it)
+  char answer_sig_[65]{};    // HA's signature of its answer (X-RT-Sig), from the job task
   std::string job_revision_;
   uint8_t *body_{nullptr};
   size_t body_len_{0};

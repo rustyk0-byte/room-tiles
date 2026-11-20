@@ -11,8 +11,11 @@
   GET <url>/api/room_tiles/panel?name=<node>&ts=<unix time>&schema=<n>[&...]&sig=<hex>
   where sig = HMAC-SHA256(the panel's API encryption key, the whole request:
   request_signature) - the key HA's ESPHome integration already holds for
-  it, so nothing new is shared and only that panel can read its payload;
-  nothing of a request (its path, its values) can be changed and sent again.
+  it, so nothing new is shared and only that panel is answered; nothing of
+  a request (its path, its values) can be changed and sent again. HA's
+  answer is signed back (answer_signature): the panel takes nothing that
+  isn't from HA. (Plain HTTP: the payload can be read on the wire - it holds
+  no secrets - but not changed.)
 - **Taps:** POST <url>/api/room_tiles/panel/action (same query), JSON body;
   the signature then also covers the body, and each signature is accepted
   once (no replays). A panel may call a short list of services, only on
@@ -292,6 +295,18 @@ def request_signature(psk: bytes, method: str, path: str, query: str, body: byte
     without ?, and without its own sig) and its body's hash ("" for a GET)."""
     msg = f"RT2\n{method.upper()}\n{path}\n{query}\n" + (hashlib.sha256(body).hexdigest() if body is not None else "")
     return hmac.new(psk, msg.encode(), hashlib.sha256).hexdigest()
+
+
+# MIRRORED: firmware/components/room_tiles/signing.cpp answer_ok - a change here must be made there too.
+def answer_signature(psk: bytes, request_sig: str, status: int, body: bytes) -> str:
+    """HA's answer to a panel, signed with that panel's key: tied to the
+    request it answers (its sig), the status and the body - the panel takes
+    nothing (data, an update offer, a pack, an image) that isn't."""
+    msg = f"RT2-ANSWER\n{request_sig.lower()}\n{status}\n{hashlib.sha256(body).hexdigest()}"
+    return hmac.new(psk, msg.encode(), hashlib.sha256).hexdigest()
+
+
+ANSWER_HEADER = "X-RT-Sig"
 
 
 def old_signature(psk: bytes, node: str, ts: int, body: bytes | None = None) -> str:
@@ -854,11 +869,23 @@ class _PanelRequest(HomeAssistantView):
                         if store.fw_install.get(dev.device_id) != image.build or dev.device_id in store.fw_auto:
                             store.firmware_install(dev.device_id, image.build)
                         answer["firmware"] = offer
-            return web.json_response(answer, status=426)
+            return self._signed(request, dev, web.json_response(answer, status=426))
         panel = store.data.panel(dev.device_id)
         if panel is None:
-            return web.Response(status=404)
+            return self._signed(request, dev, web.Response(status=404))
         return store, panel, dev
+
+    @staticmethod
+    def _signed(request: web.Request, dev: PanelDevice, resp: web.Response) -> web.Response:
+        """The answer signed for the panel that asked (answer_signature)."""
+        body = resp.body if isinstance(resp.body, (bytes, bytearray)) else b""
+        resp.headers[ANSWER_HEADER] = answer_signature(dev.psk or b"", request.query.get("sig", ""), resp.status, bytes(body))
+        return resp
+
+    async def _signed_big(self, request: web.Request, dev: PanelDevice, resp: web.Response) -> web.Response:
+        """The same for a big body (an image, a pack): hashed off the event loop."""
+        hass: HomeAssistant = request.app["hass"]
+        return await hass.async_add_executor_job(self._signed, request, dev, resp)
 
 
 class PanelView(_PanelRequest):
@@ -901,7 +928,7 @@ class PanelView(_PanelRequest):
             room_lights(hass, store.data, dev),
             is_round(store, dev.device_id),
         )
-        return web.json_response(body, headers={"Cache-Control": "no-store"})
+        return self._signed(request, dev, web.json_response(body, headers={"Cache-Control": "no-store"}))
 
 
 class PanelFirmwareView(_PanelRequest):
@@ -921,12 +948,13 @@ class PanelFirmwareView(_PanelRequest):
         running = store.fw_reports.get(dev.device_id)
         image = store.fw_images.get(running.board) if running is not None else None
         if image is None or not running.generic or image.build != request.query.get("build"):
-            return web.Response(status=404)
+            return self._signed(request, dev, web.Response(status=404))
         data = await hass.async_add_executor_job(image.path.read_bytes)
         if hashlib.sha256(data).hexdigest() != image.sha256:
-            return web.Response(status=409, text="the image changed")  # (rescanned soon)
+            return self._signed(request, dev, web.Response(status=409, text="the image changed"))  # (rescanned soon)
         store.firmware_downloaded(dev.device_id, image.build)
-        return web.Response(body=data, content_type="application/octet-stream", headers={"Cache-Control": "no-store"})
+        resp = web.Response(body=data, content_type="application/octet-stream", headers={"Cache-Control": "no-store"})
+        return await self._signed_big(request, dev, resp)
 
 
 class PanelPackView(_PanelRequest):
@@ -945,12 +973,13 @@ class PanelPackView(_PanelRequest):
         settings["round"] = is_round(store, dev.device_id)
         pack = pack_for(store.all_packs(), request.query.get("pack", ""), settings)
         if pack is None:
-            return web.Response(status=404)
-        return web.Response(
+            return self._signed(request, dev, web.Response(status=404))
+        resp = web.Response(
             body=pack.data,
             content_type="application/octet-stream",
             headers={"Cache-Control": "no-store", "X-Pack-Id": pack.id},
         )
+        return await self._signed_big(request, dev, resp)
 
 
 class PanelScreenshotView(_PanelRequest):
@@ -969,17 +998,17 @@ class PanelScreenshotView(_PanelRequest):
             return found
         _store, _panel, dev = found
         if not REPLAYS.first_time(request.query.get("sig", ""), time.time()):
-            return web.Response(status=409, text="already done")
+            return self._signed(request, dev, web.Response(status=409, text="already done"))
         try:
             w, h = int(request.query.get("w", "0")), int(request.query.get("h", "0"))
         except ValueError:
-            return web.Response(status=400, text="no size")
+            return self._signed(request, dev, web.Response(status=400, text="no size"))
         if not (0 < w <= 4096 and 0 < h <= 4096) or len(raw) != w * h * 2:
-            return web.Response(status=400, text="size doesn't match the picture")
+            return self._signed(request, dev, web.Response(status=400, text="size doesn't match the picture"))
         hass: HomeAssistant = request.app["hass"]
         media = (getattr(hass.config, "media_dirs", None) or {}).get("local") or hass.config.path("media")
         path = await hass.async_add_executor_job(screenshots.save, media, dev.node, raw, w, h)
-        return web.json_response({"ok": True, "file": path.name})
+        return self._signed(request, dev, web.json_response({"ok": True, "file": path.name}))
 
 
 async def _call_for_panel(hass: HomeAssistant, panel: Panel, domain: str, service: str, data: dict[str, Any]) -> None:
@@ -1008,26 +1037,26 @@ class PanelActionView(_PanelRequest):
         found = self._panel(request, raw)
         if isinstance(found, web.Response):
             return found
-        store, panel, _dev = found
+        store, panel, dev = found
         if not REPLAYS.first_time(request.query.get("sig", ""), time.time()):
-            return web.Response(status=409, text="already done")
+            return self._signed(request, dev, web.Response(status=409, text="already done"))
         try:
             body = json.loads(raw or b"{}")
         except ValueError:
-            return web.Response(status=400, text="not JSON")
+            return self._signed(request, dev, web.Response(status=400, text="not JSON"))
         hass: HomeAssistant = request.app["hass"]
         if isinstance(body, dict) and "settings" in body:
             why = apply_settings(store.data, panel, body)
             if why:
-                return web.Response(status=400, text=why)
+                return self._signed(request, dev, web.Response(status=400, text=why))
             store.async_changed(("panels",))
-            return web.json_response({"ok": True})
+            return self._signed(request, dev, web.json_response({"ok": True}))
         checked = check_action(store.data, body)
         if isinstance(checked, str) and checked.endswith("isn't on a board"):
             # (a marker's pop-up: its groups and scenes)
             checked = check_action(store.data, body, popup_entities(popup_lists(hass.states.async_all(), store.data)))
         if isinstance(checked, str):
-            return web.Response(status=403, text=checked)
+            return self._signed(request, dev, web.Response(status=403, text=checked))
         domain, service, entity, data = checked
         if domain == "room_tiles" and service in EDIT_SERVICES:
             # a board edit: done now, so a refusal (not in the catalog...) can
@@ -1037,8 +1066,8 @@ class PanelActionView(_PanelRequest):
             try:
                 await hass.services.async_call(domain, service, data, blocking=True)
             except (HomeAssistantError, ValueError, vol.Invalid) as err:
-                return web.Response(status=400, text=str(err))
-            return web.json_response({"ok": True})
+                return self._signed(request, dev, web.Response(status=400, text=str(err)))
+            return self._signed(request, dev, web.json_response({"ok": True}))
         if domain == "room_tiles" and service == "appliance_tap":
             # which unit, and is it finished? (the sensor knows; the panel only
             # knows where it was tapped)
@@ -1046,10 +1075,10 @@ class PanelActionView(_PanelRequest):
             units = st.attributes.get("units") if st else None
             index = data.get("index")
             if not isinstance(units, list) or not isinstance(index, int) or not 0 <= index < len(units):
-                return web.json_response({"ok": False})
+                return self._signed(request, dev, web.json_response({"ok": False}))
             unit = units[index]
             if unit.get("phase") not in ("done", "waiting"):
-                return web.json_response({"ok": False})  # nothing to empty
+                return self._signed(request, dev, web.json_response({"ok": False}))  # nothing to empty
             service, data = "clear_appliance", {"appliance": st.attributes.get("appliance"), "unit": unit.get("id")}
         elif domain == "room_tiles" and service in ("vacuum_queue", "area_lights"):
             pass  # (its robot / area says which: no entity)
@@ -1059,4 +1088,4 @@ class PanelActionView(_PanelRequest):
             data = {"entity_id": entity, **data}
         # (not blocking: the panel shows the result when HA reports it)
         hass.async_create_task(_call_for_panel(hass, panel, domain, service, data))
-        return web.json_response({"ok": True})
+        return self._signed(request, dev, web.json_response({"ok": True}))

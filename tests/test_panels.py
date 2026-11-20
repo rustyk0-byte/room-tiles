@@ -33,6 +33,7 @@ from custom_components.room_tiles.panels import (
     schema_mismatch,
     old_signature,
     request_signature,
+    answer_signature,
     sync_panels,
 )
 
@@ -445,16 +446,25 @@ async def test_panel_fetches_its_payload(hass: HomeAssistant, hass_client_no_aut
     S = str(PANEL_SCHEMA)
     assert (await client.get(URL, params={"name": "panel-1", "ts": "0", "sig": "x", "schema": S})).status == 403
     ts = int(time.time())
-    r = await client.get(URL, params=signed("GET", URL, ts))
+    q = signed("GET", URL, ts)
+    r = await client.get(URL, params=q)
     assert r.status == 200
+    # HA's answer is signed for this panel and this request (the panel takes
+    # nothing that isn't)
+    raw_body = await r.read()
+    assert r.headers["X-RT-Sig"] == answer_signature(KEY, q["sig"], 200, raw_body)
+    assert r.headers["X-RT-Sig"] != answer_signature(KEY, q["sig"], 200, raw_body + b" ")
     body = await r.json()
     assert body["panel"]["area"] == hall.id and body["panel"]["name"] == "Hall panel"
     assert body["packs"]["theme"]["id"].startswith("dark-")
 
     # its packs, signed the same way
-    r = await client.get(PACK_URL, params=signed("GET", PACK_URL, ts, pack="theme"))
+    qp = signed("GET", PACK_URL, ts, pack="theme")
+    r = await client.get(PACK_URL, params=qp)
     assert r.status == 200 and r.headers["X-Pack-Id"] == body["packs"]["theme"]["id"]
-    assert (await r.read())[:4] == b"RTP1"
+    pack_bytes = await r.read()
+    assert pack_bytes[:4] == b"RTP1"
+    assert r.headers["X-RT-Sig"] == answer_signature(KEY, qp["sig"], 200, pack_bytes)
     assert (await client.get(PACK_URL, params={**signed("GET", PACK_URL, ts, pack="theme"), "ts": "0"})).status == 403
     # (the payload's signature isn't the pack's)
     assert (await client.get(PACK_URL, params={**signed("GET", URL, ts), "pack": "theme"})).status == 403
@@ -469,6 +479,7 @@ async def test_panel_fetches_its_payload(hass: HomeAssistant, hass_client_no_aut
         q = old_signed(ts, schema=theirs) if needs == "firmware" else signed("GET", URL, ts, schema=theirs)
         r = await client.get(URL, params=q)
         assert r.status == 426 and (await r.json()) == {"schema": PANEL_SCHEMA}  # (no image for it here)
+        assert r.headers["X-RT-Sig"] == answer_signature(KEY, q["sig"], 426, await r.read())
         found = ir.async_get(hass).async_get_issue(DOMAIN, issue)
         assert found is not None and found.translation_key == f"panel_needs_{needs}"
         assert found.translation_placeholders == {"name": "Hall panel"}

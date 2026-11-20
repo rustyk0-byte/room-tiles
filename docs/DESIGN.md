@@ -847,7 +847,15 @@ show and use what the integration holds; nothing about a house is compiled in.
   sent (without its sig) and the body's SHA-256 (panels.py
   request_signature / signing.cpp sign_request) - no value, path or method
   of a caught request can be changed and sent again; HA's clock +- 5 min;
-  a POST's signature counts once.
+  a POST's signature counts once; a request with a key twice is refused.
+  **HA's answers are signed too** (`X-RT-Sig`: HMAC with the same key over
+  "RT2-ANSWER", the request's sig, the status and the body's SHA-256 -
+  panels.py answer_signature / signing.cpp answer_ok): the panel takes no
+  data, update offer (426), pack or firmware image that isn't - nothing on
+  the network can pass itself off as HA. Packs are also checked entry by
+  entry (every entry inside the pack, every picture as big as it says)
+  before they're kept, and again when loaded. Plain HTTP stays: the
+  payload can be read on the wire (it holds no secrets), never changed.
 - **A tile waits for its data:** any tile (on the board or in a pop-up)
   shows its stopwatch until HA has answered for its state and every
   attribute its kind uses. HA answers subscriptions in the order asked and

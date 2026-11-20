@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <strings.h>
 #include <ctime>
 
 #include <esp_attr.h>
@@ -1401,6 +1402,7 @@ void RoomTiles::start_job_(Job job) {
     return;
   this->job_ = job;
   this->job_url_ = this->base_url_ + path + query;
+  this->job_sig_ = query.substr(query.rfind("&sig=") + 5);
   this->job_revision_ = this->revision_;
   this->job_error_.clear();
   this->pack_id_.clear();
@@ -1444,6 +1446,16 @@ void RoomTiles::start_job_(Job job) {
   }
 }
 
+esp_err_t RoomTiles::job_http_event_(esp_http_client_event_t *evt) {
+  if (evt->event_id == HTTP_EVENT_ON_HEADER && evt->header_key != nullptr && evt->header_value != nullptr &&
+      strcasecmp(evt->header_key, "X-RT-Sig") == 0) {
+    auto *self = static_cast<RoomTiles *>(evt->user_data);
+    strncpy(self->answer_sig_, evt->header_value, sizeof(self->answer_sig_) - 1);
+    self->answer_sig_[sizeof(self->answer_sig_) - 1] = '\0';
+  }
+  return ESP_OK;
+}
+
 void RoomTiles::job_task_(void *arg) {
   auto *self = static_cast<RoomTiles *>(arg);
   // 1. download (into PSRAM - packs are megabytes; internal RAM is precious)
@@ -1452,6 +1464,9 @@ void RoomTiles::job_task_(void *arg) {
   cfg.timeout_ms = 20000;
   cfg.buffer_size = 4096;
   cfg.disable_auto_redirect = true;
+  cfg.event_handler = &RoomTiles::job_http_event_;
+  cfg.user_data = self;
+  self->answer_sig_[0] = '\0';
   esp_http_client_handle_t client = esp_http_client_init(&cfg);
   uint8_t *buf = nullptr;
   size_t len = 0;
@@ -1506,6 +1521,12 @@ void RoomTiles::job_task_(void *arg) {
   }
   self->body_ = buf;
   self->body_len_ = len;
+  // HA's answer: taken only when it's HA's (signed with this panel's key,
+  // for this request) - data, an update offer, a pack or an image from
+  // anything else on the network is refused
+  if (self->job_error_.empty() && buf != nullptr && (self->http_status_ == 200 || self->http_status_ == 426) &&
+      !answer_ok(self->job_sig_, self->http_status_, buf, len, self->answer_sig_))
+    self->job_error_ = "the answer isn't signed by Home Assistant";
   if (self->job_ == JOB_PAYLOAD || !self->job_error_.empty() || self->http_status_ != 200) {
     self->step_.store(self->job_ == JOB_PAYLOAD && self->job_error_.empty() ? READY : FAILED);
     vTaskDelete(nullptr);
