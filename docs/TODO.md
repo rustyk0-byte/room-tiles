@@ -360,3 +360,8 @@ A trimmed Room Tiles for the Elecrow CrowPanel 2.1" round display (ESP32-S3,
 - **Wi-Fi set up on the panel, the round panel:** a knob letter wheel for
   the password (the 7" / 10.1" have the on-screen keyboard) - only if people
   ask; the phone way works there.
+
+- **Maybe: an "add this panel" step.** Today any ESPHome device that
+  reports itself as a Room Tiles panel is taken as one. A one-time
+  confirmation in Room Tiles would close that, at the cost of an extra
+  setup step - left out for now to keep setup simple.
