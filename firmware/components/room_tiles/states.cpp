@@ -48,8 +48,37 @@ void StateHub::watch(const std::string &entity, const std::string &attr) {
   char buf[192];
   const std::string_view k = key_of(buf, sizeof(buf), entity, attr);
   this->index_.emplace(pstring(k.data(), k.size()), i);
+#ifdef USE_ROOM_TILES_DEMO
+  if (this->demo_) {
+    this->demo_value_(i);
+    return;
+  }
+#endif
   this->pending_.push_back(i);
 }
+
+#ifdef USE_ROOM_TILES_DEMO
+void StateHub::demo_value_(uint32_t index) {
+  Entry &e = this->entries_[index];
+  char buf[192];
+  const std::string_view k = key_of(buf, sizeof(buf), std::string(e.entity.c_str()), std::string(e.attr.c_str()));
+  auto it = this->demo_values_.find(k);
+  e.value = it == this->demo_values_.end() ? std::string() : std::string(it->second.c_str(), it->second.size());
+  this->localize_(index);
+}
+
+void StateHub::set_demo(DemoValues &&values) {
+  this->demo_ = true;
+  this->demo_values_ = std::move(values);
+  this->pending_.clear();
+  this->sent_.clear();
+  for (uint32_t i = 0; i < this->entries_.size(); i++)
+    this->demo_value_(i);
+  for (uint32_t i = 0; i < this->entries_.size(); i++)
+    if (this->listener_)
+      this->listener_(std::string(this->entries_[i].entity.c_str()));
+}
+#endif
 
 const std::string &StateHub::get(const std::string &entity, const std::string &attr) const {
   const int i = this->find_(entity, attr);
@@ -96,6 +125,8 @@ void StateHub::relocalize() {
 }
 
 bool StateHub::waiting(const std::string &entity, const std::string &attr) const {
+  if (this->demo())
+    return false;  // (the demo's values are all there is)
   const int i = this->find_(entity, attr);
   if (i < 0)
     return false;
@@ -123,8 +154,8 @@ void StateHub::notify_unanswered_(uint32_t from, uint32_t to) {
 }
 
 void StateHub::push_(uint32_t index, const char *value, size_t len) {
-  if (index >= this->entries_.size())
-    return;
+  if (index >= this->entries_.size() || this->demo())
+    return;  // (a demo home: the real home's values never show)
   Entry &e = this->entries_[index];
   bool advanced = false;
   if (e.seq > this->answered_seq_) {  // HA has got this far down the list

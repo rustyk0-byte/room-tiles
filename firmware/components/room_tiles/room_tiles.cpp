@@ -1831,6 +1831,32 @@ void RoomTiles::finish_payload_() {
       JsonObject entities = root["entities"].as<JsonObject>();
       for (JsonPair kv : entities)
         m.entities[kv.key().c_str()] = EntityInfo{kv.value()["kind"] | "", kv.value()["short"] | "", kv.value()["icon"] | ""};
+#ifdef USE_ROOM_TILES_DEMO
+      // a developer build's demo home (panel screenshots - the integration's
+      // DEV_BUILD; built in only with ROOM_TILES_DEMO=1, never in a release):
+      // its states come with it, nothing is asked of HA; leaving it restarts
+      // the panel (its real subscriptions were never made)
+      JsonObject demo = root["demo"].as<JsonObject>();
+      if (!demo.isNull()) {
+        StateHub::DemoValues values;
+        JsonObject demo_states = demo["states"].as<JsonObject>();
+        for (JsonPair ent : demo_states) {
+          JsonObject vals = ent.value().as<JsonObject>();
+          for (JsonPair kv : vals) {
+            pstring key(ent.key().c_str());
+            key += '|';
+            key += kv.key().c_str();
+            values.emplace(std::move(key), pstring(kv.value() | ""));
+          }
+        }
+        if (!this->states_.demo())
+          ESP_LOGI(TAG, "Demo home: %u values", (unsigned) values.size());
+        this->states_.set_demo(std::move(values));
+      } else if (this->states_.demo()) {
+        ESP_LOGI(TAG, "Demo home off - restarting");
+        this->set_timeout("demo_off", 200, []() { App.safe_reboot(); });
+      }
+#endif
       // the user's own picks win until HA's payload has them too - and go
       // again while it doesn't (picked_)
       if (!this->picked_.empty()) {

@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "esphome/core/defines.h"
 #include "psram.h"
 #include "words.h"
 
@@ -44,6 +45,18 @@ class StateHub {
   size_t count() const { return this->entries_.size(); }
   /// Main loop: send new subscriptions to HA (batched).
   void loop();
+#ifdef USE_ROOM_TILES_DEMO
+  /// A developer build's demo home (panel screenshots; the integration's
+  /// DEV_BUILD - built in only with ROOM_TILES_DEMO=1, never in a
+  /// release): every value from `values` ("entity|attr" -> what HA would
+  /// send), nothing asked of HA and nothing it pushes taken. Leaving it
+  /// takes a restart (subscriptions can't be taken back).
+  using DemoValues = std::map<pstring, pstring, std::less<>, PsramAllocator<std::pair<const pstring, pstring>>>;
+  void set_demo(DemoValues &&values);
+  bool demo() const { return this->demo_; }
+#else
+  bool demo() const { return false; }
+#endif
 
  protected:
   struct Entry {
@@ -71,6 +84,11 @@ class StateHub {
   // before it (-1: none yet)
   std::vector<uint32_t, PsramAllocator<uint32_t>> order_;
   int32_t answered_seq_{-1};
+#ifdef USE_ROOM_TILES_DEMO
+  bool demo_{false};
+  DemoValues demo_values_;
+  void demo_value_(uint32_t index);
+#endif
   // the batches sent and not all answered yet: [from, to) in order_, and when
   struct Sent {
     uint32_t from, to, at;

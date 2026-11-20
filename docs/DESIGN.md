@@ -722,7 +722,10 @@ show and use what the integration holds; nothing about a house is compiled in.
   settings kept, the area, the home and its states the demo's. The panel
   then asks HA for no states and takes none it pushes (a demo entity can
   share an id with a real one), and what it sends back - a tap, a setting
-  - is never carried out. Unlisted, it restarts into the real home.
+  - is never carried out. Unlisted, it restarts into the real home. The
+  panel's side is built in only when a build is made by hand with
+  `ROOM_TILES_DEMO=1` (never in a release's: a released panel can't be
+  shown states that aren't HA's).
 - **When idle** (every panel; idle_clock.cpp): after the sleep time
   untouched (a new or reset panel: 1 minute - the round one 30 s - then the
   digital clock at 40 %; one set up keeps its own), the screen goes dark or a clock comes up (digital - the time,

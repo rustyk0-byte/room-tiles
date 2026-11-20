@@ -40,6 +40,14 @@ def _release() -> str:
     return version if re.fullmatch(r"\d+\.\d+\.\d+([.-]?[0-9A-Za-z.]+)?", version) else ""
 
 
+def _demo(release: str) -> bool:
+    """The demo home's code (a developer build's panel screenshots -
+    custom_components/room_tiles/demo.py): only in builds made by hand with
+    ROOM_TILES_DEMO=1, never in a release's - a released panel can't be
+    shown states that aren't HA's."""
+    return os.environ.get("ROOM_TILES_DEMO", "").strip() == "1" and not release
+
+
 def _panel_schema() -> int:
     """signing.h PANEL_SCHEMA (the one place it's written on this side)."""
     text = (Path(__file__).parent / "signing.h").read_text(encoding="utf-8")
@@ -107,6 +115,8 @@ async def to_code(config):
     board, generic, release = config[CONF_BOARD], config[CONF_GENERIC], _release()
     tag = f"RT-IMAGE:{board}:{'generic' if generic else 'own'}:{_panel_schema()}:{release};"
     cg.add(var.set_image(tag, board, generic, release))
+    if _demo(release):
+        cg.add_define("USE_ROOM_TILES_DEMO")
     cg.add(var.set_shape(config[CONF_LAYOUT] == "strip", config[CONF_MAP]))
     for key in (CONF_ON_STATUS, CONF_ON_ASSETS):
         for conf in config.get(key, []):
