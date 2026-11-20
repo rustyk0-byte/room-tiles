@@ -9,6 +9,7 @@ A finished unit (done / waiting) survives HA restarts.
 
 from __future__ import annotations
 
+import asyncio
 import time
 from collections import deque
 from datetime import timedelta
@@ -516,6 +517,7 @@ class RobotSensor(SensorEntity, RestoreEntity):
         self._rb = rb
         self._unsub = None
         self.rq = RoomQueue(queue=[])
+        self._sending = asyncio.Lock()  # (one queue step out at a time: _do)
         self._alert = "none"  # the alert last seen (an episode starts on a change from none)
         self._unsub_calls = None
         # Room Tiles' own commands to the vacuum: their contexts, the last one's time
@@ -596,7 +598,7 @@ class RobotSensor(SensorEntity, RestoreEntity):
                 old.state if old else None, vac.state if vac else None, v.alert, ours, idle_is_a_stop(self._maker())
             )
             if step is not None:
-                self.hass.async_create_task(self._do(step))
+                self.hass.async_create_task(self._do(step, self.rq.stamp()))
         if event.data.get("entity_id") == self._rb.error:
             new = event.data.get("new_state")
             self._ask(new.state if new else None)
@@ -707,9 +709,18 @@ class RobotSensor(SensorEntity, RestoreEntity):
         a = ar.async_get(self.hass).async_get_area(area)
         return a.name if a else area
 
-    async def _do(self, step: QueueStep) -> None:
+    async def _do(self, step: QueueStep, stamp: tuple[int, int]) -> None:
         """Send the queue's step to the vacuum. clean_area goes out BEFORE the
-        room leaves the queue: a refused command leaves the queue as it was."""
+        room leaves the queue: a refused command leaves the queue as it was.
+        One step at a time; a room decided before the queue moved on (another
+        room went out, or it was stopped / cleared / let go meanwhile) is
+        never sent - two quick Starts send it once."""
+        async with self._sending:
+            if step.action == "clean" and self.rq.stamp() != stamp:
+                return
+            await self._send(step, stamp)
+
+    async def _send(self, step: QueueStep, stamp: tuple[int, int]) -> None:
         target = {"entity_id": self._rb.vacuum}
         # (its own context: a command of ours is never taken for a takeover)
         ctx = Context()
@@ -720,7 +731,8 @@ class RobotSensor(SensorEntity, RestoreEntity):
             await self.hass.services.async_call(
                 "vacuum", "clean_area", {**target, "cleaning_area_id": [step.area]}, blocking=True, context=ctx
             )
-            self.rq.sent(step.area)
+            if self.rq.gen == stamp[0]:  # (stopped meanwhile: the queue stays empty)
+                self.rq.sent(step.area)
         elif step.action in ("resume", "pause"):
             await self.hass.services.async_call(
                 "vacuum", "start" if step.action == "resume" else "pause", target, blocking=True, context=ctx
@@ -770,7 +782,7 @@ class RobotSensor(SensorEntity, RestoreEntity):
         elif action == "move" and area and index is not None:
             self.rq.move(area, index)
         elif action == "clear":
-            self.rq.queue = []
+            self.rq.clear()
         elif action == "start":
             step = self.rq.start(state, v.alert, manual=True)
         elif action == "pause":
@@ -781,7 +793,7 @@ class RobotSensor(SensorEntity, RestoreEntity):
             step = self.rq.stop_and_clear()
         self.async_write_ha_state()
         if step is not None:
-            await self._do(step)
+            await self._do(step, self.rq.stamp())
 
     def _view(self):
         vac = self.hass.states.get(self._rb.vacuum) if self.hass else None

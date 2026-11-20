@@ -275,3 +275,54 @@ async def test_a_vacuum_renamed_in_ha_is_followed_at_once(hass: HomeAssistant, e
     hass.states.async_set("vacuum.robot", "cleaning", {"supported_features": 29212})
     await hass.async_block_till_done()
     assert hass.states.get("sensor.room_tiles_matic").attributes["status"] == "Cleaning"
+
+
+async def test_quick_presses_send_a_room_once_and_a_stop_wins(hass: HomeAssistant, entry) -> None:
+    """clean_area takes a while to answer: a second Start meanwhile sends
+    nothing more, and a Stop meanwhile leaves the queue stopped."""
+    import asyncio
+
+    sent: list = []
+    gate = asyncio.Event()
+
+    async def clean_area(call):
+        sent.append(("clean_area", call.data["cleaning_area_id"]))
+        await gate.wait()
+
+    async def plain(call):
+        sent.append((call.service, None))
+
+    hass.services.async_register("vacuum", "clean_area", clean_area)
+    for name in ("start", "pause", "return_to_base"):
+        hass.services.async_register("vacuum", name, plain)
+    hass.states.async_set("vacuum.matic", "docked", {"supported_features": 29212})
+    await _call(hass, "set_robot", robot={"id": "matic", "name": "Matic", "vacuum": "vacuum.matic", "preset": "matter"})
+    await hass.async_block_till_done()
+    q = lambda: hass.states.get("sensor.room_tiles_matic").attributes  # noqa: E731
+    await _call(hass, "vacuum_queue", robot="matic", action="add", area="kitchen")
+    await _call(hass, "vacuum_queue", robot="matic", action="add", area="hall")
+
+    first = hass.async_create_task(_call(hass, "vacuum_queue", robot="matic", action="start"))
+    second = hass.async_create_task(_call(hass, "vacuum_queue", robot="matic", action="start"))
+    await asyncio.sleep(0.05)
+    gate.set()
+    await first
+    await second
+    await hass.async_block_till_done()
+    assert sent == [("clean_area", ["kitchen"])]
+    assert (q()["queue"], q()["current"]) == (["hall"], "kitchen")
+
+    # a Stop while the next room is on its way: stopped stays stopped
+    gate.clear()
+    hass.states.async_set("vacuum.matic", "cleaning", {"supported_features": 29212})
+    await hass.async_block_till_done()
+    hass.states.async_set("vacuum.matic", "returning", {"supported_features": 29212})  # kitchen done: hall goes
+    await asyncio.sleep(0.05)
+    assert sent[-1] == ("clean_area", ["hall"])
+    stop = hass.async_create_task(_call(hass, "vacuum_queue", robot="matic", action="stop"))
+    await asyncio.sleep(0.05)
+    gate.set()
+    await stop
+    await hass.async_block_till_done()
+    assert sent[-1] == ("return_to_base", None)
+    assert (q()["queue"], q()["current"]) == ([], None)

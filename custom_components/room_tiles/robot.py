@@ -210,6 +210,10 @@ class RoomQueue:
     current: str | None = None
     error_since: float | None = None
     taken_over: bool = False  # (cleared by something else; shown until it docks)
+    # (bumped when the queue is stopped / cleared / let go, and when a room
+    # goes out: a clean step decided before either is stale - never sent)
+    gen: int = 0
+    sends: int = 0
 
     def add(self, area: str) -> None:
         if area == self.current:
@@ -242,6 +246,15 @@ class RoomQueue:
         """clean_area for `area` went out: it's the room in progress now."""
         self.current = area
         self.queue = [a for a in self.queue if a != area]
+        self.sends += 1
+
+    def stamp(self) -> tuple[int, int]:
+        """Where the queue is: a clean step remembers it (stale once it moved)."""
+        return self.gen, self.sends
+
+    def clear(self) -> None:
+        self.queue = []
+        self.gen += 1
 
     def skip(self) -> QueueStep:
         return QueueStep("dock")  # back to base: "returning" moves on to the next room
@@ -253,11 +266,13 @@ class RoomQueue:
         self.current = None
         self.error_since = None
         self.taken_over = True
+        self.gen += 1
 
     def stop_and_clear(self) -> QueueStep:
         self.queue = []
         self.current = None
         self.error_since = None
+        self.gen += 1
         return QueueStep("dock")
 
     def on_state(
