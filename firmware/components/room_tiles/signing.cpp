@@ -1,5 +1,6 @@
 #include "signing.h"
 
+#include <atomic>
 #include <cctype>
 #include <cstdio>
 #include <cstring>
@@ -73,8 +74,12 @@ SignResult sign_request(const char *method, const char *path, const std::string 
   if (noise::NoiseContext::is_all_zeros(key))
     return SignResult::NO_KEY;
   const std::string node = App.get_name().str();
-  const std::string unsigned_query =
-      "name=" + node + "&ts=" + std::to_string((long long) now) + "&schema=" + std::to_string(PANEL_SCHEMA) + params;
+  // (n: a count - two requests in one second never share a signature, so
+  // a quick second tap is never taken for the first sent again)
+  static std::atomic<uint32_t> count{0};
+  const std::string unsigned_query = "name=" + node + "&ts=" + std::to_string((long long) now) +
+                                     "&n=" + std::to_string(count.fetch_add(1)) + "&schema=" + std::to_string(PANEL_SCHEMA) +
+                                     params;
   std::string msg = std::string("RT2\n") + method + "\n" + path + "\n" + unsigned_query + "\n";
   if (body != nullptr) {
     uint8_t digest[32];

@@ -17,7 +17,7 @@ static constexpr int PANEL_SCHEMA = 4;  // (4: the whole request signed - sign_r
 enum class SignResult { OK, NO_TIME, NO_KEY };
 
 // MIRRORED: custom_components/room_tiles/panels.py request_signature - a change here must be made there too.
-/// A request's query, signed whole: "?name=<node>&ts=<unix time>&schema=<PANEL_SCHEMA><params>&sig=<hex>"
+/// A request's query, signed whole: "?name=<node>&ts=<unix time>&n=<count>&schema=<PANEL_SCHEMA><params>&sig=<hex>"
 /// - `params`: its own values, each "&key=value" (URL-safe), or "". sig = HMAC-SHA256(API key,
 /// "RT2\n<method>\n<path>\n<the query without '?' and &sig>\n<sha256 of the body, hex - "" for a GET>"):
 /// nothing of it can be changed and sent again. `body` nullptr: a GET. Any thread.
