@@ -27,12 +27,14 @@ import gzip
 import hashlib
 import hmac
 import json
+import logging
 import struct
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import voluptuous as vol
 from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant, callback
@@ -40,6 +42,8 @@ from homeassistant.helpers import device_registry as dr
 
 from .const import DOMAIN, LAYOUTS, NO_ENTITY_KINDS, PANEL_SCHEMA
 from .model import Panel, RoomTilesData
+
+_LOGGER = logging.getLogger(__name__)
 
 PANEL_MANUFACTURER = "room-tiles"
 PANEL_MODEL = "panel"
@@ -932,6 +936,17 @@ class PanelScreenshotView(_PanelRequest):
         return web.json_response({"ok": True, "file": path.name})
 
 
+async def _call_for_panel(hass: HomeAssistant, panel: Panel, domain: str, service: str, data: dict[str, Any]) -> None:
+    """A panel's action, not waited for: a refusal (no such action, data HA
+    won't take) is logged - never an unhandled task error."""
+    from homeassistant.exceptions import HomeAssistantError
+
+    try:
+        await hass.services.async_call(domain, service, data, blocking=False)
+    except (HomeAssistantError, vol.Invalid) as err:
+        _LOGGER.warning("A panel's %s.%s wasn't done (panel %s): %s", domain, service, panel.id, err)
+
+
 class PanelActionView(_PanelRequest):
     """POST what a panel's user did: a service call on one of its board's
     entities ({"service", "entity", "data"}) or its own settings
@@ -975,7 +990,7 @@ class PanelActionView(_PanelRequest):
 
             try:
                 await hass.services.async_call(domain, service, data, blocking=True)
-            except (HomeAssistantError, ValueError) as err:
+            except (HomeAssistantError, ValueError, vol.Invalid) as err:
                 return web.Response(status=400, text=str(err))
             return web.json_response({"ok": True})
         if domain == "room_tiles" and service == "appliance_tap":
@@ -997,5 +1012,5 @@ class PanelActionView(_PanelRequest):
         else:
             data = {"entity_id": entity, **data}
         # (not blocking: the panel shows the result when HA reports it)
-        hass.async_create_task(hass.services.async_call(domain, service, data, blocking=False))
+        hass.async_create_task(_call_for_panel(hass, panel, domain, service, data))
         return web.json_response({"ok": True})

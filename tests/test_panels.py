@@ -708,3 +708,11 @@ def test_a_refused_settings_change_changes_nothing():
     assert apply_settings(data, p, {"settings": {"theme": "light", "area": "kitchen"}}) is None
     assert (p.theme, p.area) == ("light", "kitchen")
     assert apply_settings(data, p, {"settings": {"theme": None}}) is None and p.theme is None
+
+
+async def test_a_panel_action_ha_refuses_is_logged(hass: HomeAssistant, caplog) -> None:
+    """Not waited for: a refusal is a log line, never an unhandled task error."""
+    from custom_components.room_tiles.panels import _call_for_panel
+
+    await _call_for_panel(hass, Panel(id="d1"), "light", "no_such_action", {"entity_id": "light.x"})
+    assert "wasn't done" in caplog.text

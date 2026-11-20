@@ -10,6 +10,7 @@ A finished unit (done / waiting) survives HA restarts.
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from collections import deque
 from datetime import timedelta
@@ -44,6 +45,8 @@ ICONS = {"dishwasher": "mdi:dishwasher", "washer": "mdi:washing-machine", "dryer
 BASE = {"dishwasher": "plate", "washer": "shirt", "dryer": "shirt"}
 OPEN = frozenset({"on", "open", "opening"})
 TICK = timedelta(seconds=30)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -598,7 +601,7 @@ class RobotSensor(SensorEntity, RestoreEntity):
                 old.state if old else None, vac.state if vac else None, v.alert, ours, idle_is_a_stop(self._maker())
             )
             if step is not None:
-                self.hass.async_create_task(self._do(step, self.rq.stamp()))
+                self.hass.async_create_task(self._next_room(step, self.rq.stamp()))
         if event.data.get("entity_id") == self._rb.error:
             new = event.data.get("new_state")
             self._ask(new.state if new else None)
@@ -708,6 +711,16 @@ class RobotSensor(SensorEntity, RestoreEntity):
 
         a = ar.async_get(self.hass).async_get_area(area)
         return a.name if a else area
+
+    async def _next_room(self, step: QueueStep, stamp: tuple[int, int]) -> None:
+        """The queue moving on by itself (no one waits for it): a refusal is
+        logged - the room stays queued, as a refused Start leaves it."""
+        from homeassistant.exceptions import HomeAssistantError
+
+        try:
+            await self._do(step, stamp)
+        except HomeAssistantError as err:
+            _LOGGER.warning("%s: the next room wasn't sent: %s", self._rb.name, err)
 
     async def _do(self, step: QueueStep, stamp: tuple[int, int]) -> None:
         """Send the queue's step to the vacuum. clean_area goes out BEFORE the
