@@ -40,6 +40,17 @@ from custom_components.room_tiles.panels import (
 KEY = bytes(range(32))
 
 
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _started_long_ago(monkeypatch):
+    """(requests here are signed a few seconds back: HA counts as started before them)"""
+    from custom_components.room_tiles import panels as p
+
+    monkeypatch.setattr(p, "STARTED", 0)
+
+
 def signed(method: str, path: str, ts: int | None = None, body: bytes | None = None, key: bytes = KEY,
            node: str = "panel-1", schema: str | None = None, **extra: str) -> dict[str, str]:
     """A panel's query, signed whole the way its firmware does (signing.cpp):
@@ -474,9 +485,10 @@ async def test_panel_fetches_its_payload(hass: HomeAssistant, hass_client_no_aut
     from homeassistant.helpers import issue_registry as ir
 
     issue = f"panel_needs_{dev.id}"
-    for theirs, needs in ((None, "firmware"), (str(PANEL_SCHEMA - 1), "firmware"), (str(PANEL_SCHEMA + 1), "integration")):
-        # (an older panel signs the old way; a newer one ours, its number says newer)
-        q = old_signed(ts, schema=theirs) if needs == "firmware" else signed("GET", URL, ts, schema=theirs)
+    for i, (theirs, needs) in enumerate(((None, "firmware"), (str(PANEL_SCHEMA - 1), "firmware"), (str(PANEL_SCHEMA + 1), "integration"))):
+        # (an older panel signs the old way - each signature used once; a
+        # newer one ours, its number says newer)
+        q = old_signed(ts - 10 - i, schema=theirs) if needs == "firmware" else signed("GET", URL, ts - 10 - i, schema=theirs)
         r = await client.get(URL, params=q)
         assert r.status == 426 and (await r.json()) == {"schema": PANEL_SCHEMA}  # (no image for it here)
         assert r.headers["X-RT-Sig"] == answer_signature(KEY, q["sig"], 426, await r.read())
@@ -587,6 +599,13 @@ async def test_panel_taps_reach_ha(hass: HomeAssistant, hass_client_no_auth) -> 
     assert store.data.panel(dev.id).layout == "6x3"
     raw, q = post({"settings": {"layout": "9x9"}}, int(time.time()) - 4)
     assert (await client.post(ACTION_URL, params=q, data=raw)).status == 400
+    # signed before this HA run started (the replay guard was empty then): refused
+    from custom_components.room_tiles import panels as panels_mod
+
+    panels_mod.STARTED = time.time() + 100
+    raw, q = post({"service": "light.toggle", "entity": "light.counter"}, int(time.time()) - 5)
+    assert (await client.post(ACTION_URL, params=q, data=raw)).status == 409
+    panels_mod.STARTED = 0
 
 
 def _fw_image(board="elecrow-p4-7in-v1.2-es", built="2026-11-15 18:33:30 -0500", elf=b"\x07" * 32, schema=PANEL_SCHEMA) -> bytes:
@@ -685,7 +704,12 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
     image = store.fw_images[board]
     client = await hass_client_no_auth()
 
+    import itertools
+
+    back = itertools.count(1)
+
     def q(build="ff" * 8, built=None, schema=str(PANEL_SCHEMA), path=URL, **more):
+        more.setdefault("ts", int(time.time()) - next(back))  # (each request its own signature)
         extra = {"board": board, "build": build, "generic": "1"}
         if built is not None:
             extra["built"] = str(built)
@@ -702,8 +726,11 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
     assert body["firmware"] == {"build": image.build, "size": image.size, "sha256": image.sha256, "auto": True}
     # downloads that don't take: tried AUTO_TRIES times, then left for the user
     for _ in range(AUTO_TRIES):
-        r = await client.get(FIRMWARE_URL, params=q(build=image.build, built=when - 86400, path=FIRMWARE_URL))
+        fq = q(build=image.build, built=when - 86400, path=FIRMWARE_URL)
+        r = await client.get(FIRMWARE_URL, params=fq)
         assert r.status == 200 and len(await r.read()) == image.size
+        # (the same request again - caught and resent - doesn't count as a try)
+        assert (await client.get(FIRMWARE_URL, params=fq)).status == 409
         await client.get(URL, params=q(built=when - 86400))  # (back on its old build)
     body = await (await client.get(URL, params=q(built=when - 86400))).json()
     assert "firmware" not in body

@@ -664,6 +664,9 @@ class _Replays:
 
 
 REPLAYS = _Replays()
+# (this HA run's start: REPLAYS is empty after a restart - a POST signed
+# before it is refused, never done twice)
+STARTED = time.time()
 
 
 # ---- what a panel gets ---------------------------------------------------------------
@@ -847,6 +850,16 @@ class _PanelRequest(HomeAssistantView):
         )
         if dev is None:
             return web.Response(status=403)
+        # an older panel's signature covers only its name and time: each used
+        # once at each address; so is any POST's, and the firmware download's
+        # (each counts as a try)
+        old = schema_mismatch(q.get("schema", "")) == "firmware"
+        # (by address too: an old panel asks for its image right after its
+        # 426 - the same second, the same old signature - and must get it)
+        if (old or body is not None or self.any_schema) and not REPLAYS.first_time(f"{request.path}|{q.get('sig', '')}", time.time()):
+            return self._signed(request, dev, web.Response(status=409, text="already done"))
+        if body is not None and int(q.get("ts", "0")) < STARTED:
+            return self._signed(request, dev, web.Response(status=409, text="signed before Home Assistant started"))
         from .repairs import async_report_panel_schema
 
         needs = None if self.any_schema else schema_mismatch(q.get("schema", ""))
@@ -997,8 +1010,6 @@ class PanelScreenshotView(_PanelRequest):
         if isinstance(found, web.Response):
             return found
         _store, _panel, dev = found
-        if not REPLAYS.first_time(request.query.get("sig", ""), time.time()):
-            return self._signed(request, dev, web.Response(status=409, text="already done"))
         try:
             w, h = int(request.query.get("w", "0")), int(request.query.get("h", "0"))
         except ValueError:
@@ -1038,8 +1049,6 @@ class PanelActionView(_PanelRequest):
         if isinstance(found, web.Response):
             return found
         store, panel, dev = found
-        if not REPLAYS.first_time(request.query.get("sig", ""), time.time()):
-            return self._signed(request, dev, web.Response(status=409, text="already done"))
         try:
             body = json.loads(raw or b"{}")
         except ValueError:
