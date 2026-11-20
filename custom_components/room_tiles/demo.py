@@ -107,7 +107,11 @@ def apply(real: dict[str, Any], home: dict[str, Any], picked: Any = None) -> dic
     out = {**real, **home["home"]}
     panel = dict(real.get("panel") or {})
     areas = home["home"].get("areas") or []
-    want = getattr(picked, "area", None) or home.get("area")
+    ids = [a.get("id") for a in areas]
+    # (its own pick if it's one of the demo's - a pick copies its real
+    # settings, its real area too - else where the demo opens)
+    want = getattr(picked, "area", None)
+    want = want if want in ids else home.get("area")
     area = next((a for a in areas if a.get("id") == want), areas[0] if areas else None)
     panel.update({
         "area": area.get("id") if area else None,

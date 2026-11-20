@@ -75,6 +75,9 @@ def test_a_demo_panels_own_picks_hold_while_it_shows_the_demo():
     assert picked.area == "kitchen" and picked.theme == "light" and shown.theme == "dark"  # (a copy: nothing saved)
     out = demo.apply({"panel": {"layout": "5x2"}}, _home(), picked)
     assert out["panel"]["area"] == "kitchen"
+    # a pick of only its theme: its real area (copied along) isn't the demo's
+    theme_only = demo.pick(shown, _home(), {"settings": {"theme": "light"}}, ("dark", "light"), ("5x2",))
+    assert demo.apply({"panel": {}}, _home(), theme_only)["panel"]["area"] == "living_room"
     # checked: a real home's area, an unknown theme or setting - refused
     for bad in ({"area": "attic"}, {"theme": "neon"}, {"layout": "9x9"}, {"wifi": "x"}):
         assert demo.pick(shown, _home(), {"settings": bad}, ("dark", "light"), ("5x2", "6x3")) is None

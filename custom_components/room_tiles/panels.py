@@ -1110,6 +1110,8 @@ class PanelPackView(_PanelRequest):
             return found
         store, panel, dev = found
         hass: HomeAssistant = request.app["hass"]
+        if store.demo_shows(dev):  # (its theme / language picked while it shows the demo - demo.py)
+            panel = store.demo_picks.get(dev.device_id) or panel
         settings = resolve(store.data, panel, dev, hass.config.language)
         settings["round"] = is_round(store, dev.device_id)
         pack = pack_for(store.all_packs(), request.query.get("pack", ""), settings)
