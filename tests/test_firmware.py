@@ -20,7 +20,7 @@ from custom_components.room_tiles.firmware import (
     tidy_folder,
 )
 
-SCHEMA = 3
+SCHEMA = 4
 
 ELF = bytes(range(32))
 

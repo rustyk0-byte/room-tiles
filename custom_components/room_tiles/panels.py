@@ -8,15 +8,18 @@
   state (a revision) whenever anything a panel shows changes; its `url`
   attribute is where HA answers. The panel subscribes to it over the ESPHome
   API (which it holds open anyway), then fetches its payload over HTTP:
-  GET <url>/api/room_tiles/panel?name=<node>&ts=<unix time>&sig=<hex>&schema=<n>
-  where sig = HMAC-SHA256(the panel's API encryption key, "<node>\\n<ts>") -
-  the key HA's ESPHome integration already holds for it, so nothing new is
-  shared and only that panel can read its payload.
+  GET <url>/api/room_tiles/panel?name=<node>&ts=<unix time>&schema=<n>[&...]&sig=<hex>
+  where sig = HMAC-SHA256(the panel's API encryption key, the whole request:
+  request_signature) - the key HA's ESPHome integration already holds for
+  it, so nothing new is shared and only that panel can read its payload;
+  nothing of a request (its path, its values) can be changed and sent again.
 - **Taps:** POST <url>/api/room_tiles/panel/action (same query), JSON body;
-  the signature then also covers the body ("<node>\\n<ts>\\n<sha256 of the
-  body, hex>") and each signature is accepted once (no replays). A panel may
-  call a short list of services, only on entities on its own boards, and
-  change its own settings - nothing else.
+  the signature then also covers the body, and each signature is accepted
+  once (no replays). A panel may call a short list of services, only on
+  entities on its own boards, and change its own settings - nothing else.
+- **Older panels** (signed the old way, a lower schema): only the way out -
+  every request answered "update needed" (426, with its board's image), and
+  that image's download.
 """
 
 from __future__ import annotations
@@ -283,11 +286,27 @@ def pack_for(packs: dict[str, Pack], kind: str, settings: dict[str, Any]) -> Pac
 # ---- requests -------------------------------------------------------------------
 
 
-def signature(psk: bytes, node: str, ts: int, body: bytes | None = None) -> str:
+# MIRRORED: firmware/components/room_tiles/signing.cpp sign_request - a change here must be made there too.
+def request_signature(psk: bytes, method: str, path: str, query: str, body: bytes | None = None) -> str:
+    """A panel's request, signed whole: its method, path, query (as sent,
+    without ?, and without its own sig) and its body's hash ("" for a GET)."""
+    msg = f"RT2\n{method.upper()}\n{path}\n{query}\n" + (hashlib.sha256(body).hexdigest() if body is not None else "")
+    return hmac.new(psk, msg.encode(), hashlib.sha256).hexdigest()
+
+
+def old_signature(psk: bytes, node: str, ts: int, body: bytes | None = None) -> str:
+    """How panels before PANEL_SCHEMA 4 sign (only their name and time, and
+    a POST's body): taken only on the way out of an old panel - its update."""
     msg = f"{node}\n{ts}"
     if body is not None:
         msg += "\n" + hashlib.sha256(body).hexdigest()
     return hmac.new(psk, msg.encode(), hashlib.sha256).hexdigest()
+
+
+def unsigned_query(raw: str) -> str:
+    """A raw query string as it was signed: without its sig= (the rest
+    exactly as sent, in its order)."""
+    return "&".join(part for part in raw.split("&") if part and not part.startswith("sig="))
 
 
 def schema_mismatch(theirs: str) -> str | None:
@@ -304,20 +323,37 @@ def schema_mismatch(theirs: str) -> str | None:
 
 
 def check_request(
-    panels: dict[str, PanelDevice], node: str, ts: str, sig: str, now: float, body: bytes | None = None
+    panels: dict[str, PanelDevice],
+    method: str,
+    path: str,
+    raw_query: str,
+    now: float,
+    body: bytes | None = None,
+    old_ok: bool = False,
 ) -> PanelDevice | None:
-    """The panel this request is from, if it's signed by that panel's key
-    (and `body`, for a POST) and its time is close to HA's; else None."""
+    """The panel this request is from, if all of it is signed by that panel's
+    key and its time is close to HA's; else None. `old_ok`: an older panel's
+    old signature counts too (only for its way out: the 426 answer, its
+    update's download)."""
+    from urllib.parse import parse_qs
+
+    q = {k: v[-1] for k, v in parse_qs(raw_query, keep_blank_values=True).items()}
+    node, sig = q.get("name", ""), q.get("sig", "").lower()
     dev = next((p for p in panels.values() if p.node == node), None)
     if dev is None or dev.psk is None:
         return None
     try:
-        t = int(ts)
+        t = int(q.get("ts", ""))
     except ValueError:
         return None
     if abs(now - t) > MAX_SKEW_S:
         return None
-    return dev if hmac.compare_digest(signature(dev.psk, node, t, body), sig.lower()) else None
+    if schema_mismatch(q.get("schema", "")) == "firmware":
+        # an older panel: its old signature, and only where it may use it
+        good = old_signature(dev.psk, node, t, body) if old_ok else ""
+    else:
+        good = request_signature(dev.psk, method, path, unsigned_query(raw_query), body)
+    return dev if good and hmac.compare_digest(good, sig) else None
 
 
 # ---- what a panel may do -------------------------------------------------------------
@@ -783,7 +819,11 @@ class _PanelRequest(HomeAssistantView):
         if store is None:
             return web.Response(status=503)
         q = request.query
-        dev = check_request(find_panels(hass), q.get("name", ""), q.get("ts", ""), q.get("sig", ""), time.time(), body)
+        # an older panel (signed the old way): only the way out - a 426 from
+        # any request (below), and its update's download (any_schema)
+        dev = check_request(
+            find_panels(hass), request.method, request.path, request.rel_url.raw_query_string, time.time(), body, old_ok=True
+        )
         if dev is None:
             return web.Response(status=403)
         from .repairs import async_report_panel_schema

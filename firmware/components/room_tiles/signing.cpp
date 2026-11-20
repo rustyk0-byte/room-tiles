@@ -19,12 +19,6 @@ static void hex(const uint8_t *in, size_t n, char *out) {
     snprintf(out + i * 2, 3, "%02x", in[i]);
 }
 
-SignResult sign_query(const std::string *body, std::string &query) {
-  if (body == nullptr)
-    return sign_query_bytes(nullptr, 0, query);
-  return sign_query_bytes(reinterpret_cast<const uint8_t *>(body->data()), body->size(), query);
-}
-
 bool has_api_key() {
 #ifdef USE_API_NOISE
   if (api::global_api_server == nullptr)
@@ -37,7 +31,8 @@ bool has_api_key() {
 #endif
 }
 
-SignResult sign_query_bytes(const uint8_t *body, size_t size, std::string &query) {
+SignResult sign_request(const char *method, const char *path, const std::string &params, const uint8_t *body,
+                        size_t size, std::string &query) {
   const time_t now = ::time(nullptr);
   if (now < TIME_VALID)
     return SignResult::NO_TIME;
@@ -47,13 +42,14 @@ SignResult sign_query_bytes(const uint8_t *body, size_t size, std::string &query
   if (noise::NoiseContext::is_all_zeros(key))
     return SignResult::NO_KEY;
   const std::string node = App.get_name().str();
-  std::string msg = node + "\n" + std::to_string((long long) now);
+  const std::string unsigned_query =
+      "name=" + node + "&ts=" + std::to_string((long long) now) + "&schema=" + std::to_string(PANEL_SCHEMA) + params;
+  std::string msg = std::string("RT2\n") + method + "\n" + path + "\n" + unsigned_query + "\n";
   if (body != nullptr) {
     uint8_t digest[32];
     char digest_hex[65];
     mbedtls_sha256(body, size, digest, 0);
     hex(digest, 32, digest_hex);
-    msg += "\n";
     msg += digest_hex;
   }
   uint8_t mac[32];
@@ -62,8 +58,7 @@ SignResult sign_query_bytes(const uint8_t *body, size_t size, std::string &query
     return SignResult::NO_KEY;
   char sig[65];
   hex(mac, 32, sig);
-  query = "?name=" + node + "&ts=" + std::to_string((long long) now) + "&sig=" + sig +
-          "&schema=" + std::to_string(PANEL_SCHEMA);
+  query = "?" + unsigned_query + "&sig=" + sig;
   return SignResult::OK;
 #else
   return SignResult::NO_KEY;

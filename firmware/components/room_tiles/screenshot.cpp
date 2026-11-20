@@ -107,10 +107,11 @@ void Screenshot::upload_(void *arg) {
   const auto *data = reinterpret_cast<const uint8_t *>(self->px_);
   const size_t size = (size_t) self->w_ * self->h_ * 2;
   std::string query;
-  if (sign_query_bytes(data, size, query) != SignResult::OK) {
+  const std::string params = "&w=" + std::to_string(self->w_) + "&h=" + std::to_string(self->h_);
+  if (sign_request("POST", SCREENSHOT_PATH, params, data, size, query) != SignResult::OK) {
     ESP_LOGW(TAG, "Not sent (not connected to Room Tiles yet)");
   } else {
-    self->url_ += SCREENSHOT_PATH + query + "&w=" + std::to_string(self->w_) + "&h=" + std::to_string(self->h_);
+    self->url_ += SCREENSHOT_PATH + query;
     esp_http_client_config_t cfg = {};
     cfg.url = self->url_.c_str();
     cfg.method = HTTP_METHOD_POST;

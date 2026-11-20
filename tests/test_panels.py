@@ -31,11 +31,38 @@ from custom_components.room_tiles.panels import (
     room_lights,
     resolve,
     schema_mismatch,
-    signature,
+    old_signature,
+    request_signature,
     sync_panels,
 )
 
 KEY = bytes(range(32))
+
+
+def signed(method: str, path: str, ts: int | None = None, body: bytes | None = None, key: bytes = KEY,
+           node: str = "panel-1", schema: str | None = None, **extra: str) -> dict[str, str]:
+    """A panel's query, signed whole the way its firmware does (signing.cpp):
+    name, ts, schema, its own values - then sig."""
+    from urllib.parse import urlencode
+
+    q = {"name": node, "ts": str(ts if ts is not None else int(time.time())), "schema": schema or str(PANEL_SCHEMA), **extra}
+    q["sig"] = request_signature(key, method, path, urlencode(q), body)
+    return q
+
+
+def old_signed(ts: int | None = None, body: bytes | None = None, schema: str | None = str(PANEL_SCHEMA - 1), **extra: str) -> dict[str, str]:
+    """An older panel's query (signed the old way)."""
+    t = ts if ts is not None else int(time.time())
+    q = {"name": "panel-1", "ts": str(t), "sig": old_signature(KEY, "panel-1", t, body)}
+    if schema is not None:
+        q["schema"] = schema
+    return {**q, **extra}
+
+
+def _raw(q: dict[str, str]) -> str:
+    from urllib.parse import urlencode
+
+    return urlencode(q)
 
 
 def _dev(device_id="d1", node="panel-1", area=None, psk=KEY):
@@ -45,17 +72,28 @@ def _dev(device_id="d1", node="panel-1", area=None, psk=KEY):
 def test_signed_requests_only():
     found = {"d1": _dev()}
     now = 1_800_000_000
-    good = signature(KEY, "panel-1", now)
-    assert check_request(found, "panel-1", str(now), good, now) is found["d1"]
-    assert check_request(found, "panel-1", str(now), good.upper(), now) is found["d1"]
+    good = signed("GET", URL, now, board="b", build="0123456789abcdef")
+    ok = lambda q, path=URL, method="GET", body=None, old_ok=False: check_request(found, method, path, _raw(q), now, body, old_ok)  # noqa: E731
+    assert ok(good) is found["d1"]
+    assert ok({**good, "sig": good["sig"].upper()}) is found["d1"]
     # wrong key, other panel's name, stale or future time, junk
-    assert check_request(found, "panel-1", str(now), signature(b"x" * 32, "panel-1", now), now) is None
-    assert check_request(found, "panel-2", str(now), signature(KEY, "panel-2", now), now) is None
-    assert check_request(found, "panel-1", str(now - 301), signature(KEY, "panel-1", now - 301), now) is None
-    assert check_request(found, "panel-1", str(now + 301), signature(KEY, "panel-1", now + 301), now) is None
-    assert check_request(found, "panel-1", "soon", good, now) is None
+    assert ok(signed("GET", URL, now, key=b"x" * 32)) is None
+    assert ok(signed("GET", URL, now, node="panel-2")) is None
+    assert ok(signed("GET", URL, now - 301)) is None
+    assert ok(signed("GET", URL, now + 301)) is None
+    assert ok({**good, "ts": "soon"}) is None
     # a panel HA has no key for can't be read
-    assert check_request({"d1": _dev(psk=None)}, "panel-1", str(now), good, now) is None
+    assert check_request({"d1": _dev(psk=None)}, "GET", URL, _raw(good), now) is None
+    # the whole request is signed: no value, path or method can be changed
+    assert ok({**good, "board": "other"}) is None
+    assert ok({**good, "built": "99999999999"}) is None
+    assert ok(good, path=PACK_URL) is None
+    assert ok(good, method="POST", body=b"{}") is None
+    # an older panel's old signature: only where it may use it (its way out)
+    old = old_signed(now)
+    assert ok(old) is None
+    assert ok(old, old_ok=True) is found["d1"]
+    assert ok(old_signed(now, schema=None), old_ok=True) is found["d1"]  # (one that didn't say)
 
 
 def test_the_source_is_a_developer_build():
@@ -402,18 +440,19 @@ async def test_panel_fetches_its_payload(hass: HomeAssistant, hass_client_no_aut
     S = str(PANEL_SCHEMA)
     assert (await client.get(URL, params={"name": "panel-1", "ts": "0", "sig": "x", "schema": S})).status == 403
     ts = int(time.time())
-    r = await client.get(URL, params={"name": "panel-1", "ts": str(ts), "sig": signature(KEY, "panel-1", ts), "schema": S})
+    r = await client.get(URL, params=signed("GET", URL, ts))
     assert r.status == 200
     body = await r.json()
     assert body["panel"]["area"] == hall.id and body["panel"]["name"] == "Hall panel"
     assert body["packs"]["theme"]["id"].startswith("dark-")
 
     # its packs, signed the same way
-    sig = signature(KEY, "panel-1", ts)
-    r = await client.get(PACK_URL, params={"name": "panel-1", "ts": str(ts), "sig": sig, "pack": "theme", "schema": S})
+    r = await client.get(PACK_URL, params=signed("GET", PACK_URL, ts, pack="theme"))
     assert r.status == 200 and r.headers["X-Pack-Id"] == body["packs"]["theme"]["id"]
     assert (await r.read())[:4] == b"RTP1"
-    assert (await client.get(PACK_URL, params={"name": "panel-1", "ts": "0", "sig": sig, "pack": "theme", "schema": S})).status == 403
+    assert (await client.get(PACK_URL, params={**signed("GET", PACK_URL, ts, pack="theme"), "ts": "0"})).status == 403
+    # (the payload's signature isn't the pack's)
+    assert (await client.get(PACK_URL, params={**signed("GET", URL, ts), "pack": "theme"})).status == 403
 
     # firmware that doesn't match: refused with HA's number, and a repair
     # naming the panel and which side needs the update; gone once it matches
@@ -421,15 +460,14 @@ async def test_panel_fetches_its_payload(hass: HomeAssistant, hass_client_no_aut
 
     issue = f"panel_needs_{dev.id}"
     for theirs, needs in ((None, "firmware"), (str(PANEL_SCHEMA - 1), "firmware"), (str(PANEL_SCHEMA + 1), "integration")):
-        q = {"name": "panel-1", "ts": str(ts), "sig": sig}
-        if theirs is not None:
-            q["schema"] = theirs
+        # (an older panel signs the old way; a newer one ours, its number says newer)
+        q = old_signed(ts, schema=theirs) if needs == "firmware" else signed("GET", URL, ts, schema=theirs)
         r = await client.get(URL, params=q)
         assert r.status == 426 and (await r.json()) == {"schema": PANEL_SCHEMA}  # (no image for it here)
         found = ir.async_get(hass).async_get_issue(DOMAIN, issue)
         assert found is not None and found.translation_key == f"panel_needs_{needs}"
         assert found.translation_placeholders == {"name": "Hall panel"}
-    assert (await client.get(URL, params={"name": "panel-1", "ts": str(ts), "sig": sig, "schema": S})).status == 200
+    assert (await client.get(URL, params=signed("GET", URL, ts))).status == 200
     assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is None
     # a stranger's request never makes one
     assert (await client.get(URL, params={"name": "panel-1", "ts": "0", "sig": "x"})).status == 403
@@ -499,12 +537,12 @@ async def test_panel_taps_reach_ha(hass: HomeAssistant, hass_client_no_auth) -> 
     calls = async_mock_service(hass, "light", "toggle")
     client = await hass_client_no_auth()
 
-    def signed(body: dict, ts: int | None = None):
+    def post(body: dict, ts: int | None = None):
         raw = json.dumps(body).encode()
         ts = ts or int(time.time())
-        return raw, {"name": "panel-1", "ts": str(ts), "sig": signature(KEY, "panel-1", ts, raw), "schema": str(PANEL_SCHEMA)}
+        return raw, signed("POST", ACTION_URL, ts, raw)
 
-    raw, q = signed({"service": "light.toggle", "entity": "light.counter"})
+    raw, q = post({"service": "light.toggle", "entity": "light.counter"})
     assert (await client.post(ACTION_URL, params=q, data=raw)).status == 200
     await hass.async_block_till_done()
     assert len(calls) == 1 and calls[0].data["entity_id"] == "light.counter"
@@ -516,17 +554,17 @@ async def test_panel_taps_reach_ha(hass: HomeAssistant, hass_client_no_auth) -> 
     assert (await client.post(ACTION_URL, params={**q, "sig": mixed}, data=raw)).status == 409
     assert len(calls) == 1
     # a body that isn't the one signed is refused
-    _raw, q2 = signed({"service": "light.toggle", "entity": "light.counter"}, int(time.time()) - 1)
+    _raw, q2 = post({"service": "light.toggle", "entity": "light.counter"}, int(time.time()) - 1)
     tampered = json.dumps({"service": "light.toggle", "entity": "light.other"}).encode()
     assert (await client.post(ACTION_URL, params=q2, data=tampered)).status == 403
     # not on its boards
-    raw, q = signed({"service": "light.toggle", "entity": "light.other"}, int(time.time()) - 2)
+    raw, q = post({"service": "light.toggle", "entity": "light.other"}, int(time.time()) - 2)
     assert (await client.post(ACTION_URL, params=q, data=raw)).status == 403
     # its own settings
-    raw, q = signed({"settings": {"layout": "6x3"}}, int(time.time()) - 3)
+    raw, q = post({"settings": {"layout": "6x3"}}, int(time.time()) - 3)
     assert (await client.post(ACTION_URL, params=q, data=raw)).status == 200
     assert store.data.panel(dev.id).layout == "6x3"
-    raw, q = signed({"settings": {"layout": "9x9"}}, int(time.time()) - 4)
+    raw, q = post({"settings": {"layout": "9x9"}}, int(time.time()) - 4)
     assert (await client.post(ACTION_URL, params=q, data=raw)).status == 400
 
 
@@ -626,13 +664,13 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
     image = store.fw_images[board]
     client = await hass_client_no_auth()
 
-    def q(build="ff" * 8, built=None, schema=str(PANEL_SCHEMA)):
-        ts = int(time.time())
-        out = {"name": "panel-1", "ts": str(ts), "sig": signature(KEY, "panel-1", ts), "schema": schema,
-               "board": board, "build": build, "generic": "1"}
+    def q(build="ff" * 8, built=None, schema=str(PANEL_SCHEMA), path=URL, **more):
+        extra = {"board": board, "build": build, "generic": "1"}
         if built is not None:
-            out["built"] = str(built)
-        return out
+            extra["built"] = str(built)
+        if schema != str(PANEL_SCHEMA):  # (an older panel: the old way)
+            return old_signed(schema=schema, **extra, **more)
+        return signed("GET", path, **extra, **more)
 
     when = int(image.built_ts)
     # running something newer (flashed by hand): left alone
@@ -643,7 +681,7 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
     assert body["firmware"] == {"build": image.build, "size": image.size, "sha256": image.sha256, "auto": True}
     # downloads that don't take: tried AUTO_TRIES times, then left for the user
     for _ in range(AUTO_TRIES):
-        r = await client.get(FIRMWARE_URL, params={**q(built=when - 86400), "build": image.build})
+        r = await client.get(FIRMWARE_URL, params=q(build=image.build, built=when - 86400, path=FIRMWARE_URL))
         assert r.status == 200 and len(await r.read()) == image.size
         await client.get(URL, params=q(built=when - 86400))  # (back on its old build)
     body = await (await client.get(URL, params=q(built=when - 86400))).json()
@@ -661,8 +699,14 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
     answer = await r.json()
     assert answer["schema"] == PANEL_SCHEMA and answer["firmware"]["build"] == image.build
     assert "auto" not in answer["firmware"]
-    r = await client.get(FIRMWARE_URL, params={**q(schema=str(PANEL_SCHEMA - 1)), "build": image.build})
+    r = await client.get(FIRMWARE_URL, params=q(schema=str(PANEL_SCHEMA - 1), build=image.build))
     assert r.status == 200
+    # ... but nothing else: its tap is answered "update needed", not done
+    import json as _json
+
+    tap = _json.dumps({"service": "light.toggle", "entity": "light.x"}).encode()
+    r = await client.post(ACTION_URL, params=old_signed(body=tap), data=tap)
+    assert r.status == 426
     # installed: done
     await client.get(URL, params=q(build=image.build, built=when))
     assert dev.id not in store.fw_install

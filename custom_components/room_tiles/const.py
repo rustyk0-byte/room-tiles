@@ -116,4 +116,4 @@ SHAPE_STYLES: tuple[str, ...] = ("floor", "water", "grass", "deck", "paving")
 # any change the other side can't read. Every panel request says its number
 # (?schema=); HA answers another number with 426 and its own in the body - the
 # panel then says which side needs an update, and HA lists it in Repairs.
-PANEL_SCHEMA = 3  # (3: theme packs carry I8X pictures)
+PANEL_SCHEMA = 4  # (4: the whole request signed - panels.py request_signature)

@@ -58,7 +58,7 @@ void ActionSender::worker_(void *arg) {
       base = self->base_url_;
     }
     std::string query;
-    SignResult signed_ok = base.empty() ? SignResult::NO_KEY : sign_query(item, query);
+    SignResult signed_ok = base.empty() ? SignResult::NO_KEY : sign_request("POST", ACTION_PATH, "", item, query);
     if (signed_ok != SignResult::OK) {
       ESP_LOGW(TAG, "Not sent (not connected to Room Tiles yet): %s", item->c_str());
       delete item;

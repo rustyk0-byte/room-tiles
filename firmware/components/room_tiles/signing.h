@@ -12,15 +12,22 @@ namespace esphome::room_tiles {
 // The panels' format (payload, packs, taps, screenshots): bump both on any
 // change the other side can't read. Every request says it (&schema=); HA
 // answers another number with 426 and its own number as the body.
-static constexpr int PANEL_SCHEMA = 3;  // (3: theme packs carry I8X pictures)
+static constexpr int PANEL_SCHEMA = 4;  // (4: the whole request signed - sign_request)
 
 enum class SignResult { OK, NO_TIME, NO_KEY };
 
-/// "?name=<node>&ts=<unix time>&sig=<hex>&schema=<PANEL_SCHEMA>" - sig = HMAC-SHA256(API key,
-/// "<node>\n<ts>" [+ "\n<sha256 of body, hex>" for a POST]). Any thread.
-SignResult sign_query(const std::string *body, std::string &query);
-/// The same for a POST of raw bytes (a screenshot: no copy into a string).
-SignResult sign_query_bytes(const uint8_t *body, size_t size, std::string &query);
+// MIRRORED: custom_components/room_tiles/panels.py request_signature - a change here must be made there too.
+/// A request's query, signed whole: "?name=<node>&ts=<unix time>&schema=<PANEL_SCHEMA><params>&sig=<hex>"
+/// - `params`: its own values, each "&key=value" (URL-safe), or "". sig = HMAC-SHA256(API key,
+/// "RT2\n<method>\n<path>\n<the query without '?' and &sig>\n<sha256 of the body, hex - "" for a GET>"):
+/// nothing of it can be changed and sent again. `body` nullptr: a GET. Any thread.
+SignResult sign_request(const char *method, const char *path, const std::string &params, const uint8_t *body,
+                        size_t size, std::string &query);
+inline SignResult sign_request(const char *method, const char *path, const std::string &params,
+                               const std::string *body, std::string &query) {
+  return sign_request(method, path, params, body != nullptr ? reinterpret_cast<const uint8_t *>(body->data()) : nullptr,
+                      body != nullptr ? body->size() : 0, query);
+}
 
 /// The panel has its API key (HA sets it when it adds the panel).
 bool has_api_key();

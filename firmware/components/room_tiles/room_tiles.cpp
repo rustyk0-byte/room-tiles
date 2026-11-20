@@ -1366,8 +1366,8 @@ void RoomTiles::download_again() {
   this->retry_at_ = 0;
 }
 
-bool RoomTiles::sign_(std::string &query) {
-  switch (sign_query(nullptr, query)) {
+bool RoomTiles::sign_(const char *path, const std::string &params, std::string &query) {
+  switch (sign_request("GET", path, params, nullptr, query)) {
     case SignResult::OK:
       return true;
     case SignResult::NO_TIME:
@@ -1382,21 +1382,25 @@ bool RoomTiles::sign_(std::string &query) {
 }
 
 void RoomTiles::start_job_(Job job) {
+  // the request's own values - signed with it (signing.h: none can be
+  // changed on the way)
+  std::string params;
+  if (job == JOB_THEME)
+    params = "&pack=theme";
+  else if (job == JOB_STRINGS)
+    params = "&pack=strings";
+  else if (job == JOB_PAYLOAD)  // (what it runs: for updates)
+    params = std::string("&board=") + this->board_id_ + "&build=" + this->build_ + "&generic=" + (this->generic_ ? "1" : "0") +
+             "&built=" + std::to_string((long long) App.get_build_time()) +
+             (*this->release_ ? std::string("&release=") + this->release_ : std::string());
+  else if (job == JOB_FIRMWARE)
+    params = "&build=" + this->want_build_;
+  const char *path = job == JOB_PAYLOAD ? PANEL_PATH : job == JOB_FIRMWARE ? FIRMWARE_PATH : PACK_PATH;
   std::string query;
-  if (!this->sign_(query))
+  if (!this->sign_(path, params, query))
     return;
   this->job_ = job;
-  this->job_url_ = this->base_url_ + (job == JOB_PAYLOAD ? PANEL_PATH : job == JOB_FIRMWARE ? FIRMWARE_PATH : PACK_PATH) + query;
-  if (job == JOB_THEME)
-    this->job_url_ += "&pack=theme";
-  else if (job == JOB_STRINGS)
-    this->job_url_ += "&pack=strings";
-  else if (job == JOB_PAYLOAD)  // (what it runs: for updates)
-    this->job_url_ += std::string("&board=") + this->board_id_ + "&build=" + this->build_ + "&generic=" + (this->generic_ ? "1" : "0") +
-                      "&built=" + std::to_string((long long) App.get_build_time()) +
-                      (*this->release_ ? std::string("&release=") + this->release_ : std::string());
-  else if (job == JOB_FIRMWARE)
-    this->job_url_ += "&build=" + this->want_build_;
+  this->job_url_ = this->base_url_ + path + query;
   this->job_revision_ = this->revision_;
   this->job_error_.clear();
   this->pack_id_.clear();

@@ -234,7 +234,7 @@ class RoomTiles : public Component {
   enum Step : int { IDLE = 0, BUSY, READY, WRITE, WRITTEN, FAILED };
 
   static void job_task_(void *arg);
-  bool sign_(std::string &query);
+  bool sign_(const char *path, const std::string &params, std::string &query);
   void start_job_(Job job);
   void finish_payload_();
   void finish_pack_();

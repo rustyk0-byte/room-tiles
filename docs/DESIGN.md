@@ -838,7 +838,16 @@ show and use what the integration holds; nothing about a house is compiled in.
   panel in Repairs, saying which side needs the update. The panel stays on its boot screen saying the same
   ("Update this panel's firmware – Room Tiles in Home Assistant is newer" /
   "Update Room Tiles in Home Assistant – this panel's firmware is newer") and tries again every 30 s. No compatibility with
-  other numbers before the first release.
+  other numbers - but **an older panel always has its way out**: whatever
+  it signed with then (before format 4: only its name, time and body), HA
+  takes it for the 426 answer and its image's download - nothing else
+  (no taps, settings, screenshots, data). A rule for good, not a shim.
+- **Panel requests are signed whole** (format 4): HMAC-SHA256 with the
+  panel's ESPHome API key over "RT2", the method, the path, the query as
+  sent (without its sig) and the body's SHA-256 (panels.py
+  request_signature / signing.cpp sign_request) - no value, path or method
+  of a caught request can be changed and sent again; HA's clock +- 5 min;
+  a POST's signature counts once.
 - **A tile waits for its data:** any tile (on the board or in a pop-up)
   shows its stopwatch until HA has answered for its state and every
   attribute its kind uses. HA answers subscriptions in the order asked and
