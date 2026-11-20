@@ -154,13 +154,15 @@ export class RtShortNames extends LitElement {
       this._error = t("short.length", { max: MAX_SHORT });
       return;
     }
+    const row = `${r.kind}:${r.id}`;
     this._busy = true;
     try {
       await this.hass!.callService("room_tiles", "set_short_name", { [r.kind === "area" ? "area" : "entity"]: r.id, short_name: v });
-      this._editing = undefined;
+      if (this._editing === row) this._editing = undefined; // (another row opened meanwhile stays open)
     } catch (err) {
-      // e.g. too wide for a tile - the integration's own message
-      this._error = (err as { message?: string })?.message ?? String(err);
+      // e.g. too wide for a tile - the integration's own message (only
+      // under its own row)
+      if (this._editing === row) this._error = (err as { message?: string })?.message ?? String(err);
     } finally {
       this._busy = false;
     }

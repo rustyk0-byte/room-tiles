@@ -636,11 +636,13 @@ export class RoomTilesPanel extends LitElement {
 
   private _subscribe(): void {
     if (!this.hass || this._unsub || !this.isConnected) return; // (a timer's, after the panel went: nothing)
-    this._unsub = this.hass.connection.subscribeMessage<FeedMessage>(
+    const sub = this.hass.connection.subscribeMessage<FeedMessage>(
       (msg) => this._onFeed(msg),
       { type: "room_tiles/subscribe" },
     );
-    this._unsub.catch((err: { message?: string }) => {
+    this._unsub = sub;
+    sub.catch((err: { message?: string }) => {
+      if (this._unsub !== sub) return; // (an older try failing: the newer one stands)
       this._error = err?.message || "not set up"; // (the screen says it in the language)
       this._unsub = undefined;
       // again after 5 s, then longer (up to a minute) - HA's next state

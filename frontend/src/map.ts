@@ -833,6 +833,7 @@ export class RtMap extends LitElement {
 
   private _onWheel(e: WheelEvent): void {
     e.preventDefault();
+    this._stopFly();
     this._zoomAt(e.clientX, e.clientY, Math.pow(1.0015, e.deltaY));
   }
 
@@ -855,7 +856,16 @@ export class RtMap extends LitElement {
     this._box = undefined;
   }
 
+  /** A zoom animation under way stops where it is: a finger or the wheel
+   *  takes over from there (never undone by the rest of the animation). */
+  private _stopFly(): void {
+    if (this._anim) cancelAnimationFrame(this._anim);
+    this._anim = undefined;
+    this._flyTo = undefined;
+  }
+
   private _down(e: PointerEvent, marker?: MapMarker): void {
+    this._stopFly();
     // The first finger down: anything still tracked is stale (its "up" went
     // to something that covered the map, e.g. a pop-up) - otherwise this
     // finger would count as the second finger of a pinch.
