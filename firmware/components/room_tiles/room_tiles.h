@@ -239,6 +239,7 @@ class RoomTiles : public Component {
   // (the download's answer headers: HA's signature of its answer)
   static esp_err_t job_http_event_(esp_http_client_event_t *evt);
   bool sign_(const char *path, const std::string &params, std::string &query);
+  bool theme_due_() const;
   void start_job_(Job job);
   void finish_payload_();
   void finish_pack_();
@@ -356,6 +357,7 @@ class RoomTiles : public Component {
   std::string failed_theme_;
   uint32_t failed_theme_at_{0};
   uint8_t theme_fails_{0};
+  bool pack_released_{false};  // (the stored pack let go of for its write: reloaded after it)
   bool strip_{false};
   bool map_{true};
   bool have_model_{false};

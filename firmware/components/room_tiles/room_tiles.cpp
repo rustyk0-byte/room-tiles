@@ -379,6 +379,8 @@ void RoomTiles::choose_theme(const std::string &name) {
   this->pick_("theme", name);
   if (name == this->model_.theme)
     return;  // (this one already: nothing comes)
+  this->theme_fails_ = 0;  // (asked for: right away, not after an earlier failure's wait)
+  this->failed_theme_.clear();
   // straight to the boot screen (loop() takes the board down - this runs in
   // the settings' own tap)
   this->theme_asked_ms_ = millis() | 1;
@@ -647,8 +649,10 @@ void RoomTiles::show_screen_(bool main) {
 void RoomTiles::maybe_show_board_() {
   if (!this->have_model_ || !this->board_.attached())
     return;
+  // (a theme waiting out its failures' backoff isn't coming now: the board
+  // goes up without it meanwhile)
   const bool packs_pending = (!this->want_strings_.empty() && this->want_strings_ != this->assets_.pack_id(PACK_STRINGS)) ||
-                             (!this->want_theme_.empty() && this->want_theme_ != this->assets_.pack_id(PACK_THEME));
+                             (!this->want_theme_.empty() && this->want_theme_ != this->assets_.pack_id(PACK_THEME) && this->theme_due_());
   if (packs_pending && !this->main_shown_ && this->retry_at_ == 0)
     return;  // it's coming: keep the boot screen up meanwhile
   if (this->theme_asked_ms_ != 0 || this->mismatched_ || this->offline_)
@@ -1290,6 +1294,7 @@ void RoomTiles::loop() {
           // bar) with the board taken down
           this->take_board_down_();
           this->assets_.release(kind);
+          this->pack_released_ = true;
           // (the wording's mapping too - its parsed copy stays: with nothing
           // of flash mapped, a firmware run from PSRAM keeps its cache, and
           // so the round panel's screen keeps its picture, while flash is
@@ -1301,6 +1306,7 @@ void RoomTiles::loop() {
           // the wording is a copy in RAM: the board stays up meanwhile (then
           // rebuilt in the new wording)
           this->assets_.unmap(kind);
+          this->pack_released_ = true;
         }
         this->write_started_ms_ = millis();
         this->set_updating(true);  // (the screen stays on while it's written)
@@ -1331,10 +1337,7 @@ void RoomTiles::loop() {
     this->start_job_(JOB_FIRMWARE);  // too old for HA's Room Tiles (its 426 offer): nothing else works
     return;
   }
-  // the theme that failed: again only after its wait (longer each time)
-  const uint32_t theme_wait = this->theme_fails_ == 0 ? 0
-                              : std::min<uint32_t>(THEME_RETRY_MAX_MS, RETRY_MS << std::min<int>(this->theme_fails_ - 1, 6));
-  const bool theme_due = this->want_theme_ != this->failed_theme_ || millis() - this->failed_theme_at_ >= theme_wait;
+  const bool theme_due = this->theme_due_();
   if (this->revision_ != this->fetched_revision_) {
     this->start_job_(JOB_PAYLOAD);
   } else if (firmware && (!this->want_auto_ || this->unused_())) {
@@ -1353,6 +1356,14 @@ bool RoomTiles::unused_() const {
   return this->asleep_ || this->dimmed_ || lv_display_get_inactive_time(nullptr) > AUTO_UPDATE_UNTOUCHED_MS;
 }
 
+// the theme that failed: again only after its wait (longer each time)
+bool RoomTiles::theme_due_() const {
+  if (this->theme_fails_ == 0 || this->want_theme_ != this->failed_theme_)
+    return true;
+  const uint32_t wait = std::min<uint32_t>(THEME_RETRY_MAX_MS, RETRY_MS << std::min<int>(this->theme_fails_ - 1, 6));
+  return millis() - this->failed_theme_at_ >= wait;
+}
+
 void RoomTiles::download_again() {
   if (this->step_.load() != IDLE)
     return;  // one is downloading already
@@ -1365,6 +1376,8 @@ void RoomTiles::download_again() {
   this->assets_.forget(PACK_STRINGS);
   this->assets_changed_();
   this->retry_at_ = 0;
+  this->theme_fails_ = 0;  // (asked for: right away, not after an earlier failure's wait)
+  this->failed_theme_.clear();
 }
 
 bool RoomTiles::sign_(const char *path, const std::string &params, std::string &query) {
@@ -1945,10 +1958,6 @@ void RoomTiles::finish_pack_() {
   } else {
     ESP_LOGW(TAG, "%s pack: HTTP %d", what, this->http_status_);
   }
-  // load whatever is stored now (the new pack - or, after a failed write,
-  // nothing: plain colours until the retry)
-  this->assets_.load(kind, !written);  // (just written: it was checked in memory)
-  this->assets_changed_();
   if (kind == PACK_THEME) {
     if (written) {
       this->theme_fails_ = 0;
@@ -1959,6 +1968,23 @@ void RoomTiles::finish_pack_() {
       this->failed_theme_at_ = millis();
     }
   }
+  const bool released = this->pack_released_;
+  this->pack_released_ = false;
+  if (!written && !released) {
+    // (failed before the stored pack was touched - the download or its
+    // check: what's on screen stays as it is, nothing reloaded or rebuilt -
+    // a board shown first if it was waiting for this pack)
+    this->retry_at_ = millis() + RETRY_MS;
+    if (kind == PACK_STRINGS)
+      this->show_language_picker_();  // (no wording came: the picker as it should be)
+    if (!this->main_shown_)
+      this->maybe_show_board_();
+    return;
+  }
+  // load whatever is stored now (the new pack - or, after a failed write,
+  // nothing: plain colours until the retry)
+  this->assets_.load(kind, !written);  // (just written: it was checked in memory)
+  this->assets_changed_();
   if (written)
     this->show_summary_();
   else
