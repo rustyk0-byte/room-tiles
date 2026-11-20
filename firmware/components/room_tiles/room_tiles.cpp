@@ -806,7 +806,10 @@ std::string RoomTiles::setup_hint() const {
 // name (the picker covers the lower part - the status lines), 4 + 3 across.
 // The round panel: the languages alone, two by two inside the circle.
 bool RoomTiles::language_needed() const {
-  return this->generic_ && this->boot_lang_.code[0] == 0 && this->assets_.pack_id(PACK_STRINGS).empty();
+  // (only a panel HA hasn't added yet - new, or factory reset: one already
+  // set up whose wording is just gone for a moment - a new panel format's
+  // pack still coming, Download Theme Again - never asks)
+  return this->generic_ && !has_api_key() && this->boot_lang_.code[0] == 0 && this->assets_.pack_id(PACK_STRINGS).empty();
 }
 
 void RoomTiles::attach_language_picker(lv_obj_t *root) {
