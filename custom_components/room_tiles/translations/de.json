@@ -68,21 +68,21 @@
   "services": {
     "export_data": {
       "name": "Daten exportieren",
-      "description": "Schreibt die gesamte Room-Tiles-Einrichtung (Bereiche, Kacheln, Katalog, Karten, Markierungen) in eine JSON-Datei in deinem Konfigurationsordner.",
+      "description": "Schreibt die gesamte Room-Tiles-Einrichtung (Bereiche, Kacheln, Katalog, Karten, Markierungen) in eine JSON-Datei in room_tiles_backups/ in deinem Konfigurationsordner.",
       "fields": {
         "file": {
           "name": "Datei",
-          "description": "Eine .json-Datei im Konfigurationsordner oder in room_tiles_backups/."
+          "description": "Ein .json-Dateiname - in room_tiles_backups/ im Konfigurationsordner."
         }
       }
     },
     "import_data": {
       "name": "Daten importieren",
-      "description": "Ersetzt die gesamte Room-Tiles-Einrichtung durch eine JSON-Datei aus deinem Konfigurationsordner. Die aktuelle Einrichtung wird vorher in room_tiles_backups/ gesichert; eine ungültige Datei ändert nichts.",
+      "description": "Ersetzt die gesamte Room-Tiles-Einrichtung durch eine JSON-Datei aus room_tiles_backups/ in deinem Konfigurationsordner. Die aktuelle Einrichtung wird vorher dort gesichert; eine ungültige Datei ändert nichts.",
       "fields": {
         "file": {
           "name": "Datei",
-          "description": "Eine .json-Datei im Konfigurationsordner oder in room_tiles_backups/."
+          "description": "Ein .json-Dateiname - in room_tiles_backups/ im Konfigurationsordner."
         }
       }
     },

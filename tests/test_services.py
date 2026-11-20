@@ -22,6 +22,13 @@ async def entry(hass: HomeAssistant):
     return e
 
 
+def _backup(hass, name: str) -> Path:
+    """A file where export / import look: room_tiles_backups/."""
+    folder = Path(hass.config.path("room_tiles_backups"))
+    folder.mkdir(exist_ok=True)
+    return folder / name
+
+
 async def _call(hass, service, **data):
     return await hass.services.async_call(DOMAIN, service, data, blocking=True, return_response=True)
 
@@ -45,7 +52,7 @@ async def test_export_then_import_round_trip(hass: HomeAssistant, entry) -> None
 
 
 async def test_invalid_import_changes_nothing(hass: HomeAssistant, entry) -> None:
-    Path(hass.config.path("bad.json")).write_text(json.dumps({"markers": [{"id": "m", "map": "nowhere", "entity": "light.x", "x": 1, "y": 1}]}))
+    _backup(hass, "bad.json").write_text(json.dumps({"markers": [{"id": "m", "map": "nowhere", "entity": "light.x", "x": 1, "y": 1}]}))
     with pytest.raises(ServiceValidationError, match="not valid Room Tiles data"):
         await _call(hass, "import_data", file="bad.json")
     assert entry.runtime_data.data.areas[0].name == "Kitchen"
@@ -54,18 +61,25 @@ async def test_invalid_import_changes_nothing(hass: HomeAssistant, entry) -> Non
 async def test_missing_and_non_json_files(hass: HomeAssistant, entry) -> None:
     with pytest.raises(ServiceValidationError, match="not found"):
         await _call(hass, "import_data", file="nope.json")
-    Path(hass.config.path("text.json")).write_text("not json")
+    _backup(hass, "text.json").write_text("not json")
     with pytest.raises(ServiceValidationError, match="not valid JSON"):
         await _call(hass, "import_data", file="text.json")
     for odd in ([], "text", {"version": 1, "minor_version": 5, "data": []}):
-        Path(hass.config.path("odd.json")).write_text(json.dumps(odd))
+        _backup(hass, "odd.json").write_text(json.dumps(odd))
         with pytest.raises(ServiceValidationError, match="not valid Room Tiles data"):
             await _call(hass, "import_data", file="odd.json")
 
 
 async def test_paths_outside_config_refused(hass: HomeAssistant, entry) -> None:
-    with pytest.raises(ServiceValidationError, match="inside the config folder"):
-        await _call(hass, "export_data", file="../escape.json")
+    """Only room_tiles_backups/: a plain name goes there, anything else is refused."""
+    for name in ("../escape.json", "sub/x.json", ".storage/core.config_entries", "room_tiles_backups/../x.json", ".."):
+        with pytest.raises(ServiceValidationError, match="must be a file name"):
+            await _call(hass, "export_data", file=name)
+    res = await _call(hass, "export_data", file="room_tiles_backups/same.json")
+    assert Path(res["file"]) == _backup(hass, "same.json")
+    res = await _call(hass, "export_data", file="plain.json")
+    assert Path(res["file"]) == _backup(hass, "plain.json")
+    assert not Path(hass.config.path("plain.json")).exists()
 
 
 async def test_actions_refuse_without_setup(hass: HomeAssistant) -> None:
@@ -92,12 +106,12 @@ async def test_a_removal_copy_imports(hass: HomeAssistant, entry) -> None:
     """Undo a removal: the copy Room Tiles kept (HA's storage file, maybe
     from an older version) goes back in with import - unwrapped, migrated."""
     fixture = Path(__file__).parent / "fixtures" / "storage" / "v1.2.json"
-    Path(hass.config.path("removed-old.json")).write_text(fixture.read_text())
+    _backup(hass, "removed-old.json").write_text(fixture.read_text())
     res = await _call(hass, "import_data", file="removed-old.json")
     assert res["maps"] >= 1 and res["markers"] >= 1
     stored = json.loads(fixture.read_text())
     newer = {**stored, "version": 2}
-    Path(hass.config.path("removed-newer.json")).write_text(json.dumps(newer))
+    _backup(hass, "removed-newer.json").write_text(json.dumps(newer))
     with pytest.raises(ServiceValidationError, match="another Room Tiles"):
         await _call(hass, "import_data", file="removed-newer.json")
 
@@ -139,7 +153,7 @@ async def test_export_and_import_are_for_admins_only(hass: HomeAssistant, entry,
                 DOMAIN, service, {"file": "admins-only.json"}, blocking=True, return_response=True,
                 context=Context(user_id=hass_read_only_user.id),
             )
-    assert not Path(hass.config.path("admins-only.json")).exists()
+    assert not _backup(hass, "admins-only.json").exists()
 
 
 async def test_only_json_files(hass: HomeAssistant, entry) -> None:
@@ -174,7 +188,7 @@ async def test_import_keeps_every_panel(hass: HomeAssistant, entry) -> None:
 async def test_only_room_tiles_own_places(hass: HomeAssistant, entry) -> None:
     """Not HA's own JSON files (.storage, .cloud, an integration's manifest)."""
     for name in (".cloud/production_auth.json", ".storage/core.config_entries.json", "custom_components/x/manifest.json"):
-        with pytest.raises(ServiceValidationError, match="must be in the config folder itself"):
+        with pytest.raises(ServiceValidationError, match="must be a file name"):
             await _call(hass, "export_data", file=name)
     res = await _call(hass, "export_data", file="room_tiles_backups/mine.json")
     assert Path(res["file"]).exists()

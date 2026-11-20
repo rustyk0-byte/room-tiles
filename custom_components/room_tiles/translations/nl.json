@@ -68,21 +68,21 @@
   "services": {
     "export_data": {
       "name": "Gegevens exporteren",
-      "description": "Schrijft de hele Room Tiles-instelling (ruimtes, tegels, catalogus, kaarten, markeringen) naar een JSON-bestand in je configuratiemap.",
+      "description": "Schrijft de hele Room Tiles-instelling (ruimtes, tegels, catalogus, kaarten, markeringen) naar een JSON-bestand in room_tiles_backups/ in je configuratiemap.",
       "fields": {
         "file": {
           "name": "Bestand",
-          "description": "Een .json-bestand in de configuratiemap of in room_tiles_backups/."
+          "description": "Een .json-bestandsnaam - in room_tiles_backups/ in de configuratiemap."
         }
       }
     },
     "import_data": {
       "name": "Gegevens importeren",
-      "description": "Vervangt de hele Room Tiles-instelling door een JSON-bestand uit je configuratiemap. De huidige instelling wordt eerst bewaard in room_tiles_backups/; een ongeldig bestand verandert niets.",
+      "description": "Vervangt de hele Room Tiles-instelling door een JSON-bestand uit room_tiles_backups/ in je configuratiemap. De huidige instelling wordt daar eerst bewaard; een ongeldig bestand verandert niets.",
       "fields": {
         "file": {
           "name": "Bestand",
-          "description": "Een .json-bestand in de configuratiemap of in room_tiles_backups/."
+          "description": "Een .json-bestandsnaam - in room_tiles_backups/ in de configuratiemap."
         }
       }
     },

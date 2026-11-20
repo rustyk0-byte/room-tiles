@@ -68,21 +68,21 @@
   "services": {
     "export_data": {
       "name": "Esporta dati",
-      "description": "Scrive l'intera configurazione di Room Tiles (aree, riquadri, catalogo, mappe, indicatori) in un file JSON nella tua cartella di configurazione.",
+      "description": "Scrive l'intera configurazione di Room Tiles (aree, riquadri, catalogo, mappe, indicatori) in un file JSON in room_tiles_backups/ nella tua cartella di configurazione.",
       "fields": {
         "file": {
           "name": "File",
-          "description": "Un file .json nella cartella di configurazione o in room_tiles_backups/."
+          "description": "Un nome di file .json - in room_tiles_backups/ nella cartella di configurazione."
         }
       }
     },
     "import_data": {
       "name": "Importa dati",
-      "description": "Sostituisce l'intera configurazione di Room Tiles con un file JSON dalla tua cartella di configurazione. Prima la configurazione attuale viene salvata in room_tiles_backups/; un file non valido non cambia nulla.",
+      "description": "Sostituisce l'intera configurazione di Room Tiles con un file JSON da room_tiles_backups/ nella tua cartella di configurazione. Prima la configurazione attuale viene salvata lì; un file non valido non cambia nulla.",
       "fields": {
         "file": {
           "name": "File",
-          "description": "Un file .json nella cartella di configurazione o in room_tiles_backups/."
+          "description": "Un nome di file .json - in room_tiles_backups/ nella cartella di configurazione."
         }
       }
     },

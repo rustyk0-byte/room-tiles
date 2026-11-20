@@ -68,21 +68,21 @@
   "services": {
     "export_data": {
       "name": "Exporter les données",
-      "description": "Écrit toute la configuration de Room Tiles (zones, tuiles, catalogue, cartes, repères) dans un fichier JSON de votre dossier de configuration.",
+      "description": "Écrit toute la configuration de Room Tiles (pièces, tuiles, catalogue, plans, repères) dans un fichier JSON dans room_tiles_backups/ de votre dossier de configuration.",
       "fields": {
         "file": {
           "name": "Fichier",
-          "description": "Un fichier .json dans le dossier de configuration ou dans room_tiles_backups/."
+          "description": "Un nom de fichier .json - dans room_tiles_backups/ du dossier de configuration."
         }
       }
     },
     "import_data": {
       "name": "Importer les données",
-      "description": "Remplace toute la configuration de Room Tiles par un fichier JSON de votre dossier de configuration. La configuration actuelle est d'abord enregistrée dans room_tiles_backups/ ; un fichier non valide ne change rien.",
+      "description": "Remplace toute la configuration de Room Tiles par un fichier JSON de room_tiles_backups/ dans votre dossier de configuration. La configuration actuelle y est d'abord enregistrée ; un fichier non valide ne change rien.",
       "fields": {
         "file": {
           "name": "Fichier",
-          "description": "Un fichier .json dans le dossier de configuration ou dans room_tiles_backups/."
+          "description": "Un nom de fichier .json - dans room_tiles_backups/ du dossier de configuration."
         }
       }
     },

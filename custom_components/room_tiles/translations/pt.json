@@ -68,21 +68,21 @@
   "services": {
     "export_data": {
       "name": "Exportar dados",
-      "description": "Escreve toda a configuração do Room Tiles (áreas, blocos, catálogo, mapas, marcadores) num ficheiro JSON da sua pasta de configuração.",
+      "description": "Escreve toda a configuração do Room Tiles (divisões, mosaicos, catálogo, mapas, marcadores) num ficheiro JSON em room_tiles_backups/ na sua pasta de configuração.",
       "fields": {
         "file": {
           "name": "Ficheiro",
-          "description": "Um ficheiro .json na pasta de configuração ou em room_tiles_backups/."
+          "description": "Um nome de ficheiro .json - em room_tiles_backups/ na pasta de configuração."
         }
       }
     },
     "import_data": {
       "name": "Importar dados",
-      "description": "Substitui toda a configuração do Room Tiles por um ficheiro JSON da sua pasta de configuração. Antes, a configuração atual é guardada em room_tiles_backups/; um ficheiro inválido não altera nada.",
+      "description": "Substitui toda a configuração do Room Tiles por um ficheiro JSON de room_tiles_backups/ na sua pasta de configuração. Antes, a configuração atual é guardada lá; um ficheiro inválido não altera nada.",
       "fields": {
         "file": {
           "name": "Ficheiro",
-          "description": "Um ficheiro .json na pasta de configuração ou em room_tiles_backups/."
+          "description": "Um nome de ficheiro .json - em room_tiles_backups/ na pasta de configuração."
         }
       }
     },

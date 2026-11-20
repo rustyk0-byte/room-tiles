@@ -24,21 +24,21 @@
   "services": {
     "export_data": {
       "name": "Export data",
-      "description": "Writes the whole Room Tiles setup (areas, tiles, catalog, maps, markers) to a JSON file in your config folder.",
+      "description": "Writes the whole Room Tiles setup (areas, tiles, catalog, maps, markers) to a JSON file in room_tiles_backups/ in your config folder.",
       "fields": {
         "file": {
           "name": "File",
-          "description": "A .json file in the config folder, or in room_tiles_backups/."
+          "description": "A .json file name - in room_tiles_backups/ in the config folder."
         }
       }
     },
     "import_data": {
       "name": "Import data",
-      "description": "Replaces the whole Room Tiles setup with a JSON file from your config folder. The current setup is saved to room_tiles_backups/ first; a file that isn't valid changes nothing.",
+      "description": "Replaces the whole Room Tiles setup with a JSON file from room_tiles_backups/ in your config folder. The current setup is saved there first; a file that isn't valid changes nothing.",
       "fields": {
         "file": {
           "name": "File",
-          "description": "A .json file in the config folder, or in room_tiles_backups/."
+          "description": "A .json file name - in room_tiles_backups/ in the config folder."
         }
       }
     },
