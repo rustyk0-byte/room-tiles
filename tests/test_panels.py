@@ -781,8 +781,10 @@ async def test_panel_updates(hass: HomeAssistant, hass_client_no_auth, tmp_path)
     assert r.status == 426
     # asked for by hand, fetched again and again (it doesn't start): given up
     store.firmware_install(dev.id, image.build)
-    for _ in range(INSTALL_TRIES + 1):
-        await client.get(FIRMWARE_URL, params=q(build=image.build, built=when - 86400, path=FIRMWARE_URL))
+    for _ in range(INSTALL_TRIES):
+        assert (await client.get(FIRMWARE_URL, params=q(build=image.build, built=when - 86400, path=FIRMWARE_URL))).status == 200
+    # (the next one is never sent: given up before, not after, one more flash write)
+    assert (await client.get(FIRMWARE_URL, params=q(build=image.build, built=when - 86400, path=FIRMWARE_URL))).status == 404
     assert dev.id not in store.fw_install
     # installed: done
     await client.get(URL, params=q(build=image.build, built=when))

@@ -897,9 +897,10 @@ class _PanelRequest(HomeAssistantView):
                 running = fw.reported(dict(q))
                 if running is not None:
                     offer = fw.offer(store.fw_images.get(running.board), running)
-                    # (fetched INSTALL_TRIES times and still too old: it
-                    # doesn't take - not offered again until a new image)
-                    if offer is not None and store.fw_tries.get((dev.device_id, offer["build"]), 0) < fw.INSTALL_TRIES:
+                    # (fetched INSTALL_TRIES times within the hour and still too
+                    # old: it doesn't take - offered again an hour later, or
+                    # at once after HA restarts / a new image)
+                    if offer is not None and store.firmware_may_fetch(dev.device_id, offer["build"], True):
                         answer["firmware"] = offer
             return self._signed(request, dev, web.json_response(answer, status=426))
         panel = store.data.panel(dev.device_id)
@@ -984,10 +985,16 @@ class PanelFirmwareView(_PanelRequest):
         image = next((img for img in store.fw_images.values() if img.build == build), None)
         if image is None or not image.generic or (running is not None and (image.board != running.board or not running.generic)):
             return self._signed(request, dev, web.Response(status=404))
+        # an install that doesn't take (the build won't start, the panel rolls
+        # back and asks again): at most INSTALL_TRIES - checked BEFORE it's
+        # sent (never one more written to flash)
+        forced = signs_old(request.query.get("schema", ""))
+        if not store.firmware_may_fetch(dev.device_id, image.build, forced):
+            return self._signed(request, dev, web.Response(status=404))
         data = await hass.async_add_executor_job(image.path.read_bytes)
         if hashlib.sha256(data).hexdigest() != image.sha256:
             return self._signed(request, dev, web.Response(status=409, text="the image changed"))  # (rescanned soon)
-        store.firmware_downloaded(dev.device_id, image.build)
+        store.firmware_downloaded(dev.device_id, image.build, forced)
         resp = web.Response(body=data, content_type="application/octet-stream", headers={"Cache-Control": "no-store"})
         return await self._signed_big(request, dev, resp)
 

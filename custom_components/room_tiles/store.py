@@ -122,6 +122,9 @@ class RoomTilesStore:
         # install has started once it's the one asked for (firmware_installing)
         self.fw_fetched: dict[str, str] = {}
         self.fw_tries: dict[tuple[str, str], int] = {}
+        # a too-old panel's forced update: when it was fetched (this HA run
+        # only, the last hour counts - never stuck for good)
+        self.fw_forced: dict[tuple[str, str], list[float]] = {}
         self.fw_listeners: list[Callable[[], None]] = []
         self.fw_rescan: Callable[[], Any] | None = None  # (__init__: read the images again)
         self.fw_upload_dir: Any = None  # (<config>/room_tiles_firmware)
@@ -217,6 +220,14 @@ class RoomTilesStore:
 
         want = auto_installs(self.fw_images, self.fw_reports, self.fw_tries) if self.data.settings.auto_update_panels else {}
         changed = False
+        # an install (by hand too) of a build no longer offered (another image
+        # came for its board): over - never "updating" for good
+        offered = {img.build for img in self.fw_images.values()}
+        for device_id, build in list(self.fw_install.items()):
+            if build not in offered:
+                del self.fw_install[device_id]
+                self.fw_auto.discard(device_id)
+                changed = True
         for device_id in list(self.fw_auto):
             if want.get(device_id) != self.fw_install.get(device_id):
                 self.fw_auto.discard(device_id)
@@ -233,22 +244,40 @@ class RoomTilesStore:
         return changed
 
     @callback
-    def firmware_downloaded(self, device_id: str, build: str) -> None:
-        """A panel fetched an image: counted (firmware.AUTO_TRIES) - and an
-        install waiting for the panel to be unused has started."""
+    def firmware_may_fetch(self, device_id: str, build: str, forced: bool) -> bool:
+        """May the panel have this image (again)? An install asked for by hand:
+        at most INSTALL_TRIES fetches (then it's given up - Install again
+        starts afresh); a too-old panel's forced one: INSTALL_TRIES within
+        the last hour."""
+        import time
+
         from .firmware import INSTALL_TRIES
 
         key = (device_id, build)
-        self.fw_tries[key] = self.fw_tries.get(key, 0) + 1
-        self._save_fw_tries()
-        if self.fw_install.get(device_id) == build and device_id not in self.fw_auto and self.fw_tries[key] > INSTALL_TRIES:
-            # asked for by hand, fetched again and again: it doesn't take (a
-            # build that won't start rolls the panel back) - not offered again
-            # until asked for anew (Install resets the count)
-            del self.fw_install[device_id]
+        if forced:
+            recent = [t for t in self.fw_forced.get(key, []) if time.time() - t < 3600]
+            self.fw_forced[key] = recent
+            return len(recent) < INSTALL_TRIES
+        if self.fw_install.get(device_id) == build and device_id not in self.fw_auto and self.fw_tries.get(key, 0) >= INSTALL_TRIES:
+            del self.fw_install[device_id]  # (it doesn't take: given up)
             self.panel_link.bump()
             self.firmware_changed()
-            return
+            return False
+        return True
+
+    @callback
+    def firmware_downloaded(self, device_id: str, build: str, forced: bool = False) -> None:
+        """A panel fetched an image: counted (firmware.AUTO_TRIES /
+        INSTALL_TRIES) - and an install waiting for the panel to be unused
+        has started."""
+        import time
+
+        key = (device_id, build)
+        if forced:
+            self.fw_forced.setdefault(key, []).append(time.time())
+            return  # (a too-old panel: nothing else of it is kept)
+        self.fw_tries[key] = self.fw_tries.get(key, 0) + 1
+        self._save_fw_tries()
         started = self.fw_install.get(device_id) == build and self.fw_fetched.get(device_id) != build
         self.fw_fetched[device_id] = build
         if started:
