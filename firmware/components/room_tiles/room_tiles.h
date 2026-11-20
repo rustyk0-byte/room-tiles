@@ -24,6 +24,7 @@
 #include "map_view.h"
 #include "model.h"
 #include "picker.h"
+#include "screen_policy.h"
 #include "screenshot.h"
 #include "states.h"
 #include "wifi_setup.h"
@@ -346,9 +347,9 @@ class RoomTiles : public Component {
   std::string want_build_, want_sha256_;
   size_t want_size_{0};
   bool want_auto_{false};
-  bool update_dark_{false};  // (the screen was dark when the update started)
-  ESPPreferenceObject quiet_pref_;  // (set: the next start goes dark at once)
-  bool quiet_boot_{false};  // ("Update panels automatically": when nobody's using it - unused_)
+  DarkWhy update_dark_{DarkWhy::NONE};  // (dark when the update started: why)
+  ESPPreferenceObject quiet_pref_;  // (set: the next start goes dark at once, for that reason)
+  DarkWhy quiet_boot_{DarkWhy::NONE};  // ("Update panels automatically": when nobody's using it - unused_)
   bool unused_() const;
   std::string failed_build_;
   uint32_t failed_at_{0};
@@ -406,9 +407,9 @@ class RoomTiles : public Component {
   uint8_t idle_lights_{0};
   ESPPreferenceObject idle_lights_pref_;
   std::string lights_watched_;  // (the room's lights watched for it)
-  bool lights_slept_{false};    // (asleep because the room's lights went off)
-  /// The room the panel is in has lights (its lights button) and all are off.
-  bool room_dark_();
+  /// The lights of the room the panel is in (its lights button), for "Screen
+  /// off when the following area lights are off" - UNKNOWN with it off.
+  Lights room_lights_();
 #ifdef USE_UPDATE
   update::UpdateEntity *wifi_chip_waiting_{nullptr};  // (an update due: once the language is picked)
   void wifi_chip_update_();
@@ -427,33 +428,29 @@ class RoomTiles : public Component {
   ESPPreferenceObject strip_points_pref_;
   ESPPreferenceObject clock24_pref_;
   uint8_t preview_pct_{0};  // (a brightness slider moving: shown as it goes; 0 = none)
-  bool dimmed_{false};      // (idle: the backlight at the idle brightness - idle_loop_)
-  void dim_(bool on);
+  bool dimmed_{false};      // (the backlight at the idle brightness - apply_screen_)
   IdleClock clock_;
-  /// Each loop: the screen off or the clock when idle (the setting).
+  // the screen when nobody's using it: lit, dimmed, the clock, dark (its rules)
+  ScreenPolicy screen_;
+  Screen shown_screen_{Screen::LIT};  // (what apply_screen_ last put up)
+  bool board_shown_once_{false};      // (its first appearance counts as use)
+  /// Each loop: the facts to the policy, the screen as it says.
   void idle_loop_();
+  void apply_screen_();
+  /// A touch on the dark screen, or the knob: it only wakes (true).
+  bool touch_wake_();
   ESPPreferenceObject queue_pref_;  // (its own: the display record keeps its size)
   bool queue_autostart_{false};
   bool oom_report_{false};
   uint32_t boot_pictures_at_{0};  // (the boot screen waits for the maps' pictures: maybe_show_board_)  // (the last restart was out of memory: logged again once connected)
   light::LightState *backlight_{nullptr};
-  bool asleep_{false};
   // the knob: its last click (when, which way) and where its list scroll goes
   uint32_t knob_ms_{0};
   int knob_dir_{0};
   lv_obj_t *knob_list_{nullptr};  // (only compared: never used)
   int32_t knob_y_{0};
-  // the screen went dark only because HA was gone (the Connecting screen):
-  // when the board is back, the idle rules decide again, as if untouched all
-  // along - an animation keeps it up dimmed, a clock comes - for a while
-  // (resume_at_: then the tiles' states are in), else it stays dark
-  bool offline_slept_{false};
-  uint32_t resume_at_{0};
-  bool updating_{false};
   lv_obj_t *sleep_overlay_{nullptr};
   void apply_backlight_();
-  void sleep_();
-  void wake_();
   BusyIcons boot_busy_;
   lv_obj_t *boot_busy_obj_{nullptr};
 };

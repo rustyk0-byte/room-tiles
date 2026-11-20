@@ -48,9 +48,6 @@ static const uint32_t FIRMWARE_RETRY_MS = 10 * 60 * 1000;
 // the clock, dimmed) - or this long untouched when it never goes idle
 static const uint32_t AUTO_UPDATE_UNTOUCHED_MS = 10 * 60 * 1000;
 static const uint32_t PICK_RESEND_MS = 15 * 1000;
-// HA gone while a panel is idle on its clock: "Connecting…" shows dimmed this
-// long, then the screen goes dark (idle_loop_)
-static const uint32_t OFFLINE_DARK_MS = 10 * 60 * 1000;
 static const int KNOB_SCROLL_PX = 64;  // (a knob click in a list: about one row)
 static const uint32_t KNOB_AGAIN_MS = 500;  // (longer than a scroll animation runs)
 // a fast turn goes further a click: the time since the last click the same
@@ -64,9 +61,6 @@ static int knob_steps(uint32_t gap_ms) {
     return 2;
   return 1;
 }
-// back from HA's absence on a screen it darkened: this long for the tiles'
-// states to show an animation (or the clock to come) before it stays dark
-static const uint32_t RESUME_WINDOW_MS = 15 * 1000;
 static const size_t MAX_BODY = 6 * 1024 * 1024;  // bigger than this is refused
 static const uint32_t RETRY_MS = 30000;
 static const uint32_t THEME_RETRY_MAX_MS = 30 * 60 * 1000;
@@ -162,12 +156,12 @@ void RoomTiles::setup() {
   this->clock24_pref_ = global_preferences->make_preference<uint8_t>(0x5254434Bu /* "RTCK" */);
   if (!this->clock24_pref_.load(&this->clock24_) || this->clock24_ > 2)
     this->clock24_ = 0;
-  // an automatic update while the screen was dark: this start stays dark
-  // (once - set_backlight)
+  // an automatic update while the screen was dark: this start stays dark,
+  // for the same reason (once - set_backlight)
   this->quiet_pref_ = global_preferences->make_preference<uint8_t>(0x52545142u /* "RTQB" */);
   uint8_t dark = 0;
-  if (this->quiet_pref_.load(&dark) && dark == 1) {
-    this->quiet_boot_ = true;
+  if (this->quiet_pref_.load(&dark) && dark >= (uint8_t) DarkWhy::IDLE && dark <= (uint8_t) DarkWhy::CHOICE) {
+    this->quiet_boot_ = (DarkWhy) dark;
     dark = 0;
     this->quiet_pref_.save(&dark);
   }
@@ -263,19 +257,21 @@ void RoomTiles::send_picked_() {
 void RoomTiles::set_backlight(light::LightState *light) {
   this->backlight_ = light;
   this->apply_backlight_();
-  if (this->quiet_boot_) {
-    this->quiet_boot_ = false;
-    ESP_LOGI(TAG, "Updated while the screen was dark: back to dark");
-    this->sleep_();
+  if (this->quiet_boot_ != DarkWhy::NONE) {
+    this->screen_.start_dark(this->quiet_boot_);
+    this->quiet_boot_ = DarkWhy::NONE;
+    ESP_LOGI(TAG, "Updated while the screen was dark: back to %s", this->screen_.describe());
+    this->apply_screen_();
   }
 }
 
 void RoomTiles::backlight_switched(bool on) {
-  // (the panel's own switching finds it already asleep / awake: nothing to do)
-  if (!on && !this->asleep_)
-    this->sleep_();
-  else if (on && this->asleep_)
-    this->wake_();
+  // (the panel's own switching finds it already dark / lit: nothing changes)
+  const bool was_dark = this->screen_.dark();
+  this->screen_.switched(on);
+  if (on && was_dark)
+    lv_display_trigger_activity(nullptr);  // (switched on in HA: counts as use)
+  this->apply_screen_();
 }
 
 void RoomTiles::apply_backlight_() {
@@ -289,7 +285,7 @@ void RoomTiles::apply_backlight_() {
     pct = this->preview_pct_;
   else if (this->dimmed_)
     pct = std::min<int>(pct, this->idle_bright_);
-  const float level = this->asleep_ ? 0.0f : pct / 100.0f;
+  const float level = this->screen_.dark() ? 0.0f : pct / 100.0f;
   auto call = level > 0 ? this->backlight_->turn_on() : this->backlight_->turn_off();
   if (level > 0)
     call.set_brightness(level);
@@ -328,50 +324,78 @@ void RoomTiles::set_queue_autostart(bool on) {
 }
 
 void RoomTiles::set_updating(bool on, bool wake) {
-  this->updating_ = on;
-  if (on && wake)
-    this->wake_();
-  this->apply_backlight_();
+  this->screen_.updating(on, wake);
+  this->apply_screen_();
 }
 
-// Asleep: the backlight off and an opaque layer over everything - the next
-// touch only wakes it (it never reaches a tile under it)
-void RoomTiles::sleep_() {
-  if (this->asleep_)
-    return;
-  this->asleep_ = true;
-  App.set_loop_interval(LOOP_ASLEEP_MS);
-  if (this->sleep_overlay_ == nullptr) {
-    this->sleep_overlay_ = lv_obj_create(lv_layer_top());
-    lv_obj_remove_style_all(this->sleep_overlay_);
-    lv_obj_set_size(this->sleep_overlay_, LV_PCT(100), LV_PCT(100));
-    lv_obj_set_style_bg_color(this->sleep_overlay_, lv_color_hex(0x000000), 0);
-    lv_obj_set_style_bg_opa(this->sleep_overlay_, LV_OPA_COVER, 0);
-    lv_obj_add_flag(this->sleep_overlay_, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(
-        this->sleep_overlay_, [](lv_event_t *e) { static_cast<RoomTiles *>(lv_event_get_user_data(e))->wake_(); },
-        LV_EVENT_PRESSED, this);
+// A touch on the dark screen (its overlay) or the knob: it only wakes
+bool RoomTiles::touch_wake_() {
+  if (!this->screen_.touched())
+    return false;
+  this->apply_screen_();
+  return true;
+}
+
+// The screen as the policy says (screen_policy.h): the backlight, the dark
+// overlay, the idle clock, the loop's pace. Dark: the backlight off and an
+// opaque layer over everything - the next touch only wakes it (it never
+// reaches a tile under it).
+void RoomTiles::apply_screen_() {
+  const Screen s = this->screen_.now();
+  const bool changed = s != this->shown_screen_;
+  if (changed) {
+    const bool was_dark = this->shown_screen_ == Screen::DARK;
+    this->shown_screen_ = s;  // (first: the backlight's own callback finds it so)
+    ESP_LOGI(TAG, "Screen: %s", this->screen_.describe());
+    if (s == Screen::DARK) {
+      App.set_loop_interval(LOOP_ASLEEP_MS);
+      if (this->sleep_overlay_ == nullptr) {
+        this->sleep_overlay_ = lv_obj_create(lv_layer_top());
+        lv_obj_remove_style_all(this->sleep_overlay_);
+        lv_obj_set_size(this->sleep_overlay_, LV_PCT(100), LV_PCT(100));
+        lv_obj_set_style_bg_color(this->sleep_overlay_, lv_color_hex(0x000000), 0);
+        lv_obj_set_style_bg_opa(this->sleep_overlay_, LV_OPA_COVER, 0);
+        lv_obj_add_flag(this->sleep_overlay_, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(
+            this->sleep_overlay_,
+            [](lv_event_t *e) { static_cast<RoomTiles *>(lv_event_get_user_data(e))->touch_wake_(); },
+            LV_EVENT_PRESSED, this);
+      }
+      lv_obj_remove_flag(this->sleep_overlay_, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_move_foreground(this->sleep_overlay_);
+    } else if (was_dark) {
+      App.set_loop_interval(LOOP_AWAKE_MS);
+      // (hidden after this touch is done with it: the release mustn't reach what's under it)
+      lv_async_call([](void *p) {
+        auto *self = static_cast<RoomTiles *>(p);
+        if (!self->screen_.dark() && self->sleep_overlay_ != nullptr)
+          lv_obj_add_flag(self->sleep_overlay_, LV_OBJ_FLAG_HIDDEN);
+      }, this);
+    }
   }
-  lv_obj_remove_flag(this->sleep_overlay_, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_move_foreground(this->sleep_overlay_);
-  this->apply_backlight_();
-}
-
-void RoomTiles::wake_() {
-  if (!this->asleep_)
-    return;
-  this->asleep_ = false;
-  this->offline_slept_ = false;
-  this->lights_slept_ = false;
-  this->resume_at_ = 0;
-  App.set_loop_interval(LOOP_AWAKE_MS);
-  // (hidden after this touch is done with it: the release mustn't reach what's under it)
-  lv_async_call([](void *p) {
-    auto *self = static_cast<RoomTiles *>(p);
-    if (!self->asleep_ && self->sleep_overlay_ != nullptr)
-      lv_obj_add_flag(self->sleep_overlay_, LV_OBJ_FLAG_HIDDEN);
-  }, this);
-  this->apply_backlight_();
+  // the idle clock: up while the policy says so - never while dark (the
+  // first touch must reach the overlay); a finger on it keeps it until let
+  // go (its own release takes it down)
+  if (s == Screen::CLOCK && !this->clock_.shown() && this->main_shown_) {
+    const bool round = this->strip_;
+    // the theme's clock: the analog one in a theme without (the setting stays)
+    int face = this->idle_.mode;
+    if (face == IDLE_THEME && this->theme_clock().empty())
+      face = IDLE_ANALOG;
+    this->clock_.show(this, this->board_.fonts(), face, this->idle_.seconds != 0, round ? 480 : 1024, round ? 480 : 600);
+  } else if (s != Screen::CLOCK && this->clock_.shown() && (!this->clock_.pressed() || s == Screen::DARK)) {
+    this->clock_.hide();
+  }
+  this->clock_.tick();
+  // the idle brightness: the clock up, a board an animation keeps, "Connecting…"
+  const bool dim = s == Screen::DIMMED || this->clock_.shown();
+  if (dim != this->dimmed_) {
+    this->dimmed_ = dim;
+    this->preview_pct_ = 0;  // (a slider left mid-move)
+    this->apply_backlight_();
+  } else if (changed) {
+    this->apply_backlight_();
+  }
 }
 
 void RoomTiles::choose_language(const std::string &code) { this->pick_("language", code); }
@@ -457,11 +481,11 @@ void RoomTiles::set_idle_lights_off(bool on) {
   this->idle_lights_pref_.save(&this->idle_lights_);
 }
 
-bool RoomTiles::room_dark_() {
+Lights RoomTiles::room_lights_() {
   // the room the panel is in (its HA device's area), whatever area it shows
   const std::vector<std::string> &lights = this->model_.room_lights;
-  if (lights.empty())
-    return false;  // (no room in HA, or no lights button there: the clock as usual)
+  if (!this->idle_lights_ || lights.empty())
+    return Lights::UNKNOWN;  // (the setting off, no room in HA, or no lights button there: as usual)
   std::string key;
   for (const std::string &l : lights)
     key += l + ",";
@@ -474,90 +498,30 @@ bool RoomTiles::room_dark_() {
   for (const std::string &l : lights) {
     const std::string &s = this->states_.get(l);
     if (s == "on")
-      return false;
+      return Lights::ON;
     off = off || s == "off";
   }
-  return off;  // (none known yet, or all unavailable: not "off")
+  return off ? Lights::OFF : Lights::UNKNOWN;  // (none known yet, or all unavailable: not "off")
 }
 
-// After the sleep time untouched: the screen off, or the clock (the
-// setting) at the idle brightness. A tile in view animating ("Animations
-// keep tiles visible") keeps the board up instead - dimmed to the idle
-// brightness. "Screen off when the following area lights are off": while the lights of the
-// room the panel is in (its HA device's area, not the area shown) are all
-// off, the screen off instead of either; they come on while it's off (still
-// untouched): the clock (or the kept board) again. The clock goes when the
-// panel is used again (its own touch: on its release - idle_clock.cpp).
+// Each loop: the facts for the screen policy (screen_policy.h - the rules
+// and their tests: firmware/tests/screen_policy_test.cpp), then the screen
+// as it says.
 void RoomTiles::idle_loop_() {
-  const uint32_t inactive = lv_display_get_inactive_time(nullptr);
-  // back from HA's absence (offline_slept_): idle as before it, until touched
-  bool resumed = false;
-  if (this->resume_at_ != 0) {
-    const uint32_t since = millis() - this->resume_at_;
-    if (inactive + 1000 < since || inactive > this->display_.sleep_s * 1000u)
-      this->resume_at_ = 0;  // (touched since, or idle anyway now)
-    else if (this->asleep_ && since > RESUME_WINDOW_MS)
-      this->resume_at_ = 0;  // (nothing to show: it stays dark)
-    else
-      resumed = true;
-  }
-  const bool idle = this->display_.sleep_s > 0 && !this->updating_ && (resumed || inactive > this->display_.sleep_s * 1000u);
-  const bool dark = this->idle_lights_ && this->main_shown_ && idle && this->room_dark_();
-  const bool keep = !dark && this->idle_.anim_keep && this->main_shown_ && this->board_.visible_animating();
-  if (this->lights_slept_ && this->asleep_ && !dark && idle && (keep || this->idle_.mode != IDLE_OFF)) {
-    ESP_LOGI(TAG, "The room's lights came on: %s", keep ? "an animation keeps the board up" : "the idle clock");
-    this->dim_(true);  // (straight to the idle brightness)
-    this->wake_();
-  }
-  if (resumed && this->asleep_ && this->main_shown_ && idle && !dark && (keep || this->idle_.mode != IDLE_OFF)) {
-    ESP_LOGI(TAG, "Home Assistant back: %s", keep ? "an animation keeps the board up" : "the idle clock");
-    const uint32_t at = this->resume_at_;
-    this->dim_(true);  // (straight to the idle brightness: never the full one)
-    this->wake_();
-    this->resume_at_ = at;  // (wake_ ends it for a touch: not this one)
-  }
-  if (this->idle_.mode == IDLE_OFF || dark || !this->main_shown_) {
-    this->clock_.hide();
-    // HA gone while idle on the clock (not dark by choice): "Connecting to
-    // Home Assistant…" at the idle brightness for OFFLINE_DARK_MS - an HA
-    // restart passes lit - then dark: if HA stays away, say overnight, a
-    // dark screen keeps nobody awake
-    const bool waiting = !this->main_shown_ && this->offline_ && this->idle_.mode != IDLE_OFF && !this->asleep_ &&
-                         this->offline_since_ != 0 && millis() - this->offline_since_ < OFFLINE_DARK_MS;
-    // an animation keeps the board up, dimmed; else the screen goes dark
-    // (also on the boot screen while HA is gone, once that's past)
-    this->dim_(idle && (keep || waiting));
-    if (idle && !keep && !waiting && (this->main_shown_ || this->offline_) && !this->asleep_) {
-      this->sleep_();
-      this->offline_slept_ = !this->main_shown_;  // (HA's absence did it: undone when it's back)
-      this->lights_slept_ = dark;                 // (the lights did it: undone when they come on)
-    }
-    return;
-  }
-  if (idle && !keep && !this->clock_.shown() && !this->asleep_) {
-    // (never while dark: the first touch must reach the sleep overlay - wake)
-    const bool round = this->strip_;
-    // the theme's clock: the analog one in a theme without (the setting stays)
-    int face = this->idle_.mode;
-    if (face == IDLE_THEME && this->theme_clock().empty())
-      face = IDLE_ANALOG;
-    this->clock_.show(this, this->board_.fonts(), face, this->idle_.seconds != 0, round ? 480 : 1024, round ? 480 : 600);
-  } else if (this->clock_.shown() && !this->clock_.pressed() && (keep || !idle)) {
-    this->clock_.hide();  // (an animation in view, or the knob turned)
-  }
-  this->clock_.tick();
-  // the idle brightness: the clock up (until its own touch takes it down), or
-  // the board an animation keeps, past the sleep time
-  this->dim_(this->clock_.shown() || (idle && keep));
+  ScreenFacts f;
+  f.now = millis();
+  f.idle_ms = lv_display_get_inactive_time(nullptr);
+  f.sleep_ms = this->display_.sleep_s * 1000u;
+  f.board = this->main_shown_;
+  f.away = this->offline_;
+  f.away_ms = this->offline_since_ != 0 ? f.now - this->offline_since_ : 0;
+  f.room = this->main_shown_ ? this->room_lights_() : Lights::UNKNOWN;
+  f.clock = this->idle_.mode != IDLE_OFF;
+  f.animating = this->idle_.anim_keep && this->main_shown_ && this->board_.visible_animating();
+  this->screen_.step(f);
+  this->apply_screen_();
 }
 
-void RoomTiles::dim_(bool on) {
-  if (on == this->dimmed_)
-    return;
-  this->dimmed_ = on;
-  this->preview_pct_ = 0;  // (a slider left mid-move)
-  this->apply_backlight_();
-}
 
 // The topmost thing that scrolls up and down under `obj` (a page's list, a
 // dialog's column, the language list) - nullptr when nothing does.
@@ -575,10 +539,8 @@ static lv_obj_t *vertical_scroller(lv_obj_t *obj) {
 
 void RoomTiles::knob_turn(int clicks) {
   lv_display_trigger_activity(nullptr);  // (the screen's idle time)
-  if (this->asleep_) {
-    this->wake_();
+  if (this->touch_wake_())
     return;
-  }
   const uint32_t now = millis();
   const int dir = clicks > 0 ? 1 : -1;
   const bool again = now - this->knob_ms_ < KNOB_AGAIN_MS;  // (its scroll may still run)
@@ -607,10 +569,8 @@ void RoomTiles::knob_turn(int clicks) {
 
 void RoomTiles::knob_press() {
   lv_display_trigger_activity(nullptr);
-  if (this->asleep_) {
-    this->wake_();
+  if (this->touch_wake_())
     return;
-  }
   this->board_.knob_press();
 }
 
@@ -632,14 +592,14 @@ void RoomTiles::show_screen_(bool main) {
   if (main == this->main_shown_)
     return;
   this->main_shown_ = main;
-  // the board appearing counts as use: the idle time (the screen off / the
-  // clock) starts now, not at the last touch - after a boot there's none
-  if (main)
-    lv_display_trigger_activity(nullptr);
-  // dark only because HA was gone: idle again as before (idle_loop_)
-  if (main && this->offline_slept_ && this->asleep_) {
-    this->offline_slept_ = false;
-    this->resume_at_ = millis() | 1;
+  // the board's first appearance counts as use: the idle time (the screen
+  // off / the clock) starts now - after a boot there's been none. Not its
+  // return after HA's absence (idle as before it), nor a start that's dark
+  // (an update made while dark: idle until used)
+  if (main && !this->board_shown_once_) {
+    this->board_shown_once_ = true;
+    if (!this->screen_.dark())
+      lv_display_trigger_activity(nullptr);
   }
   for (auto *t : this->screen_triggers_)
     t->trigger(main);
@@ -1255,7 +1215,7 @@ void RoomTiles::loop() {
   this->wifi_setup_.loop();
   // dark: the sleep overlay over everything on the top layer (the Wi-Fi
   // setup keeps itself on top of the rest) - a first touch only wakes
-  if (this->asleep_ && this->sleep_overlay_ != nullptr &&
+  if (this->screen_.dark() && this->sleep_overlay_ != nullptr &&
       lv_obj_get_index(this->sleep_overlay_) != (int32_t) lv_obj_get_child_count(lv_layer_top()) - 1)
     lv_obj_move_foreground(this->sleep_overlay_);
   // the boot screen's big stopwatch: while it waits (no progress bar then)
@@ -1296,7 +1256,7 @@ void RoomTiles::loop() {
         this->write_started_ms_ = millis();
         // (an automatic one while the screen was dark: it stays dark - and
         // comes back dark: quiet_pref_)
-        this->set_updating(true, !(this->want_auto_ && this->update_dark_));
+        this->set_updating(true, !(this->want_auto_ && this->update_dark_ != DarkWhy::NONE));
         this->percent_.store(0);
         this->step_.store(WRITE);
       } else {
@@ -1367,7 +1327,7 @@ void RoomTiles::loop() {
 // idle time only, whatever is on screen - idle (dark, the clock, or dimmed:
 // also a board an animation keeps up), or untouched a good while
 bool RoomTiles::unused_() const {
-  return this->asleep_ || this->dimmed_ || lv_display_get_inactive_time(nullptr) > AUTO_UPDATE_UNTOUCHED_MS;
+  return this->screen_.now() != Screen::LIT || lv_display_get_inactive_time(nullptr) > AUTO_UPDATE_UNTOUCHED_MS;
 }
 
 // the theme that failed: again only after its wait (longer each time)
@@ -1446,11 +1406,11 @@ void RoomTiles::start_job_(Job job) {
   else if (job == JOB_FIRMWARE)
     this->say_("panel.update_downloading", "Downloading the update…");
   if (job == JOB_FIRMWARE) {
-    // dark by choice (idle: the screen off; the room's lights off): the
-    // update stays dark and the panel comes back dark - not dark only
-    // because HA was gone (offline_slept_: HA restarting for this very
+    // dark (idle: the screen off; the room's lights off; switched off): the
+    // update stays dark and the panel comes back dark, for the same reason -
+    // not dark only because HA was gone (HA restarting for this very
     // update): that one shows its progress and comes back lit
-    this->update_dark_ = this->asleep_ && !this->offline_slept_;
+    this->update_dark_ = this->screen_.dark() && this->screen_.why() != DarkWhy::AWAY ? this->screen_.why() : DarkWhy::NONE;
     ESP_LOGI(TAG, "Firmware update: build %s (%u KB) - this one is %s", this->want_build_.c_str(),
              (unsigned) (this->want_size_ / 1024), this->build_.c_str());
     this->take_board_down_();  // (the boot screen and its progress bar)
@@ -1898,8 +1858,8 @@ void RoomTiles::finish_firmware_() {
              this->want_build_.c_str(), (unsigned) (this->body_len_ / 1024), this->write_started_ms_ - this->job_started_ms_,
              millis() - this->write_started_ms_);
     this->say_("panel.update_restarting", "Restarting…");
-    if (this->want_auto_ && this->update_dark_) {
-      const uint8_t dark = 1;  // (back dark after the restart: set_backlight)
+    if (this->want_auto_ && this->update_dark_ != DarkWhy::NONE) {
+      const uint8_t dark = (uint8_t) this->update_dark_;  // (back dark after the restart, for its reason: set_backlight)
       this->quiet_pref_.save(&dark);
       global_preferences->sync();
     }
