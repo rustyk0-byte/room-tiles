@@ -60,8 +60,8 @@ jobs:
           (cd frontend && npm install --no-audit --no-fund)
           python assets/build_web.py custom_components/room_tiles/frontend
           python tools/make_site.py site --demo-data demo-data --images images
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
