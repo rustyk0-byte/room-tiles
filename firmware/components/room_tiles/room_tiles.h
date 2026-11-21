@@ -245,6 +245,7 @@ class RoomTiles : public Component {
   static esp_err_t job_http_event_(esp_http_client_event_t *evt);
   bool sign_(const char *path, const std::string &params, std::string &query);
   bool theme_due_() const;
+  bool strings_due_() const;
   void start_job_(Job job);
   void finish_payload_();
   void finish_pack_();
@@ -357,11 +358,21 @@ class RoomTiles : public Component {
   bool unused_() const;
   std::string failed_build_;
   uint32_t failed_at_{0};
-  // a theme pack that failed (download, check, write): tried again later and
-  // later (30 s, 1 min, 2 min ... 30 min), the board left up meanwhile
-  std::string failed_theme_;
-  uint32_t failed_theme_at_{0};
-  uint8_t theme_fails_{0};
+  // a pack that didn't come as asked - it failed (download, check, write)
+  // or HA sent another one: tried again later and later (30 s, 1 min,
+  // 2 min ... 30 min), the board left up meanwhile - never a loop
+  struct PackTries {
+    std::string failed;
+    uint32_t at{0};
+    uint8_t fails{0};
+    bool due(const std::string &want, uint32_t now, uint32_t first_ms, uint32_t max_ms) const;
+    void note(const std::string &want, bool ok, uint32_t now);
+    void reset() {
+      this->fails = 0;
+      this->failed.clear();
+    }
+  };
+  PackTries theme_tries_, strings_tries_;
   bool pack_released_{false};  // (the stored pack let go of for its write: reloaded after it)
   bool strip_{false};
   bool map_{true};

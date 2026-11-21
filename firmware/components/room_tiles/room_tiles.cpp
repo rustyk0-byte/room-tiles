@@ -412,8 +412,7 @@ void RoomTiles::choose_theme(const std::string &name) {
   this->pick_("theme", name);
   if (name == this->model_.theme)
     return;  // (this one already: nothing comes)
-  this->theme_fails_ = 0;  // (asked for: right away, not after an earlier failure's wait)
-  this->failed_theme_.clear();
+  this->theme_tries_.reset();  // (asked for: right away, not after an earlier failure's wait)
   // straight to the boot screen (loop() takes the board down - this runs in
   // the settings' own tap)
   this->theme_asked_ms_ = millis() | 1;
@@ -620,7 +619,7 @@ void RoomTiles::maybe_show_board_() {
     return;
   // (a theme waiting out its failures' backoff isn't coming now: the board
   // goes up without it meanwhile)
-  const bool packs_pending = (!this->want_strings_.empty() && this->want_strings_ != this->assets_.pack_id(PACK_STRINGS)) ||
+  const bool packs_pending = (!this->want_strings_.empty() && this->want_strings_ != this->assets_.pack_id(PACK_STRINGS) && this->strings_due_()) ||
                              (!this->want_theme_.empty() && this->want_theme_ != this->assets_.pack_id(PACK_THEME) && this->theme_due_());
   if (packs_pending && !this->main_shown_ && this->retry_at_ == 0)
     return;  // it's coming: keep the boot screen up meanwhile
@@ -1327,7 +1326,7 @@ void RoomTiles::loop() {
     this->start_job_(JOB_PAYLOAD);
   } else if (firmware && (!this->want_auto_ || this->unused_())) {
     this->start_job_(JOB_FIRMWARE);  // an update HA offers: before packs (it may want new ones)
-  } else if (!this->want_strings_.empty() && this->want_strings_ != this->assets_.pack_id(PACK_STRINGS)) {
+  } else if (!this->want_strings_.empty() && this->want_strings_ != this->assets_.pack_id(PACK_STRINGS) && this->strings_due_()) {
     this->start_job_(JOB_STRINGS);  // small and changes the words: first
   } else if (!this->want_theme_.empty() && this->want_theme_ != this->assets_.pack_id(PACK_THEME) && theme_due) {
     this->start_job_(JOB_THEME);
@@ -1342,11 +1341,26 @@ bool RoomTiles::unused_() const {
 }
 
 // the theme that failed: again only after its wait (longer each time)
-bool RoomTiles::theme_due_() const {
-  if (this->theme_fails_ == 0 || this->want_theme_ != this->failed_theme_)
+bool RoomTiles::theme_due_() const { return this->theme_tries_.due(this->want_theme_, millis(), RETRY_MS, THEME_RETRY_MAX_MS); }
+bool RoomTiles::strings_due_() const {
+  return this->strings_tries_.due(this->want_strings_, millis(), RETRY_MS, THEME_RETRY_MAX_MS);
+}
+
+bool RoomTiles::PackTries::due(const std::string &want, uint32_t now, uint32_t first_ms, uint32_t max_ms) const {
+  if (this->fails == 0 || want != this->failed)
     return true;
-  const uint32_t wait = std::min<uint32_t>(THEME_RETRY_MAX_MS, RETRY_MS << std::min<int>(this->theme_fails_ - 1, 6));
-  return millis() - this->failed_theme_at_ >= wait;
+  const uint32_t wait = std::min<uint32_t>(max_ms, first_ms << std::min<int>(this->fails - 1, 6));
+  return now - this->at >= wait;
+}
+
+void RoomTiles::PackTries::note(const std::string &want, bool ok, uint32_t now) {
+  if (ok) {
+    this->reset();
+    return;
+  }
+  this->fails = this->failed == want ? (uint8_t) std::min(this->fails + 1, 20) : 1;
+  this->failed = want;
+  this->at = now;
 }
 
 void RoomTiles::download_again() {
@@ -1361,8 +1375,8 @@ void RoomTiles::download_again() {
   this->assets_.forget(PACK_STRINGS);
   this->assets_changed_();
   this->retry_at_ = 0;
-  this->theme_fails_ = 0;  // (asked for: right away, not after an earlier failure's wait)
-  this->failed_theme_.clear();
+  this->theme_tries_.reset();  // (asked for: right away, not after an earlier failure's wait)
+  this->strings_tries_.reset();
 }
 
 bool RoomTiles::sign_(const char *path, const std::string &params, std::string &query) {
@@ -1473,7 +1487,7 @@ void RoomTiles::start_job_(Job job) {
     // it's saved - but a try again after a failure leaves the board up
     // until the pack is in hand (READY takes it down to save it)
     this->theme_asked_ms_ = 0;
-    if (this->failed_theme_ != this->want_theme_)
+    if (this->theme_tries_.failed != this->want_theme_)
       this->take_board_down_();
   }
   this->step_.store(BUSY);
@@ -2019,16 +2033,13 @@ void RoomTiles::finish_pack_() {
   } else {
     ESP_LOGW(TAG, "%s pack: HTTP %d", what, this->http_status_);
   }
-  if (kind == PACK_THEME) {
-    if (written) {
-      this->theme_fails_ = 0;
-      this->failed_theme_.clear();
-    } else {
-      this->theme_fails_ = this->failed_theme_ == this->want_theme_ ? (uint8_t) std::min(this->theme_fails_ + 1, 20) : 1;
-      this->failed_theme_ = this->want_theme_;
-      this->failed_theme_at_ = millis();
-    }
-  }
+  // (saved, but not the one asked for - HA sent another: a failed try too,
+  // or it would be asked for again and again, the flash written each time)
+  const std::string &want = kind == PACK_THEME ? this->want_theme_ : this->want_strings_;
+  const bool as_asked = written && this->pack_id_ == want;
+  if (written && !as_asked)
+    ESP_LOGW(TAG, "%s pack: asked for %s, got %s - asking again later", what, want.c_str(), this->pack_id_.c_str());
+  (kind == PACK_THEME ? this->theme_tries_ : this->strings_tries_).note(want, as_asked, millis());
   const bool released = this->pack_released_;
   this->pack_released_ = false;
   if (!written && !released) {
