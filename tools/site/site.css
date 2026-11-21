@@ -368,6 +368,27 @@ footer .support {
   }
 }
 
+/* ---- the panels' own screens (1024 x 600) ---- */
+.screens {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+.screens figure img {
+  aspect-ratio: 1024 / 600;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+@media (max-width: 900px) {
+  .screens {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .screens {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---- the gallery (gallery/, and its few on the landing page) ---- */
 .gallery-head {
   padding: 56px 0 24px;
