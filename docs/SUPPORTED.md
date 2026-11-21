@@ -78,6 +78,11 @@ is wired differently (the firmware handles both). V1.1 and V1.2 differ
 only in parts Room Tiles doesn't use, so they run the same firmware - V1.1
 with the Wi-Fi chip's link at half speed until one is confirmed.
 
+**Have another ESP32 touch panel?** Help bring Room Tiles to it - see
+[Another touch panel](../CONTRIBUTING.md#another-touch-panel) in
+CONTRIBUTING.md. Trying a beta board above and telling us how it went
+helps too.
+
 ## Everyday devices: any brand
 
 Lights, switches, fans, covers (blinds, shades, garage doors), locks,

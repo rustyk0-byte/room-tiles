@@ -30,6 +30,30 @@ before you put the work in.
   `esphome compile room-tiles-<board>.yaml` (ESPHome version: see
   `.github/workflows/firmware.yml`).
 
+## Another touch panel
+
+Room Tiles' firmware is one ESPHome configuration for every panel; a new
+panel is mostly a board file. Ports to more ESP32 touch panels are very
+welcome.
+
+What a panel needs: an ESP32-P4 or ESP32-S3 with PSRAM, 16 MB of flash, and
+a screen and touch that ESPHome's LVGL can drive. A 1024x600 screen gets
+the full layout; a smaller or round one can show a room's tiles in one strip
+(`layout: strip` and `map: false` in its board file, like the 2.1" round
+panel).
+
+1. Open an issue first with the panel's name and a link, so we can agree on
+   the approach.
+2. Add the hardware in `firmware/boards/` (display, touch, backlight and
+   the rest - start from the closest existing board) and a device file in
+   `firmware/devices/`, named by what's printed on the board.
+3. Build it and try it on your panel (see "Running the checks yourself"):
+   install, Wi-Fi setup, the tiles, an update.
+4. Open the pull request with what you tried, and add the panel to
+   [docs/SUPPORTED.md](docs/SUPPORTED.md) as "Beta".
+
+[firmware/README.md](firmware/README.md) explains the firmware's folders.
+
 ## Reports as tests
 
 A model report or problem report on GitHub carries a recorded cycle. To keep
