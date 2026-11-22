@@ -1115,6 +1115,10 @@ show and use what the integration holds; nothing about a house is compiled in.
   the browser). English is in the bundle; every other language is its own
   small file (its text + the status wording, ~20 KB gzip), loaded when a
   device shows it - a page downloads one language, not seven (i18n.ts).
+- **Download size:** every .js the dashboard loads has a .gz copy beside it
+  (build.mjs) - HA sends that to any browser that takes gzip, about a
+  quarter of the size (HA doesn't compress these files on its own); a page
+  loads only its theme's pictures.
   Opening the settings menu loads the rest, so switching stays instant; a
   page's first language is waited for (never a flash of English), a later
   switch keeps the old one until the new one is in. The integration's own
