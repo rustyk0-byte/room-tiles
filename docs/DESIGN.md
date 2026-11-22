@@ -1098,6 +1098,13 @@ show and use what the integration holds; nothing about a house is compiled in.
   Tiles covers HA's sidebar and header (full screen; a button shows HA's menu
   again); per-device setting, default on for touch, off for mouse devices.
 - Orientation comes from the window's shape, not HA's "narrow" flag.
+- **Compact tiles:** a tile drawn small on this screen - by its real width,
+  not 5x2 vs 6x3 (a phone's 6x3, a phone held sideways) - reads like the
+  panels' small tiles: under 140 px its words a step larger for its size,
+  the word beside the roller and the thermostat's band left out (the icon
+  says what it is); under 100 px a step more. CSS container queries on
+  the tile, nothing to set. The appliance tile is sized with the tile like
+  the rest (MIRRORED with the panels' build_appliance_).
 - **Tile layout (5x2 / 6x3) is per area and per device**, like the panels;
   the grid button next to the area name switches it (no settings-menu entry).
 - Top bar: menu, area name (opens the area picker), area lights (Done while

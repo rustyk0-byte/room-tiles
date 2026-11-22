@@ -259,14 +259,6 @@ settings). Nothing left.
   settings: heat or chill, the "pump with heater" setting, spa mode on a
   shared system; a press elsewhere on the tile keeps opening the HA Card
   (the heater's thermostat dialog) like now.
-- **Compact tiles on the web** (nice to have): in the browser, text / SVG
-  are always sharp and sprites scale smoothly, so it's only about
-  legibility and layout. Switch on the tile's REAL rendered size, not on
-  5x2 vs 6x3 (web resolution varies per device: a 6x3 tile on a big monitor
-  can beat a 5x2 tile on a phone): below a threshold width the tile gets the
-  panels' small-tile rules - text a step larger relative to the tile,
-  roller / swatch pinned top-right with labels clear of the icon, appliance
-  pictures + text fitted.
 - **Webhooks and NFC tags** - run a Room Tiles action from outside the
   dashboard. Actions: vacuum (add an area to a robot's queue, start unless
   told not to), tile (toggle / on / off / open / close / stop an entity

@@ -4754,13 +4754,13 @@ export class RoomTilesPanel extends LitElement {
       color: var(--rt-text-secondary);
       text-transform: capitalize;
     }
+    /* (the units inside: applianceStyles in appliance, sized with the tile) */
     .appliance-body {
       position: absolute;
       top: calc(50 * var(--u));
       left: calc(12 * var(--u));
       right: calc(12 * var(--u));
-      bottom: calc(12 * var(--u));
-      font-size: calc(16 * var(--u));
+      bottom: calc(4 * var(--u));
     }
     .map-art {
       top: calc(98 * var(--u));
@@ -4778,6 +4778,53 @@ export class RoomTilesPanel extends LitElement {
       transform: translateX(-50%);
       --mdc-icon-size: calc(80 * var(--u));
       color: var(--rt-accent);
+    }
+    /* Compact tiles: a tile drawn small on THIS screen (its real width - a
+       phone's 6x3, a phone held sideways) reads like the panels' small
+       tiles: its words a step larger for its size, the roller's word beside
+       it left out (the icon says what it is), the thermostat's band too.
+       Two steps: small, and very small. (Last in the styles: it overrides
+       the tiles' own rules.) */
+    @container (max-width: 140px) {
+      .name {
+        top: calc(10 * var(--u));
+        left: calc(5 * var(--u));
+        right: calc(5 * var(--u));
+        font-size: calc(26 * var(--u));
+        line-height: calc(30 * var(--u));
+      }
+      .prefix,
+      .band {
+        display: none;
+      }
+      .thermo-status,
+      .state-center {
+        font-size: calc(19 * var(--u));
+        line-height: calc(23 * var(--u));
+      }
+      .vac-line {
+        font-size: calc(18 * var(--u));
+        line-height: calc(21 * var(--u));
+      }
+      .vac-note {
+        font-size: calc(16 * var(--u));
+        line-height: calc(19 * var(--u));
+      }
+    }
+    @container (max-width: 100px) {
+      .name {
+        font-size: calc(28 * var(--u));
+        line-height: calc(32 * var(--u));
+      }
+      .thermo-status,
+      .state-center {
+        font-size: calc(22 * var(--u));
+        line-height: calc(26 * var(--u));
+      }
+      .vac-line {
+        font-size: calc(21 * var(--u));
+        line-height: calc(24 * var(--u));
+      }
     }
   `];
 }

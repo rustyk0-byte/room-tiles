@@ -112,11 +112,16 @@ export const applianceStyles = css`
   .cell.editing .appliance * {
     pointer-events: none;
   }
+  /* Sized with the tile (--u: one of the panel tile's 198 design px) -
+     MIRRORED: firmware/components/room_tiles/board_kinds.cpp build_appliance_:
+     each unit a half - its 96 px picture, the name and the step beside it
+     (16 px), the step wrapped to its column. */
   /* one unit: exactly a half's layout, centred vertically in the tile */
   .appliance {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: calc(2 * var(--u, 1px));
+    --rt-appliance-size: calc(96 * var(--u, 1px));
     width: 100%;
     height: 100%;
     justify-content: space-around;
@@ -130,15 +135,15 @@ export const applianceStyles = css`
     display: grid;
     grid-template-columns: auto 1fr;
     grid-template-rows: auto auto;
-    column-gap: 8px;
+    column-gap: calc(4 * var(--u, 1px));
     align-items: center;
     min-width: 0;
   }
   .appl-pic {
     grid-row: span 2;
     position: relative;
-    width: var(--rt-appliance-size, 56px);
-    height: var(--rt-appliance-size, 56px);
+    width: var(--rt-appliance-size);
+    height: var(--rt-appliance-size);
   }
   .appl-base,
   .appl-anim {
@@ -181,17 +186,32 @@ export const applianceStyles = css`
     animation: none;
   }
   .appl-label {
-    font-size: 0.95rem;
+    font-size: calc(16 * var(--u, 1px));
+    line-height: calc(20 * var(--u, 1px));
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .appl-status {
-    font-size: 0.8rem;
+    font-size: calc(16 * var(--u, 1px));
+    line-height: calc(20 * var(--u, 1px));
     color: var(--rt-text-secondary);
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+  /* a compact tile (the panel's "Compact tiles" styles): the words a step
+     larger, the picture a little smaller to leave them room */
+  @container (max-width: 140px) {
+    .appliance {
+      --rt-appliance-size: calc(80 * var(--u, 1px));
+    }
+    .appl-label,
+    .appl-status {
+      font-size: calc(19 * var(--u, 1px));
+      line-height: calc(23 * var(--u, 1px));
+    }
   }
   .appl-time {
     color: var(--rt-light);
