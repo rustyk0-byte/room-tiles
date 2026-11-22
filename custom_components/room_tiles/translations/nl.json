@@ -699,6 +699,46 @@
           "description": "Met add: start de wachtrij als de stofzuiger niets doet (hervat nooit een gepauzeerde)."
         }
       }
+    },
+    "backup_map": {
+      "name": "Kaart back-uppen",
+      "description": "Bewaart een back-up van de tekening, lagen en markeringen van een kaart.",
+      "fields": {
+        "map": {
+          "name": "Kaart",
+          "description": "Kaart-ID."
+        }
+      }
+    },
+    "map_backups": {
+      "name": "Kaartback-ups",
+      "description": "Toont de back-ups van een kaart, de nieuwste eerst.",
+      "fields": {
+        "map": {
+          "name": "Kaart",
+          "description": "Kaart-ID."
+        }
+      }
+    },
+    "restore_map_backup": {
+      "name": "Kaartback-up terugzetten",
+      "description": "Zet een back-up terug op zijn kaart. Eerst wordt de huidige kaart geback-upt.",
+      "fields": {
+        "backup": {
+          "name": "Back-up",
+          "description": "Back-up-ID."
+        }
+      }
+    },
+    "delete_map_backup": {
+      "name": "Kaartback-up verwijderen",
+      "description": "Verwijdert een kaartback-up.",
+      "fields": {
+        "backup": {
+          "name": "Back-up",
+          "description": "Back-up-ID."
+        }
+      }
     }
   }
 }

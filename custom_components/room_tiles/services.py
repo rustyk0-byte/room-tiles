@@ -437,6 +437,57 @@ async def _add_map(call: ServiceCall) -> dict[str, Any]:
 
 async def _remove_map(call: ServiceCall) -> None:
     _edit(call, lambda w: ops.remove_map(w, call.data["map"]))
+    _store(call.hass).map_backups.drop_map(call.data["map"])
+
+
+# ---- map backups (Map settings > Backups - map_backups.py) ----
+MAP_BACKUP_SCHEMA = vol.Schema({vol.Required("map"): cv.string})
+BACKUP_ID_SCHEMA = vol.Schema({vol.Required("backup"): cv.string})
+
+
+async def _backup_map(call: ServiceCall) -> dict[str, Any]:
+    from . import map_backups
+
+    store = _store(call.hass)
+    try:
+        b = map_backups.snapshot(store.data, call.data["map"])
+    except ModelError as err:
+        raise ServiceValidationError(str(err)) from err
+    store.map_backups.add(b)
+    return {"backup": b["id"]}
+
+
+async def _map_backups(call: ServiceCall) -> dict[str, Any]:
+    from . import map_backups
+
+    return {"backups": [map_backups.summary(b) for b in _store(call.hass).map_backups.of_map(call.data["map"])]}
+
+
+def _backup(call: ServiceCall) -> dict[str, Any]:
+    b = _store(call.hass).map_backups.get(call.data["backup"])
+    if b is None:
+        raise ServiceValidationError(f"no map backup '{call.data['backup']}'")
+    return b
+
+
+async def _restore_map_backup(call: ServiceCall) -> dict[str, Any]:
+    """The backup back on its map; the map as it was is backed up first
+    (its id returned: Restore of that one undoes this)."""
+    from . import map_backups
+
+    store = _store(call.hass)
+    b = _backup(call)
+    if store.data.map(b["map"]) is None:
+        raise ServiceValidationError(f"no map '{b['map']}'")
+    before = map_backups.snapshot(store.data, b["map"], auto=True)
+    _edit(call, lambda w: map_backups.restore(w, b))
+    store.map_backups.add(before)
+    return {"before": before["id"]}
+
+
+async def _delete_map_backup(call: ServiceCall) -> None:
+    _backup(call)
+    _store(call.hass).map_backups.remove(call.data["backup"])
 
 
 async def _order_maps(call: ServiceCall) -> None:
@@ -878,6 +929,10 @@ def async_register_services(hass: HomeAssistant) -> None:
         ("add_map", _add_map, ADD_MAP_SCHEMA, optional),
         ("remove_map", _remove_map, REMOVE_MAP_SCHEMA, SupportsResponse.NONE),
         ("order_maps", _order_maps, ORDER_MAPS_SCHEMA, SupportsResponse.NONE),
+        ("backup_map", _backup_map, MAP_BACKUP_SCHEMA, optional),
+        ("map_backups", _map_backups, MAP_BACKUP_SCHEMA, SupportsResponse.ONLY),
+        ("restore_map_backup", _restore_map_backup, BACKUP_ID_SCHEMA, optional),
+        ("delete_map_backup", _delete_map_backup, BACKUP_ID_SCHEMA, SupportsResponse.NONE),
         ("set_appliance", _set_appliance, SET_APPLIANCE_SCHEMA, optional),
         ("remove_appliance", _remove_appliance, REMOVE_APPLIANCE_SCHEMA, SupportsResponse.NONE),
         ("clear_appliance", _clear_appliance, CLEAR_APPLIANCE_SCHEMA, SupportsResponse.NONE),

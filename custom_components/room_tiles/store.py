@@ -158,10 +158,14 @@ class RoomTilesStore:
         from .cycles import Recordings
 
         self.recordings = Recordings(hass, lambda: self.async_notify(("recordings",)))
+        from .map_backups import MapBackups
+
+        self.map_backups = MapBackups(hass)
 
     async def async_load(self) -> None:
         raw = await self._store.async_load()
         self.data = RoomTilesData.from_dict(raw)
+        await self.map_backups.async_load()
         keys = await self._keys_store.async_load() or {}
         self.panel_keys = {
             str(d): str(k).lower()

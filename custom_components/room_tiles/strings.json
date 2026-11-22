@@ -651,6 +651,46 @@
           "description": "With add: start the queue if the vacuum is idle (never resumes a paused one)."
         }
       }
+    },
+    "backup_map": {
+      "name": "Back up map",
+      "description": "Saves a backup of a map's drawing, layers and markers.",
+      "fields": {
+        "map": {
+          "name": "Map",
+          "description": "Map id."
+        }
+      }
+    },
+    "map_backups": {
+      "name": "Map backups",
+      "description": "Lists a map's backups, newest first.",
+      "fields": {
+        "map": {
+          "name": "Map",
+          "description": "Map id."
+        }
+      }
+    },
+    "restore_map_backup": {
+      "name": "Restore map backup",
+      "description": "Puts a backup back on its map. The map as it is now is backed up first.",
+      "fields": {
+        "backup": {
+          "name": "Backup",
+          "description": "Backup id."
+        }
+      }
+    },
+    "delete_map_backup": {
+      "name": "Delete map backup",
+      "description": "Deletes a map backup.",
+      "fields": {
+        "backup": {
+          "name": "Backup",
+          "description": "Backup id."
+        }
+      }
     }
   },
   "issues": {

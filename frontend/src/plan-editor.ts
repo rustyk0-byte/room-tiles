@@ -57,6 +57,16 @@ import type { ThemeName } from "./theme";
 import "./map-help";
 import "./unsaved";
 import { listOf, num, t as tr, th, tn } from "./i18n";
+import { when } from "./problem";
+
+/** A map backup as the list shows it (integration map_backups.summary). */
+interface MapBackup {
+  id: string;
+  at: string;
+  auto: boolean;
+  layers: number;
+  markers: number;
+}
 
 type Tool = "select" | SegKind | "zone" | "shape" | "link" | "picture";
 
@@ -160,6 +170,8 @@ export class RtPlanEditor extends LitElement {
     _busy: { state: true },
     _confirmDelete: { state: true },
     _confirmClear: { state: true },
+    _backups: { state: true },
+    _confirmRestore: { state: true },
     _newMap: { state: true },
     _newFloor: { state: true },
     _vacuum: { state: true },
@@ -227,6 +239,9 @@ export class RtPlanEditor extends LitElement {
   private _busy = false;
   private _confirmDelete = false;
   private _confirmClear = false; // Map settings' Clear map: asking
+  /** Map settings' Backups: this map's (map_backups.py), newest first */
+  private _backups?: MapBackup[];
+  private _confirmRestore?: string; // a backup's Restore: asking (tap again)
   private _newMap = "";
   /** a room / shape corner picked by tapping its dot (Delete corner) */
   private _corner?: { ref: string; vi: number };
@@ -296,6 +311,10 @@ export class RtPlanEditor extends LitElement {
       this._flashLayers = true;
     }
     if (changed.has("_dialog") && this._dialog !== "settings") this._flashLayers = false;
+    if (changed.has("_dialog") && this._dialog === "settings") {
+      this._confirmRestore = undefined;
+      void this._loadBackups();
+    }
   }
 
   get dirty(): boolean {
@@ -1435,6 +1454,98 @@ export class RtPlanEditor extends LitElement {
     }
   }
 
+  // ---- map backups (Map settings > Backups - the integration's map_backups.py) ----
+
+  private async _loadBackups(): Promise<void> {
+    const id = this._draft?.id;
+    if (!this.hass || !id) return;
+    try {
+      const res = await this.hass.connection.sendMessagePromise?.<{ response?: { backups?: MapBackup[] } }>({
+        type: "call_service",
+        domain: "room_tiles",
+        service: "map_backups",
+        service_data: { map: id },
+        return_response: true,
+      });
+      if (this._draft?.id === id) this._backups = res?.response?.backups ?? [];
+    } catch {
+      this._backups = []; // (an older Room Tiles: no backups yet)
+    }
+  }
+
+  /** Back up this map: unsaved changes are saved first (the backup is the
+   *  map as it shows). */
+  private async _backupMap(): Promise<void> {
+    if (!this.hass || !this._draft) return;
+    if (this.dirty && !(await this._save())) return;
+    this._busy = true;
+    try {
+      await this.hass.callService("room_tiles", "backup_map", { map: this._draft.id });
+      await this._loadBackups();
+    } catch (err) {
+      this._error = tr("editor.err_backup", { error: String((err as { message?: string })?.message ?? err) });
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  /** Restore (tap again to confirm): the map as it is is backed up first by
+   *  the integration ("Before restoring"), so this can be undone the same
+   *  way. The drawing follows the restored map (willUpdate). */
+  private async _restoreBackup(id: string): Promise<void> {
+    if (this._confirmRestore !== id) {
+      this._confirmRestore = id;
+      return;
+    }
+    this._confirmRestore = undefined;
+    if (!this.hass || !this._draft) return;
+    if (this.dirty && !(await this._save())) return;
+    this._busy = true;
+    try {
+      await this.hass.callService("room_tiles", "restore_map_backup", { backup: id });
+      this._sel = [];
+      this._chain = undefined;
+      await this._loadBackups();
+    } catch (err) {
+      this._error = tr("editor.err_restore", { error: String((err as { message?: string })?.message ?? err) });
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  private async _deleteBackup(id: string): Promise<void> {
+    if (!this.hass) return;
+    try {
+      await this.hass.callService("room_tiles", "delete_map_backup", { backup: id });
+      await this._loadBackups();
+    } catch (err) {
+      this._error = tr("editor.err_backup", { error: String((err as { message?: string })?.message ?? err) });
+    }
+  }
+
+  private _renderBackups(): TemplateResult {
+    const list = this._backups;
+    return html`<div class="group">
+      <div class="group-head"><ha-icon icon="mdi:backup-restore"></ha-icon>${tr("editor.backups")}</div>
+      ${list && !list.length ? html`<div class="hint">${tr("editor.backups_none")}</div>` : nothing}
+      ${(list ?? []).map(
+        (b) => html`<div class="setting backup">
+          <span class="label">
+            ${when(this.hass, Date.parse(b.at) / 1000, true)}
+            <span class="backup-what">${b.auto ? tr("editor.backup_auto") + " · " : ""}${tn("editor.backup_layers", b.layers)} · ${tn("editor.n_markers", b.markers)}</span>
+          </span>
+          <button class=${this._confirmRestore === b.id ? "pill primary" : "pill"} ?disabled=${this._busy} @click=${() => this._restoreBackup(b.id)}>
+            ${this._confirmRestore === b.id ? tr("editor.backup_restore_again") : tr("editor.backup_restore")}
+          </button>
+          <button class="icon" title=${tr("editor.backup_delete")} ?disabled=${this._busy} @click=${() => this._deleteBackup(b.id)}>
+            <ha-icon icon="mdi:delete"></ha-icon>
+          </button>
+        </div>`,
+      )}
+      <button class="link" title=${tr("editor.backup_tip")} ?disabled=${this._busy} @click=${() => this._backupMap()}>+ ${tr("editor.backup_now")}</button>
+    </div>`;
+  }
+
   private _orderShown = "";
 
   /** Map settings' map order: the lit map scrolled into view (the row only,
@@ -2320,6 +2431,8 @@ export class RtPlanEditor extends LitElement {
           </div>
           </div>
 
+          ${this._renderBackups()}
+
           <!-- on their own: start over / delete this map -->
           <div class="map-danger">
           <button
@@ -2428,6 +2541,19 @@ export class RtPlanEditor extends LitElement {
         border: 1px solid var(--rt-tile-border);
         background: var(--rt-button);
         color: var(--rt-text);
+      }
+      .backup .pill {
+        color: var(--rt-text);
+        padding: 6px 12px;
+      }
+      .backup .label {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .backup-what {
+        font-size: 0.8rem;
+        color: var(--rt-text-secondary);
       }
       .map-danger {
         display: flex;

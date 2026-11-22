@@ -699,6 +699,46 @@
           "description": "Con add: avvia la coda se l'aspirapolvere è inattivo (non riprende mai uno in pausa)."
         }
       }
+    },
+    "backup_map": {
+      "name": "Backup della mappa",
+      "description": "Salva un backup del disegno, dei livelli e dei marcatori di una mappa.",
+      "fields": {
+        "map": {
+          "name": "Mappa",
+          "description": "ID della mappa."
+        }
+      }
+    },
+    "map_backups": {
+      "name": "Backup della mappa (elenco)",
+      "description": "Elenca i backup di una mappa, dal più recente.",
+      "fields": {
+        "map": {
+          "name": "Mappa",
+          "description": "ID della mappa."
+        }
+      }
+    },
+    "restore_map_backup": {
+      "name": "Ripristina backup della mappa",
+      "description": "Rimette un backup sulla sua mappa. Prima viene salvato un backup della mappa attuale.",
+      "fields": {
+        "backup": {
+          "name": "Backup",
+          "description": "ID del backup."
+        }
+      }
+    },
+    "delete_map_backup": {
+      "name": "Elimina backup della mappa",
+      "description": "Elimina un backup di una mappa.",
+      "fields": {
+        "backup": {
+          "name": "Backup",
+          "description": "ID del backup."
+        }
+      }
     }
   }
 }

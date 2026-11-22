@@ -699,6 +699,46 @@
           "description": "Con add: empieza la cola si el aspirador está inactivo (nunca reanuda uno en pausa)."
         }
       }
+    },
+    "backup_map": {
+      "name": "Copia de seguridad del mapa",
+      "description": "Guarda una copia del dibujo, las capas y los marcadores de un mapa.",
+      "fields": {
+        "map": {
+          "name": "Mapa",
+          "description": "ID del mapa."
+        }
+      }
+    },
+    "map_backups": {
+      "name": "Copias del mapa",
+      "description": "Muestra las copias de un mapa, la más reciente primero.",
+      "fields": {
+        "map": {
+          "name": "Mapa",
+          "description": "ID del mapa."
+        }
+      }
+    },
+    "restore_map_backup": {
+      "name": "Restaurar copia del mapa",
+      "description": "Devuelve una copia a su mapa. Antes se guarda una copia del mapa actual.",
+      "fields": {
+        "backup": {
+          "name": "Copia",
+          "description": "ID de la copia."
+        }
+      }
+    },
+    "delete_map_backup": {
+      "name": "Eliminar copia del mapa",
+      "description": "Elimina una copia de un mapa.",
+      "fields": {
+        "backup": {
+          "name": "Copia",
+          "description": "ID de la copia."
+        }
+      }
     }
   }
 }

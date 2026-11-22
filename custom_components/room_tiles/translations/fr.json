@@ -699,6 +699,46 @@
           "description": "Avec add : lance la file si l'aspirateur est inactif (ne reprend jamais un aspirateur en pause)."
         }
       }
+    },
+    "backup_map": {
+      "name": "Sauvegarder la carte",
+      "description": "Enregistre une sauvegarde du dessin, des calques et des marqueurs d'une carte.",
+      "fields": {
+        "map": {
+          "name": "Carte",
+          "description": "ID de la carte."
+        }
+      }
+    },
+    "map_backups": {
+      "name": "Sauvegardes de la carte",
+      "description": "Liste les sauvegardes d'une carte, la plus récente d'abord.",
+      "fields": {
+        "map": {
+          "name": "Carte",
+          "description": "ID de la carte."
+        }
+      }
+    },
+    "restore_map_backup": {
+      "name": "Restaurer une sauvegarde de carte",
+      "description": "Remet une sauvegarde sur sa carte. La carte actuelle est sauvegardée avant.",
+      "fields": {
+        "backup": {
+          "name": "Sauvegarde",
+          "description": "ID de la sauvegarde."
+        }
+      }
+    },
+    "delete_map_backup": {
+      "name": "Supprimer une sauvegarde de carte",
+      "description": "Supprime une sauvegarde de carte.",
+      "fields": {
+        "backup": {
+          "name": "Sauvegarde",
+          "description": "ID de la sauvegarde."
+        }
+      }
     }
   }
 }

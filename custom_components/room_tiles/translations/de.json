@@ -699,6 +699,46 @@
           "description": "Mit add: die Warteschlange starten, wenn der Sauger untätig ist (setzt nie einen pausierten fort)."
         }
       }
+    },
+    "backup_map": {
+      "name": "Karte sichern",
+      "description": "Speichert eine Sicherung der Zeichnung, Ebenen und Markierungen einer Karte.",
+      "fields": {
+        "map": {
+          "name": "Karte",
+          "description": "Karten-ID."
+        }
+      }
+    },
+    "map_backups": {
+      "name": "Kartensicherungen",
+      "description": "Listet die Sicherungen einer Karte, die neueste zuerst.",
+      "fields": {
+        "map": {
+          "name": "Karte",
+          "description": "Karten-ID."
+        }
+      }
+    },
+    "restore_map_backup": {
+      "name": "Kartensicherung wiederherstellen",
+      "description": "Stellt eine Sicherung auf ihrer Karte wieder her. Die Karte, wie sie jetzt ist, wird vorher gesichert.",
+      "fields": {
+        "backup": {
+          "name": "Sicherung",
+          "description": "Sicherungs-ID."
+        }
+      }
+    },
+    "delete_map_backup": {
+      "name": "Kartensicherung löschen",
+      "description": "Löscht eine Kartensicherung.",
+      "fields": {
+        "backup": {
+          "name": "Sicherung",
+          "description": "Sicherungs-ID."
+        }
+      }
     }
   }
 }

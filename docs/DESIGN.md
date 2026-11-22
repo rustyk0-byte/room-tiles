@@ -1177,6 +1177,16 @@ show and use what the integration holds; nothing about a house is compiled in.
 - Maps are added (New map) / ordered / deleted (Map settings) (add_map,
   order_maps, remove_map act at once, outside the draft; deleting needs a
   second tap). Removing a layer moves its markers to the first layer.
+- **Map backups** (Map settings > Backups; map_backups.py): "Back up this
+  map" saves the drawing, layers and markers as they are (unsaved changes
+  saved first); each backup's Restore (a second tap confirms) puts them
+  back - the map as it is then is backed up first ("Before restoring"), so
+  a restore is undone the same way. Name and HA floor stay (settings, not
+  the drawing); links to maps gone since are left out. 10 per map, the
+  oldest going; a deleted map's go with it. Their own file
+  (.storage/room_tiles.map_backups): in HA's backups, never in exports or
+  payloads. Services backup_map, map_backups, restore_map_backup,
+  delete_map_backup.
 - **Trace picture**: a floor-plan image under the drawing - usually a phone
   photo of a paper plan, so never straight or to scale: move, resize
   (corners), stretch one way (side dots), fine turn (a knob above it, 0.1

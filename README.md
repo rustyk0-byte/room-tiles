@@ -139,7 +139,7 @@ Everyday use works on both: switching rooms, tiles, the lights button, the
 map. Some things live in only one place:
 
 **Only on the dashboard** (phone, tablet or computer):
-- Map editor and Layer editor
+- Map editor and Layer editor (and each map's **Backups**, in Map settings)
 - Areas (with each area's **Area lights**) and Short names
 - Appliances - setting up washers, dryers, dishwashers, pools and vacuums,
   and **Report a problem** with one

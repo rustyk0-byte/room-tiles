@@ -699,6 +699,46 @@
           "description": "Com add: inicia a fila se o aspirador estiver inativo (nunca retoma um em pausa)."
         }
       }
+    },
+    "backup_map": {
+      "name": "Fazer cópia do mapa",
+      "description": "Guarda uma cópia do desenho, das camadas e dos marcadores de um mapa.",
+      "fields": {
+        "map": {
+          "name": "Mapa",
+          "description": "ID do mapa."
+        }
+      }
+    },
+    "map_backups": {
+      "name": "Cópias do mapa",
+      "description": "Lista as cópias de um mapa, a mais recente primeiro.",
+      "fields": {
+        "map": {
+          "name": "Mapa",
+          "description": "ID do mapa."
+        }
+      }
+    },
+    "restore_map_backup": {
+      "name": "Restaurar cópia do mapa",
+      "description": "Repõe uma cópia no seu mapa. Antes é guardada uma cópia do mapa atual.",
+      "fields": {
+        "backup": {
+          "name": "Cópia",
+          "description": "ID da cópia."
+        }
+      }
+    },
+    "delete_map_backup": {
+      "name": "Apagar cópia do mapa",
+      "description": "Apaga uma cópia de um mapa.",
+      "fields": {
+        "backup": {
+          "name": "Cópia",
+          "description": "ID da cópia."
+        }
+      }
     }
   }
 }

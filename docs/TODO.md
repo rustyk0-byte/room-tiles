@@ -250,10 +250,6 @@ settings). Nothing left.
 
 ## 5. Dashboard - later
 
-- **Map backup / restore**: in Map settings, "Back up this map" saves a
-  snapshot (drawing, layers, markers) to the integration's backups; a list
-  of them with Restore (and delete). Nothing shows on the map meanwhile -
-  the safe way to try big changes. (Duplicate map exists for variants.)
 - **Pool / Spa tile: its own controls dialog** (the tile's switch = pump /
   spa mode, its heater button = heater on / off already). For the rare
   settings: heat or chill, the "pump with heater" setting, spa mode on a

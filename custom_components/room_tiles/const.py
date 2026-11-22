@@ -30,6 +30,7 @@ STORAGE_KEY = DOMAIN
 FW_TRIES_KEY = f"{DOMAIN}.firmware_tries"  # (store.py: automatic installs' tries, kept across restarts)
 PANEL_KEYS_KEY = f"{DOMAIN}.panel_keys"  # (store.py: each panel's own key - never in exports)
 RECORDINGS_KEY = f"{DOMAIN}.recordings"  # (cycles.py: "Report a problem" recordings of the next cycle)
+MAP_BACKUPS_KEY = f"{DOMAIN}.map_backups"  # (map_backups.py: Map settings > Backups - never in exports)
 STORAGE_VERSION = 1
 STORAGE_MINOR_VERSION = 11  # 1.11 (2026-11-12): wall panels and their own settings - see migrate.py
 
