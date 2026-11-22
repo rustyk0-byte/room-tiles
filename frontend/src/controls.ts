@@ -144,11 +144,36 @@ export class RtRoller extends LitElement {
     if ((changed.has("selected") || changed.has("options")) && !this._userScrolling) {
       this._scrollTo(this.selected, false);
     }
+    if (changed.has("options")) this._fit();
   }
 
   protected firstUpdated(): void {
     // after layout: the list's height is known
-    requestAnimationFrame(() => this._scrollTo(this.selected, false));
+    requestAnimationFrame(() => {
+      this._scrollTo(this.selected, false);
+      this._fit();
+    });
+  }
+
+  private static _canvas?: CanvasRenderingContext2D | null;
+
+  /** The selected row's size: smaller until the longest word fits inside
+   *  the frame (a language's long "Unlocked" / "Off"; a small tile) - the
+   *  same size for every row, so it doesn't change while rolling.
+   *  MIRRORED: firmware/components/room_tiles/board.cpp build_roller_ (the
+   *  panels step the font down the same way). */
+  private _fit(): void {
+    const list = this._list;
+    const sel = this.renderRoot.querySelector<HTMLElement>(".opt.sel") ?? this.renderRoot.querySelector<HTMLElement>(".opt");
+    if (!list || !sel || !list.clientWidth) return;
+    const ctx = (RtRoller._canvas ??= document.createElement("canvas").getContext("2d"));
+    if (!ctx) return;
+    this.style.removeProperty("--fit");
+    const cs = getComputedStyle(sel);
+    ctx.font = `700 ${cs.fontSize} ${cs.fontFamily}`;
+    const widest = Math.max(0, ...this.options.map((o) => ctx.measureText(String(o)).width));
+    const room = list.clientWidth - 4; // (inside the frame, a little air)
+    if (widest > room) this.style.setProperty("--fit", (room / widest).toFixed(3));
   }
 
   private _scrollTo(row: number, smooth: boolean): void {
@@ -193,6 +218,7 @@ export class RtRoller extends LitElement {
     // a size change (rotation, full screen) re-shows HA's row - never sends
     this._resizeObs = new ResizeObserver(() => {
       if (!this._userScrolling) this._scrollTo(this.selected, false);
+      this._fit();
     });
     this._resizeObs.observe(this);
   }
@@ -353,7 +379,7 @@ export class RtRoller extends LitElement {
       user-select: none;
     }
     .opt.sel {
-      font-size: var(--rt-roller-selected-size, calc(28 * var(--u, 1px)));
+      font-size: calc(var(--rt-roller-selected-size, calc(28 * var(--u, 1px))) * var(--fit, 1));
       font-weight: 700;
       color: var(--rt-roller-color, var(--rt-text));
     }
