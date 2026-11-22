@@ -564,8 +564,10 @@ the test in the same change.
   choosing "Follow device setting" again re-arms the notice.
 - Panel controls (roller, switch + knob, colour picker) are rebuilt as web
   components with the same artwork. Animations honour "reduce motion".
-- **Themes: Dark, Light, Christmas.** Dark and Christmas are drawn for a dark
-  background, so the Room Tiles page stays dark even under a light HA theme. Each device
+- **Themes: Dark, Light, Christmas, Holly & Ivy.** All but Light are drawn
+  for a dark background (Holly & Ivy: the grown-up Christmas - candles,
+  holly, ivy, brass, poinsettias; its art drawn as SVG in
+  tools/themes/holly_ivy/), so the Room Tiles page stays dark even under a light HA theme. Each device
   picks its own (dashboard ⚙ → Theme, per browser; a panel's settings →
   Theme, its setting in HA). Components use only Room Tiles' own `--rt-*`
   CSS variables (from `frontend/src/theme.ts`; never hard-coded colours,
