@@ -10,13 +10,15 @@ from pathlib import Path
 from PIL import Image
 
 SIZES = {"run_gift": (60, 60), "run_gift_s": (41, 41), "tile_map": (76, 58), "tile_map_s": (52, 40),
-         "knob_switch": (30, 30), "knob_grip_v": (40, 40), "lock_padlock_closed": (76, 84), "lock_padlock_open": (76, 84)}
+         "knob_switch": (30, 30), "track_switch_open_green": (100, 32), "track_switch_closed": (100, 32),
+         "track_switch_locked_purple": (120, 32), "track_switch_unlocked": (120, 32), "knob_grip_v": (40, 40), "lock_padlock_closed": (76, 84), "lock_padlock_open": (76, 84)}
 
 src, out = Path(sys.argv[1]), Path(sys.argv[2])
 out.mkdir(parents=True, exist_ok=True)
 for f in sorted(src.glob("*.png")):
     name = f.stem
-    size = SIZES.get(name) or ((60, 60) if name.startswith("icon_") and name != "icon_settings" else None)
+    size = SIZES.get(name) or ((60, 60) if name.startswith("icon_") and name != "icon_settings"
+                               else (75, 32) if name.startswith("track_switch") else None)
     im = Image.open(f).convert("RGBA")
     if size and im.size != size:
         im = im.resize(size, Image.LANCZOS)

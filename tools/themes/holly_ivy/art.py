@@ -100,7 +100,7 @@ def bell(ringing=True):
     rot = -14 if ringing else 0
     b = ""
     if ringing:
-        b += ('<g fill="none" stroke="#F0506E" stroke-width="7" stroke-linecap="round" opacity="0.9">'
+        b += ('<g fill="none" stroke="#D9454E" stroke-width="7" stroke-linecap="round" opacity="0.9">'
               '<path d="M188,92 Q202,120 188,148"/><path d="M206,78 Q228,120 206,162"/>'
               '<path d="M52,92 Q38,120 52,148"/><path d="M34,78 Q12,120 34,162"/></g>')
     b += (f'<g transform="rotate({rot} 120 60)">'
@@ -207,7 +207,7 @@ def flame(x, y, h, w):
 def fan(on=True):
     b = ""
     if on:
-        b += '<g fill="none" stroke="#A8C8D8" stroke-width="7" stroke-linecap="round" opacity="0.85"><path d="M150,14 A108,108 0 0 1 222,96"/><path d="M200,196 A108,108 0 0 1 96,224"/><path d="M22,150 A108,108 0 0 1 40,58"/></g>'
+        b += '<g fill="none" stroke="#6CBB7A" stroke-width="7" stroke-linecap="round" opacity="0.85"><path d="M150,14 A108,108 0 0 1 222,96"/><path d="M200,196 A108,108 0 0 1 96,224"/><path d="M22,150 A108,108 0 0 1 40,58"/></g>'
     for a in (0, 120, 240):
         b += (f'<g transform="rotate({a + (16 if on else 0)} 120 120)">'
               '<path d="M120,120 L120,84" stroke="#2A5E37" stroke-width="7" stroke-linecap="round"/>'
@@ -452,6 +452,32 @@ def clock_cap(k=1.0):
     b = '<circle cx="13" cy="13" r="11" fill="url(#brassV)" stroke="#3A2408" stroke-width="2"/><circle cx="13" cy="13" r="5" fill="url(#berry)"/>'
     return scaled(b, 26, 26, k)
 
+# ---- switch tracks: brass-rimmed, red / green / gold when on, dark velvet off ----
+TRACK_FILL = {
+    "gold": ("#F6D778", "#D4A23A", "#8F6418", "#4A1A0C"),
+    "red": ("#E2565E", "#A9222C", "#6A0E18", "#FFF3E0"),
+    "green": ("#6CBB7A", "#2F7A45", "#1A4A2A", "#FFF3E0"),
+    "blue": ("#6FA6F0", "#2B62BE", "#183E80", "#FFF3E0"),
+    "dark": ("#2C3A31", "#1A2720", "#101A14", "#B8B29C"),
+}
+
+def track(w, word, fill, text_left):
+    """A switch track, w x 32 (drawn 4x): the word on the side the knob leaves free."""
+    W, H = w * 4, 128
+    top, mid, bot, ink = TRACK_FILL[fill]
+    gid = f"t{fill}"
+    defs = (f'<linearGradient id="{gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{top}"/>'
+            f'<stop offset="0.55" stop-color="{mid}"/><stop offset="1" stop-color="{bot}"/></linearGradient>')
+    knob_room = 128  # the knob (30 px) sits at one end
+    x0, x1 = (16, W - knob_room) if text_left else (knob_room, W - 16)
+    size = min(64, (x1 - x0) / (0.66 * len(word)))
+    b = (f'<defs>{defs}</defs>'
+         f'<rect x="6" y="6" width="{W-12}" height="{H-12}" rx="{(H-12)/2}" fill="url(#{gid})" stroke="url(#brassV)" stroke-width="10"/>'
+         f'<rect x="20" y="16" width="{W-40}" height="30" rx="15" fill="#FFFFFF" opacity="0.16"/>'
+         f'<text x="{(x0+x1)/2}" y="{H/2+2}" font-family="DejaVu Sans, Verdana, sans-serif" font-weight="700" font-size="{size:.0f}" '
+         f'letter-spacing="2" fill="{ink}" text-anchor="middle" dominant-baseline="central">{word}</text>')
+    return svg(b, W, H)
+
 ART = {
     "icon_light": lambda: candle(True), "icon_light_off": lambda: candle(False),
     "icon_switch": lambda: bell(True), "icon_switch_off": lambda: bell(False),
@@ -473,6 +499,19 @@ ART = {
     "clock_minute": lambda: hand_minute(1), "clock_minute_l": lambda: hand_minute(4 / 3),
     "clock_second": lambda: hand_second(1), "clock_second_l": lambda: hand_second(4 / 3),
     "clock_cap": lambda: clock_cap(1), "clock_cap_l": lambda: clock_cap(4 / 3),
+    # the tracks (rules.ts switchTrack): lights gold, switches red, fans green,
+    # covers green, locks gold; heat red and cool blue as in every theme
+    "track_switch_off": lambda: track(75, "OFF", "dark", False),
+    "track_switch_on": lambda: track(75, "ON", "gold", True),
+    "track_switch_on_raspberry": lambda: track(75, "ON", "red", True),
+    "track_switch_on_cyan": lambda: track(75, "ON", "green", True),
+    "track_switch_on_red": lambda: track(75, "ON", "red", True),
+    "track_switch_on_blue": lambda: track(75, "ON", "blue", True),
+    "track_switch_on_slate": lambda: track(75, "ON", "green", True),
+    "track_switch_open_green": lambda: track(100, "OPEN", "green", True),
+    "track_switch_closed": lambda: track(100, "CLOSED", "dark", False),
+    "track_switch_locked_purple": lambda: track(120, "LOCKED", "gold", True),
+    "track_switch_unlocked": lambda: track(120, "UNLOCKED", "dark", False),
 }
 
 if __name__ == "__main__":
