@@ -1,0 +1,11 @@
+{
+  "center": [210, 210],
+  "hands": {
+    "hour": { "pivot": [27, 104], "length": 1.0 },
+    "minute": { "pivot": [25, 144], "length": 1.0 },
+    "second": { "pivot": [24, 150], "length": 1.0 }
+  },
+  "date": { "at": [210, 286], "align": "center", "font": "small", "color": "#E9C87A" },
+  "cap": { "at": [210, 210] },
+  "order": ["face", "date", "hour", "minute", "second", "cap"]
+}

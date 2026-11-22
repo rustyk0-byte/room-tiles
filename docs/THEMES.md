@@ -4,7 +4,7 @@ A theme changes how Room Tiles looks on the dashboard and on the touch
 panels: its colors, and any pictures it wants to draw its own way. This page
 is the theme format - **format 1**.
 
-The themes that come with Room Tiles (Dark, Light, Christmas) are made this
+The themes that come with Room Tiles (Dark, Light, Christmas, Holly & Ivy) are made this
 way, and a theme of your own is installed by putting its folder in Home
 Assistant (see [Installed themes](#installed-themes)).
 
