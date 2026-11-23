@@ -9,7 +9,8 @@ candles, holly, ivy, brass bells, poinsettias - no Santa, no tree. Icons at
 The lit candle's flame is the lights' orange (#FFB300); an unlit one has a
 wisp of smoke instead.
 """
-import math, json, sys, os
+import base64, math, json, sys, os
+from pathlib import Path
 
 FLAME = "#FFB300"  # the lights' orange (the default theme's light colour)
 
@@ -283,30 +284,60 @@ def plate():
     b += sprig(120, 120, 0.9)
     return svg(b)
 
-# ---- the laundry: folded linens tied with a ribbon ----
-def linens():
-    b = ""
-    for i, (y, c) in enumerate([(168, "#E8DCC4"), (128, "#F6EFE2"), (88, "#FFFDF8")]):
-        b += f'<rect x="36" y="{y}" width="168" height="44" rx="10" fill="{c}" {OUT}/><path d="M44,{y+12} L196,{y+12}" stroke="#C9B98E" stroke-width="2.5"/>'
-    b += ('<rect x="108" y="84" width="24" height="132" fill="url(#velvet)" stroke="#4A0610" stroke-width="2.5"/>'
-          '<path d="M120,88 C96,60 66,66 74,86 C80,98 104,94 120,88 Z M120,88 C144,60 174,66 166,86 C160,98 136,94 120,88 Z" fill="url(#velvet)" stroke="#4A0610" stroke-width="2.5"/>'
-          '<circle cx="120" cy="88" r="9" fill="#B02A3A" stroke="#4A0610" stroke-width="2"/>')
-    b += leaf(150, 70, -20, 40, 18) + berry(146, 78, 7)
+# ---- the laundry: a red turtleneck, cable-knit ----
+def turtleneck():
+    knit = "#8A1626"
+    b = ('<path d="M92,52 L60,62 Q34,72 28,100 L14,196 Q14,206 24,208 L48,210 Q58,208 58,198 L66,126 '
+         'L68,214 Q120,226 172,214 L174,126 L182,198 Q182,208 192,210 L216,208 Q226,206 226,196 L212,100 '
+         'Q206,72 180,62 L148,52 Z" fill="url(#velvet)" stroke="#4A0610" stroke-width="4" stroke-linejoin="round"/>'
+         # the rolled turtleneck collar
+         '<path d="M88,26 Q120,18 152,26 L154,56 Q120,66 86,56 Z" fill="#C0303F" stroke="#4A0610" stroke-width="4" stroke-linejoin="round"/>'
+         f'<path d="M98,30 L97,56 M110,26 L110,60 M120,24 L120,62 M130,26 L130,60 M142,30 L143,56" stroke="{knit}" stroke-width="3" opacity="0.8"/>'
+         # ribbed cuffs and hem
+         f'<path d="M16,186 L56,190 M17,196 L56,199" stroke="{knit}" stroke-width="3.5"/>'
+         f'<path d="M224,186 L184,190 M223,196 L184,199" stroke="{knit}" stroke-width="3.5"/>'
+         f'<path d="M69,200 Q120,212 171,200 M69,192 Q120,204 171,192" stroke="{knit}" stroke-width="3.5" fill="none"/>')
+    # a cable down the front, a plain rib either side
+    for y in range(76, 186, 22):
+        b += (f'<path d="M108,{y} C108,{y+8} 132,{y+12} 132,{y+22} M132,{y} C132,{y+8} 108,{y+12} 108,{y+22}" '
+              f'stroke="{knit}" stroke-width="5" fill="none" stroke-linecap="round"/>')
+    b += f'<path d="M94,72 L94,192 M146,72 L146,192" stroke="{knit}" stroke-width="3" opacity="0.8"/>'
+    b += '<path d="M80,80 Q76,130 80,180" stroke="#E0606A" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.35"/>'
     return svg(b)
 
-# ---- the robot vacuum / matic: ivory and brass, a sprig on top ----
-def vacuum(matic=False):
-    if matic:
-        b = (f'<rect x="34" y="60" width="172" height="150" rx="40" fill="url(#ivory)" {OUT}/>'
-             f'<rect x="56" y="80" width="128" height="60" rx="16" fill="#2A2420" {OUT}/>'
-             '<circle cx="120" cy="110" r="14" fill="url(#brassV)"/>'
-             f'<rect x="58" y="174" width="124" height="22" rx="11" fill="#9FC7D6" {OUT}/>')
-    else:
-        b = (f'<circle cx="120" cy="128" r="94" fill="url(#ivory)" {OUT}/>'
-             '<circle cx="120" cy="128" r="70" fill="none" stroke="#C9B98E" stroke-width="3"/>'
-             f'<circle cx="120" cy="98" r="18" fill="url(#brassV)" {BR}/>'
-             '<path d="M56,190 Q120,222 184,190" fill="none" stroke="#B8862B" stroke-width="6" stroke-linecap="round"/>')
-    b += sprig(120, 60 if matic else 50, 0.85)
+# ---- the robot vacuum: ivory and brass, a sprig on top ----
+def vacuum():
+    b = (f'<circle cx="120" cy="128" r="94" fill="url(#ivory)" {OUT}/>'
+         '<circle cx="120" cy="128" r="70" fill="none" stroke="#C9B98E" stroke-width="3"/>'
+         f'<circle cx="120" cy="98" r="18" fill="url(#brassV)" {BR}/>'
+         '<path d="M56,190 Q120,222 184,190" fill="none" stroke="#B8862B" stroke-width="6" stroke-linecap="round"/>')
+    b += sprig(120, 50, 0.85)
+    return svg(b)
+
+# ---- the Matic: the default picture as it is (its shape is how people know
+# it), two gold jingle bells on a red ribbon hung from the dock's corner ----
+MASTER = Path(__file__).resolve().parents[3] / "custom_components/room_tiles/themes/masters/ui"
+
+def jingle(x, y, r):
+    return (f'<path d="M{x},{y-r} L{x},{y-r-10}" stroke="#5A3A0C" stroke-width="4"/>'
+            f'<circle cx="{x}" cy="{y-r-12}" r="6" fill="none" stroke="url(#brassV)" stroke-width="4"/>'
+            f'<circle cx="{x}" cy="{y}" r="{r}" fill="url(#brass)" stroke="#5A3A0C" stroke-width="3"/>'
+            f'<path d="M{x-r*0.75},{y+r*0.2} L{x+r*0.75},{y+r*0.2}" stroke="#3A2408" stroke-width="4" stroke-linecap="round"/>'
+            f'<circle cx="{x-r*0.75}" cy="{y+r*0.2}" r="4" fill="#3A2408"/><circle cx="{x+r*0.75}" cy="{y+r*0.2}" r="4" fill="#3A2408"/>'
+            f'<path d="M{x},{y+r*0.2} L{x},{y+r}" stroke="#3A2408" stroke-width="3"/>'
+            f'<circle cx="{x-r*0.38}" cy="{y-r*0.42}" r="{r*0.22}" fill="#FFF2C2" opacity="0.8"/>')
+
+def matic():
+    png = base64.b64encode((MASTER / "icon_matic.png").read_bytes()).decode()
+    b = (f'<image href="data:image/png;base64,{png}" x="0" y="0" width="240" height="240" '
+         'style="image-rendering:pixelated"/>')
+    # a red bow beside the dock's light, the bells hung in the free space above the pad
+    b += ('<path d="M206,16 Q186,40 190,74 M206,16 Q220,24 216,34" stroke="#B02A3A" stroke-width="6" fill="none" stroke-linecap="round"/>')
+    b += jingle(216, 66, 22) + jingle(190, 118, 29)
+    b += ('<g transform="translate(206,16)">'
+          '<path d="M0,0 C-14,-16 -36,-14 -32,2 C-29,12 -11,7 0,0 Z" fill="url(#velvet)" stroke="#4A0610" stroke-width="2.5"/>'
+          '<path d="M0,0 C14,-16 36,-14 32,2 C29,12 11,7 0,0 Z" fill="url(#velvet)" stroke="#4A0610" stroke-width="2.5"/>'
+          '<circle cx="0" cy="1" r="6" fill="#B02A3A" stroke="#4A0610" stroke-width="2"/></g>')
     return svg(b)
 
 # ---- the pool: a brass ladder in clear water ----
@@ -482,8 +513,8 @@ ART = {
     "icon_fan": lambda: fan(True), "icon_fan_off": lambda: fan(False),
     "icon_blind": lambda: window(True), "icon_blind_off": lambda: window(False),
     "icon_garage": lambda: garage(True), "icon_garage_off": lambda: garage(False),
-    "icon_ac": thermometer, "icon_dishwasher": plate, "icon_laundry": linens,
-    "icon_robot_vacuum": lambda: vacuum(False), "icon_matic": lambda: vacuum(True),
+    "icon_ac": thermometer, "icon_dishwasher": plate, "icon_laundry": turtleneck,
+    "icon_robot_vacuum": vacuum, "icon_matic": matic,
     "icon_pool": pool, "icon_spa": spa, "icon_script": scroll, "icon_settings": gear,
     "bar_map": lambda: cottage(304, 232), "tile_map": lambda: cottage(304, 232), "tile_map_s": lambda: cottage(208, 160),
     "run_gift": lambda: lantern(240), "run_gift_s": lambda: lantern(164),
