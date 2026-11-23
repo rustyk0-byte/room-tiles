@@ -112,9 +112,12 @@ Upload firmware), one image per board in the folder.
   the rest near), else 8-bit; the threshold tuned by eye on a colorful pack.
 - **Animations per appliance type** (next theme format): a theme has one
   set of appliance animations, so a dishwasher drying plays the dryer's
-  (Holly & Ivy: the fireplace hides the plate). Let a theme add its own
-  for a type (e.g. `dishwasher/sun_dry.png`), falling back to the shared
-  one - dashboard and panel packs alike.
+  (Holly & Ivy: the fireplace hides the plate). Optional, per animation:
+  a theme may keep sharing one set, or add its own for a type (e.g.
+  `dishwasher/sun_dry.png`) - whatever it doesn't add falls back to the
+  shared one. Dashboard and panel packs alike. Check memory on the
+  ESP32-S3 (round panel) first: every extra sheet in its pack costs PSRAM
+  and pack space, so measure a pack with a full separate set.
 - **Report unknown states back**: the answers people give on the Appliances
   page ("Dryer reported "steam_fresh" - Not running") are exactly what the
   released presets need. Volunteer, never automatic: after answering, an
