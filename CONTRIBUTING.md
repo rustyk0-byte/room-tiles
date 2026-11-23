@@ -76,3 +76,19 @@ dishwashers and vacuums so far.
   messages - no names, addresses, serial numbers or entity ids from your
   home.
 - **Docs:** keep the README and docs/ describing how things work now.
+
+## Home Assistant's rules
+
+The integration follows what Home Assistant's reviewers check for:
+
+- **No file access on the event loop.** Code that runs on the loop (`async
+  def`, `@callback`) never opens, reads, writes or checks files itself -
+  not even `exists()` or `is_dir()`. Do it in a plain function through
+  `hass.async_add_executor_job(...)`, or use HA's `Store`. Large files
+  (theme packs) are read when needed and not kept in memory.
+  `tests/test_event_loop_io.py` checks every change.
+- **Only Room Tiles' own secrets.** Never read another integration's keys,
+  tokens or config entry data; Room Tiles makes and stores its own
+  (each panel's key).
+- **Services that touch files are admin-only** (`async_register_admin_service`)
+  and stay inside `room_tiles_backups/` - never a path the caller picks.
