@@ -110,6 +110,11 @@ Upload firmware), one image per board in the folder.
   Likely answer: the depth per picture, with a tolerance - 4-bit when 16
   colors cover the picture closely enough (e.g. 98% of its pixels exact,
   the rest near), else 8-bit; the threshold tuned by eye on a colorful pack.
+- **Animations per appliance type** (next theme format): a theme has one
+  set of appliance animations, so a dishwasher drying plays the dryer's
+  (Holly & Ivy: the fireplace hides the plate). Let a theme add its own
+  for a type (e.g. `dishwasher/sun_dry.png`), falling back to the shared
+  one - dashboard and panel packs alike.
 - **Report unknown states back**: the answers people give on the Appliances
   page ("Dryer reported "steam_fresh" - Not running") are exactly what the
   released presets need. Volunteer, never automatic: after answering, an
