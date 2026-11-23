@@ -404,11 +404,6 @@ def clock_face(k=1.0):
     b = (f'<circle cx="{c}" cy="{c}" r="204" fill="url(#brass)" stroke="#5A3A0C" stroke-width="4"/>'
          f'<circle cx="{c}" cy="{c}" r="188" fill="#0F1D15" stroke="#5A3A0C" stroke-width="3"/>'
          f'<circle cx="{c}" cy="{c}" r="128" fill="none" stroke="#B8862B" stroke-width="2" opacity="0.6"/>')
-    # the ivy wreath around the rim
-    for kk in range(28):
-        a = kk * 360 / 28
-        b += f'<g transform="rotate({a} {c} {c})">' + ivy_leaf(c, 30, 90 if kk % 2 else -90, 0.62) + '</g>'
-    b += f'<circle cx="{c}" cy="{c}" r="180" fill="none" stroke="#2A5E37" stroke-width="3" opacity="0.8"/>'
     # Roman numerals in brass
     nums = ["XII", "I", "II", "III", "IIII", "V", "VI", "VII", "VIII", "IX", "X", "XI"]
     for i, n in enumerate(nums):
@@ -422,7 +417,7 @@ def clock_face(k=1.0):
         if i % 5 == 0:
             continue
         b += f'<path d="M{c},{c-120} L{c},{c-128}" stroke="#B8862B" stroke-width="2" transform="rotate({i*6} {c} {c})" opacity="0.7"/>'
-    # holly at XII, over the wreath
+    # holly at XII
     b += sprig(c, 34, 0.9)
     return scaled(b, 420, 420, k)
 
