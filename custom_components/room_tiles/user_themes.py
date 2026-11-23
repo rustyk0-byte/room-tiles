@@ -16,7 +16,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import struct
 from collections.abc import Callable
 from datetime import timedelta
 from pathlib import Path
@@ -316,15 +315,9 @@ class UserThemes:
         return {b.key: dict(b.doc["name"]) for b in ordered}
 
     def packs(self) -> dict[str, Any]:
-        """Their panel packs, as panels.load_packs gives the bundled ones."""
-        from .panels import Pack
-
-        out: dict[str, Any] = {}
-        for b in self.themes.values():
-            for cut, data in b.packs.items():
-                ident = struct.unpack_from("<32s", data, 16)[0].rstrip(b"\0").decode()
-                out[f"theme-{b.key}{cut}"] = Pack(ident, data)
-        return out
+        """Their panel packs, as panels.load_packs gives the bundled ones
+        (headers only - the packs stay in the cache folder)."""
+        return {f"theme-{b.key}{cut}": p for b in self.themes.values() for cut, p in b.packs.items()}
 
     def for_dashboard(self) -> dict[str, Any]:
         """The dashboard's list (room_tiles/themes): the usable ones as the

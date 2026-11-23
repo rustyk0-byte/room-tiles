@@ -36,13 +36,13 @@
 
 from __future__ import annotations
 
-import gzip
 import hashlib
 import hmac
 import json
 import logging
 import struct
 import time
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -55,6 +55,7 @@ from homeassistant.helpers import device_registry as dr
 
 from .const import DOMAIN, LAYOUTS, NO_ENTITY_KINDS, PANEL_SCHEMA
 from .model import Panel, RoomTilesData
+from .packs import Pack, header as pack_header, pack_file
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -210,24 +211,14 @@ class PanelLink:
 # ---- packs: theme (images + colours) and wording ---------------------------------
 
 
-@dataclass
-class Pack:
-    id: str  # theme / language + content hash: the panel keeps what it has
-    data: bytes
-
-
 def load_packs(folder: Path = PACK_DIR) -> dict[str, Pack]:
-    """Every pack, unpacked, by file stem ("theme-dark", "strings-de"). Blocking
-    (reads files) - run it in the executor."""
+    """Every pack by file stem ("theme-dark", "strings-de") - their headers
+    only (packs.py: the packs stay on disk). Blocking (reads files) - run it
+    in the executor."""
     out: dict[str, Pack] = {}
     for f in sorted(folder.glob("*.rtp.gz")):
-        data = gzip.decompress(f.read_bytes())
-        if data[:4] != b"RTP1":
-            continue
-        if struct.unpack_from("<H", data, 4)[0] != PANEL_SCHEMA:
-            continue  # (made for another panel format than this code's: never served)
-        ident = struct.unpack_from("<32s", data, 16)[0].rstrip(b"\0").decode()
-        out[f.name[: -len(".rtp.gz")]] = Pack(ident, data)
+        if (p := pack_file(f)) is not None:
+            out[f.name[: -len(".rtp.gz")]] = p
     return out
 
 
@@ -863,7 +854,7 @@ def payload(
     for kind in ("theme", "strings"):
         p = pack_for(packs or {}, kind, settings)
         if p is not None:
-            pack_ids[kind] = {"id": p.id, "size": len(p.data)}
+            pack_ids[kind] = {"id": p.id, "size": p.size}
     return {
         "schema": PANEL_SCHEMA,
         "revision": revision,
@@ -1117,10 +1108,23 @@ class PanelPackView(_PanelRequest):
         pack = pack_for(store.all_packs(), request.query.get("pack", ""), settings)
         if pack is None:
             return self._signed(request, dev, web.Response(status=404))
+        # read from disk now, let go once sent (packs.py)
+        try:
+            data = await hass.async_add_executor_job(pack.read)
+        except (OSError, EOFError, ValueError, zlib.error):
+            data = b""
+        now = pack_header(data)
+        if now is None or now[0] != pack.id:
+            # changed on disk since its header was read (an update or a
+            # rebuild, HA not restarted yet): read the headers again and tell
+            # the panels, so what they're offered matches what's served
+            await store.async_reload_packs()
+            if now is None:
+                return self._signed(request, dev, web.Response(status=404))
         resp = web.Response(
-            body=pack.data,
+            body=data,
             content_type="application/octet-stream",
-            headers={"Cache-Control": "no-store", "X-Pack-Id": pack.id},
+            headers={"Cache-Control": "no-store", "X-Pack-Id": now[0]},
         )
         return await self._signed_big(request, dev, resp)
 

@@ -704,7 +704,12 @@ show and use what the integration holds; nothing about a house is compiled in.
   over HTTP from the integration and swaps it in. Theme packs and string
   tables come the same way. A released install gets its packs with the
   integration (an update restarts HA anyway; HA's Reload of the integration
-  also reloads them). In a developer build, packs rebuilt in the source
+  also reloads them). HA keeps no pack in memory (packs.py): the packs stay
+  gzipped on disk, only each one's header (its id and size) is read up
+  front, and a pack is read when a panel asks for it and let go once sent -
+  a pack that changed on disk since (an update before the restart) is sent
+  as it is now, and the headers are read again. The dashboard's pictures
+  are files HA streams from disk too, and a browser fetches only its theme's. In a developer build, packs rebuilt in the source
   are served live: their files are checked every
   10 s, a new set loads once they've stopped changing, and the revision
   moves only when a pack's content hash changed (the update watch skips

@@ -18,6 +18,7 @@ import shutil
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from . import fmt
 
@@ -53,7 +54,7 @@ class Built:
     off_art: list[str] = field(default_factory=list)  # icons with an "off" picture
     button_art: list[str] = field(default_factory=list)  # buttons it draws (BUTTONS)
     version: str = ""  # changes with its content (the dashboard's image addresses)
-    packs: dict[str, bytes] = field(default_factory=dict)  # "" (wall panels) / "-round"
+    packs: dict[str, Any] = field(default_factory=dict)  # "" (wall panels) / "-round": packs.Pack (headers - the files stay here)
     web: Path | None = None  # its dashboard pictures: web/ui, web/appliances
     problems: list[str] = field(default_factory=list)
     coarse: bool = False  # built without libimagequant (soft edges a little coarser on panels)
@@ -225,13 +226,25 @@ def cached(found: Found, base: dict, cache: Path) -> Built | None:
             off_art=meta["off_art"],
             button_art=meta["button_art"],
             version=meta["version"],
-            packs={"": (done / "theme.rtp").read_bytes(), "-round": (done / "theme-round.rtp").read_bytes()},
+            packs=_packs(done),
             web=done / "web",
             coarse=meta.get("coarse", False),
         )
     except (OSError, ValueError, KeyError):
         shutil.rmtree(done, ignore_errors=True)  # (a broken cache entry: build again)
         return None
+
+
+def _packs(done: Path) -> dict[str, Any]:
+    """Its built packs' headers (packs.py) - the packs stay on disk."""
+    from ..packs import pack_file
+
+    out = {}
+    for cut, name in (("", "theme.rtp"), ("-round", "theme-round.rtp")):
+        if (p := pack_file(done / name)) is None:
+            raise ValueError(name)  # (another panel format: build again)
+        out[cut] = p
+    return out
 
 
 def build(found: Found, base: dict, cache: Path) -> Built:

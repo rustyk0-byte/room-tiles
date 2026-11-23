@@ -11,6 +11,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.room_tiles.const import DOMAIN
 from custom_components.room_tiles.model import Area, Panel, RoomTilesData, Tile
+from custom_components.room_tiles import panels as panels_mod
 from custom_components.room_tiles.panels import (
     ACTION_URL,
     LINK_ENTITY,
@@ -136,9 +137,9 @@ def test_packs_carry_the_panel_format(tmp_path):
     import struct as st
 
     packs = load_packs()
-    assert packs and all(st.unpack_from("<H", p.data, 4)[0] == PANEL_SCHEMA for p in packs.values())
+    assert packs and all(st.unpack_from("<H", p.read(), 4)[0] == PANEL_SCHEMA for p in packs.values())
     # a pack made for another format (a rebuild ahead of this code) isn't served
-    other = bytearray(packs["theme-dark"].data)
+    other = bytearray(packs["theme-dark"].read())
     st.pack_into("<H", other, 4, PANEL_SCHEMA + 1)
     (tmp_path / "theme-dark.rtp.gz").write_bytes(gz.compress(bytes(other)))
     assert load_packs(tmp_path) == {}
@@ -417,16 +418,19 @@ def test_packs_ship_with_the_integration():
     packs = load_packs()
     assert "theme-dark" in packs and "strings-en" in packs
     for p in packs.values():
-        # what the panel checks before storing one: magic + SHA-256 trailer
+        # what the panel checks before storing one: magic + SHA-256 trailer;
+        # the size the payload offers is what's sent
         import hashlib
         import struct
 
-        size = struct.unpack_from("<I", p.data, 8)[0]
-        assert p.data[:4] == b"RTP1" and hashlib.sha256(p.data[:size]).digest() == p.data[size:]
+        data = p.read()
+        size = struct.unpack_from("<I", data, 8)[0]
+        assert data[:4] == b"RTP1" and hashlib.sha256(data[:size]).digest() == data[size:]
+        assert p.size == len(data)
     # the wording is the table itself (key -> text), not the file's wrapper
     import json as _json
 
-    words = packs["strings-de"].data
+    words = packs["strings-de"].read()
     off, size = struct.unpack_from("<II", words, 64 + 40)
     table = _json.loads(words[off : off + size])
     assert table["roller.speed"] == "Stufe" and "strings" not in table
@@ -437,13 +441,13 @@ def test_packs_ship_with_the_integration():
     # pictures for "off" (tile icons): drawn (Christmas) or generated (Dark /
     # Light: theme.json "off": "gray") - in each theme's own pack
     xmas = pack_for(packs, "theme", {"theme": "christmas"})
-    assert xmas.id.startswith("christmas-") and b"icon_light_off" in xmas.data
-    assert b"icon_light_off" in packs["theme-dark"].data
+    assert xmas.id.startswith("christmas-") and b"icon_light_off" in xmas.read()
+    assert b"icon_light_off" in packs["theme-dark"].read()
     light = pack_for(packs, "theme", {"theme": "light"})
-    assert light.id.startswith("light-") and light.data != packs["theme-dark"].data
+    assert light.id.startswith("light-") and light.read() != packs["theme-dark"].read()
 
 
-async def test_panel_fetches_its_payload(hass: HomeAssistant, hass_client_no_auth) -> None:
+async def test_panel_fetches_its_payload(hass: HomeAssistant, hass_client_no_auth, tmp_path) -> None:
     hall = ar.async_get(hass).async_create("Hall")
     esp = MockConfigEntry(domain="esphome", data={"device_name": "panel-1", "noise_psk": base64.b64encode(KEY).decode()})
     esp.add_to_hass(hass)
@@ -489,6 +493,24 @@ async def test_panel_fetches_its_payload(hass: HomeAssistant, hass_client_no_aut
     pack_bytes = await r.read()
     assert pack_bytes[:4] == b"RTP1"
     assert r.headers["X-RT-Sig"] == answer_signature(KEY, qp["sig"], 200, pack_bytes)
+    assert len(pack_bytes) == body["packs"]["theme"]["size"]
+    # read from disk when asked (packs.py): a pack changed there since its
+    # header was read (an update, HA not restarted) is sent as it is now,
+    # and the headers read again - the panels told
+    from custom_components.room_tiles.packs import Pack
+
+    dark = store.panel_packs["theme-dark"]
+    store.panel_packs = {**store.panel_packs, "theme-dark": Pack("dark-before", dark.size, dark.path)}
+    before = store.panel_link.revision
+    r = await client.get(PACK_URL, params=signed("GET", PACK_URL, ts, pack="theme"))
+    assert r.status == 200 and r.headers["X-Pack-Id"] == dark.id
+    assert store.panel_packs["theme-dark"] == dark
+    assert store.panel_link.revision == before + 1
+    # gone (or unreadable): nothing sent
+    store.panel_packs = {**store.panel_packs, "theme-dark": Pack(dark.id, dark.size, tmp_path / "gone.rtp.gz")}
+    assert (await client.get(PACK_URL, params=signed("GET", PACK_URL, ts, pack="theme"))).status == 404
+    assert store.panel_packs["theme-dark"].path == panels_mod.PACK_DIR / "theme-dark.rtp.gz"  # (found again)
+    assert (await client.get(PACK_URL, params=signed("GET", PACK_URL, ts, pack="theme"))).status == 200
     assert (await client.get(PACK_URL, params={**signed("GET", PACK_URL, ts, pack="theme"), "ts": "0"})).status == 403
     # (the payload's signature isn't the pack's)
     assert (await client.get(PACK_URL, params={**signed("GET", URL, ts), "pack": "theme"})).status == 403
@@ -827,9 +849,9 @@ def test_a_round_panel_gets_the_round_theme_pack():
     from custom_components.room_tiles.panels import Pack
 
     packs = {
-        "theme-dark": Pack("dark-1", b"x"),
-        "theme-dark-round": Pack("dark-round-1", b"x"),
-        "theme-light": Pack("light-1", b"x"),
+        "theme-dark": Pack("dark-1", 1),
+        "theme-dark-round": Pack("dark-round-1", 1),
+        "theme-light": Pack("light-1", 1),
     }
     assert pack_for(packs, "theme", {"theme": "dark", "round": True}).id == "dark-round-1"
     assert pack_for(packs, "theme", {"theme": "dark"}).id == "dark-1"
