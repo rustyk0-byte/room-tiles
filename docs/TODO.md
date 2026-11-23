@@ -61,24 +61,28 @@ Upload firmware), one image per board in the folder.
   would refuse a v3.0 board). Left: the production builds come with the
   HACS pre-release test (E: a release builds every board for both chip
   kinds); a production board booting one waits for a beta tester or the
-  first users (the maintainer has no production board).
+  first users. Unknown whether production boards are sold yet: boards
+  bought straight from Elecrow's store so far are engineering samples
+  (v1.x).
 - **C. The install page - drafted 2026-11-15** (`install/index.html`,
   `tools/make_install_site.py`, the firmware workflow's install-page job:
   GitHub Pages for each release, once the repo is public). ESP Web Tools'
   tasmota fork (Apache-2.0) tells an ESP32-P4's chip revisions apart
   ("rev0" below v3.0, "rev300" from v3.0) and picks the matching build -
   the user only picks what's printed on the board. Improv over USB after
-  flashing is on. Left: board photos, production-chip builds. NOT tried
-  by the maintainer (no USB flashing on the test panels): browser flashing of the
-  P4 and the install page are first tried by others - a beta tester or the
-  first users (say so in the release notes).
+  flashing is on. Tried 2026-11-20: the install page flashed a 7" V1.0
+  (engineering sample) from the browser, and it then updated itself
+  through Room Tiles. Left: board photos, production-chip builds, the other
+  boards from the browser.
 - **D. Setup screens on the panel - built and tried 2026-11-17** (DESIGN.md
   "Boot screen"): a Factory Reset (the panel's HA button) took a 7" V1.0
   back to new; the language picker, the hotspot's Wi-Fi page, "Add this
   panel in Home Assistant", the first downloads all worked. Left: the area
   picker on a panel HA has never seen (a re-added one gets its old HA area
   back), each line in another language, the 10.1" screen (a Factory Reset
-  there - no USB needed); the round one untested (section 3).
+  there - no USB needed); the round one untested (section 3). A new
+  10.1" straight from the box is waiting: it covers the never-seen panel
+  and the 10.1" screens in one go (with G).
 - **F. Safety - proven 2026-11-17 on a 7" V1.0:** an image that crashes 10 s
   after starting (a throwaway branch), installed through Room Tiles'
   automatic update, came back on the old build both times (ESP-IDF
@@ -94,8 +98,9 @@ Upload firmware), one image per board in the folder.
   image carries ESPHome's `network_adapter` 2.12.13 and brings an older
   chip up to it once, at startup - all the maintainer's panels are on
   2.12.13 (2026-11-18). Left:
-  - A board straight from the box (2.3.0 / 2.12.3): never tried - verify
-    on the next new board (or users report it). The 2.3.0 path (no
+  - A board straight from the box (2.3.0 / 2.12.3): never tried - a new
+    10.1" is waiting to be the first test (read its Wi-Fi chip's version
+    in the boot log before and after). The 2.3.0 path (no
     "activate", restart after 25 s) rests on the 2026-10-12 V1.0 update.
   - Keep in step: an ESPHome upgrade that moves ESP-Hosted needs the
     matching image (firmware/wifi_chip/README.md).
