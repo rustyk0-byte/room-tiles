@@ -70,6 +70,14 @@ dishwashers and vacuums so far.
   (`frontend/i18n/<language>.json`, English the full set). Short and
   friendly, in US English. If you can, add your text in the other languages
   too - or leave English there and say so in the pull request.
+- **Say what you mean:** in English, name the thing ("the vacuum", "this
+  room") wherever "it" could mean more than one thing. In the other
+  languages, write instructions the way that language usually does, and
+  address the user formally: German - instructions in the infinitive
+  ("Auf Einrichten tippen"), "Sie" elsewhere; Dutch - "u"; Spanish -
+  "usted"; Italian - instructions in the infinitive ("Toccare"), "Lei"
+  elsewhere; French - "vous"; Portuguese - "você". Button labels follow
+  each language's usual style.
 - **Panels and dashboard behave alike:** logic that exists on both sides is
   marked `MIRRORED` in both places; change both.
 - **Privacy:** no personal details in code, tests, screenshots or commit

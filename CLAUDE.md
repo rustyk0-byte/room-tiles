@@ -13,7 +13,9 @@ The ones most easily missed:
 - **Only Room Tiles' own secrets**; services that touch files admin-only and
   inside `room_tiles_backups/`.
 - **MIRRORED** logic changes on both sides (panel firmware and dashboard).
-- User-facing text from the wording files, US English, short and friendly.
+- User-facing text from the wording files, US English, short and friendly. English
+  names the thing instead of an unclear "it"; other languages use their usual style
+  for instructions and formal address (CONTRIBUTING.md "Say what you mean").
 - Docs and commit messages are public: describe how things work now - no
   personal details.
 - Run the checks before calling a change done: `pytest`; in `frontend/`
