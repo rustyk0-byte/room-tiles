@@ -217,8 +217,8 @@ describe("rt-appliance-editor: what empties a unit", () => {
     const { el, ed } = await editor(drawer, doc({ appliances: [drawer] }), { hass });
     // the garage door (other area) and the leak sensor (not motion / contact) aren't offered
     expect(rows(ed, 0, 0)).toEqual([
-      "A tap on its tile (always) [x] (fixed)",
-      "Its door opening (binary_sensor.u_door) [x]",
+      "A tap on the tile (always) [x] (fixed)",
+      "The door opening (binary_sensor.u_door) [x]",
       "binary_sensor.kitchen opening [x]",
       "Kitchen detecting motion",
     ]);
@@ -235,8 +235,8 @@ describe("rt-appliance-editor: what empties a unit", () => {
 
   it("'the Dryer starting' only on a washer sharing a tile with a dryer", async () => {
     const { el, ed } = await editor(LAUNDRY, doc({ appliances: [LAUNDRY] }));
-    expect(rows(ed, 0, 0)).toEqual(["A tap on its tile (always) [x] (fixed)"]);
-    expect(rows(ed, 0, 1)).toEqual(["A tap on its tile (always) [x] (fixed)", "The Dryer starting [x]"]);
+    expect(rows(ed, 0, 0)).toEqual(["A tap on the tile (always) [x] (fixed)"]);
+    expect(rows(ed, 0, 1)).toEqual(["A tap on the tile (always) [x] (fixed)", "The Dryer starting [x]"]);
     el.remove();
   });
 });

@@ -3,13 +3,13 @@
     "step": {
       "user": {
         "title": "Room Tiles",
-        "description": "Kies de ruimtes die Room Tiles laat zien. Je kunt dit later wijzigen.",
+        "description": "Kies de ruimtes die Room Tiles laat zien. U kunt dit later wijzigen.",
         "data": {
           "areas": "Ruimtes",
           "auto_add_areas": "Nieuwe ruimtes automatisch opnemen"
         },
         "data_description": {
-          "auto_add_areas": "Ruimtes die je later in Home Assistant toevoegt, verschijnen ook in Room Tiles."
+          "auto_add_areas": "Ruimtes die u later in Home Assistant toevoegt, verschijnen ook in Room Tiles."
         }
       }
     },
@@ -17,8 +17,8 @@
       "single_instance_allowed": "Room Tiles is al ingesteld."
     },
     "create_entry": {
-      "default": "Room Tiles is ingesteld voor {areas} ruimtes, met een tegelpagina voor elke ruimte en een startkaart voor elke verdieping.\n\n**[Open Room Tiles]({url})** wanneer je wilt via de zijbalk.",
-      "found": "Room Tiles is ingesteld voor {areas} ruimtes, met een tegelpagina voor elke ruimte en een startkaart voor elke verdieping.\n\nRoom Tiles heeft geschikte apparaten gevonden; ze verschijnen zodra je **[het instellen afrondt]({url}?open=appliances)**.\n\nOpen Room Tiles wanneer je wilt via de zijbalk."
+      "default": "Room Tiles is ingesteld voor {areas} ruimtes, met een tegelpagina voor elke ruimte en een startkaart voor elke verdieping.\n\n**[Open Room Tiles]({url})** wanneer u wilt via de zijbalk.",
+      "found": "Room Tiles is ingesteld voor {areas} ruimtes, met een tegelpagina voor elke ruimte en een startkaart voor elke verdieping.\n\nRoom Tiles heeft geschikte apparaten gevonden; ze verschijnen zodra u **[het instellen afrondt]({url}?open=appliances)**.\n\nOpen Room Tiles wanneer u wilt via de zijbalk."
     }
   },
   "issues": {
@@ -39,7 +39,7 @@
     },
     "area_lights_override_removed": {
       "title": "Room Tiles: ruimteverlichting gewijzigd",
-      "description": "De entiteit die de lichtknop van deze ruimtes gebruikte is verwijderd, dus die schakelt nu al hun lampen: {areas}. Je kunt in Room Tiles een andere kiezen."
+      "description": "De entiteit die de lichtknop van deze ruimtes gebruikte is verwijderd, dus die schakelt nu al hun lampen: {areas}. U kunt in Room Tiles een andere kiezen."
     },
     "appliance_question": {
       "title": "{name} meldt een toestand die Room Tiles niet kent",
@@ -72,7 +72,7 @@
   "services": {
     "export_data": {
       "name": "Gegevens exporteren",
-      "description": "Schrijft de hele Room Tiles-instelling (ruimtes, tegels, catalogus, kaarten, markeringen) naar een JSON-bestand in room_tiles_backups/ in je configuratiemap.",
+      "description": "Schrijft de hele Room Tiles-instelling (ruimtes, tegels, catalogus, kaarten, markeringen) naar een JSON-bestand in room_tiles_backups/ in uw configuratiemap.",
       "fields": {
         "file": {
           "name": "Bestand",
@@ -82,7 +82,7 @@
     },
     "import_data": {
       "name": "Gegevens importeren",
-      "description": "Vervangt de hele Room Tiles-instelling door een JSON-bestand uit room_tiles_backups/ in je configuratiemap. De huidige instelling wordt daar eerst bewaard; een ongeldig bestand verandert niets.",
+      "description": "Vervangt de hele Room Tiles-instelling door een JSON-bestand uit room_tiles_backups/ in uw configuratiemap. De huidige instelling wordt daar eerst bewaard; een ongeldig bestand verandert niets.",
       "fields": {
         "file": {
           "name": "Bestand",

@@ -3,13 +3,13 @@
     "step": {
       "user": {
         "title": "Room Tiles",
-        "description": "Wähle die Bereiche, die Room Tiles zeigen soll. Das lässt sich später ändern.",
+        "description": "Die Bereiche wählen, die Room Tiles zeigen soll. Das lässt sich später ändern.",
         "data": {
           "areas": "Bereiche",
           "auto_add_areas": "Neue Bereiche automatisch aufnehmen"
         },
         "data_description": {
-          "auto_add_areas": "Bereiche, die du später in Home Assistant anlegst, erscheinen auch in Room Tiles."
+          "auto_add_areas": "Bereiche, die Sie später in Home Assistant anlegst, erscheinen auch in Room Tiles."
         }
       }
     },
@@ -18,7 +18,7 @@
     },
     "create_entry": {
       "default": "Room Tiles ist für {areas} Bereiche eingerichtet, mit einer Kachelseite für jeden und einer Startkarte für jede Etage.\n\n**[Room Tiles öffnen]({url})** jederzeit über die Seitenleiste.",
-      "found": "Room Tiles ist für {areas} Bereiche eingerichtet, mit einer Kachelseite für jeden und einer Startkarte für jede Etage.\n\nRoom Tiles hat passende Geräte gefunden; sie erscheinen, sobald du die **[Geräteeinrichtung abschließt]({url}?open=appliances)**.\n\nRoom Tiles jederzeit über die Seitenleiste öffnen."
+      "found": "Room Tiles ist für {areas} Bereiche eingerichtet, mit einer Kachelseite für jeden und einer Startkarte für jede Etage.\n\nRoom Tiles hat passende Geräte gefunden; sie erscheinen, sobald Sie die **[Geräteeinrichtung abschließen]({url}?open=appliances)**.\n\nRoom Tiles jederzeit über die Seitenleiste öffnen."
     }
   },
   "issues": {
@@ -39,11 +39,11 @@
     },
     "area_lights_override_removed": {
       "title": "Room Tiles: Bereichslichter geändert",
-      "description": "Die Entität, die der Lichtknopf dieser Bereiche verwendet hat, wurde gelöscht. Er schaltet jetzt alle ihre Lichter: {areas}. Du kannst in Room Tiles eine andere wählen."
+      "description": "Die Entität, die der Lichtknopf dieser Bereiche verwendet hat, wurde gelöscht. Er schaltet jetzt alle ihre Lichter: {areas}. Sie können in Room Tiles eine andere wählen."
     },
     "appliance_question": {
       "title": "{name} meldet einen Zustand, den Room Tiles nicht kennt",
-      "description": "Öffne in Room Tiles die Geräte und sag, was er bedeutet.\n\n{states}"
+      "description": "In Room Tiles die Geräte öffnen und angeben, was er bedeutet.\n\n{states}"
     },
     "panel_needs_firmware": {
       "title": "Firmware von {name} aktualisieren",
@@ -51,11 +51,11 @@
     },
     "panel_needs_integration": {
       "title": "Room Tiles für {name} aktualisieren",
-      "description": "{name} hat neuere Room Tiles-Firmware als diese Version von Room Tiles, darum zeigt es nur einen Update-Hinweis. Aktualisiere Room Tiles in Home Assistant."
+      "description": "{name} hat neuere Room Tiles-Firmware als diese Version von Room Tiles, darum zeigt es nur einen Update-Hinweis. Bitte Room Tiles in Home Assistant aktualisieren."
     },
     "panel_needs_reinstall": {
       "title": "Firmware von {name} neu installieren",
-      "description": "{name} hat Firmware aus Room Tiles 0.1.6, die sich nicht selbst auf diese Version aktualisieren kann. Installiere die Firmware einmal neu per USB-Kabel, über die Installationsseite: {url} – danach aktualisiert sie sich wie gewohnt selbst."
+      "description": "{name} hat Firmware aus Room Tiles 0.1.6, die sich nicht selbst auf diese Version aktualisieren kann. Bitte die Firmware einmal per USB-Kabel neu installieren, über die Installationsseite: {url} – danach aktualisiert sie sich wie gewohnt selbst."
     },
     "theme_problem": {
       "title": "Room Tiles kann das Design {theme} nicht verwenden",
@@ -72,7 +72,7 @@
   "services": {
     "export_data": {
       "name": "Daten exportieren",
-      "description": "Schreibt die gesamte Room-Tiles-Einrichtung (Bereiche, Kacheln, Katalog, Karten, Markierungen) in eine JSON-Datei in room_tiles_backups/ in deinem Konfigurationsordner.",
+      "description": "Schreibt die gesamte Room-Tiles-Einrichtung (Bereiche, Kacheln, Katalog, Karten, Markierungen) in eine JSON-Datei in room_tiles_backups/ in Ihrem Konfigurationsordner.",
       "fields": {
         "file": {
           "name": "Datei",
@@ -82,7 +82,7 @@
     },
     "import_data": {
       "name": "Daten importieren",
-      "description": "Ersetzt die gesamte Room-Tiles-Einrichtung durch eine JSON-Datei aus room_tiles_backups/ in deinem Konfigurationsordner. Die aktuelle Einrichtung wird vorher dort gesichert; eine ungültige Datei ändert nichts.",
+      "description": "Ersetzt die gesamte Room-Tiles-Einrichtung durch eine JSON-Datei aus room_tiles_backups/ in Ihrem Konfigurationsordner. Die aktuelle Einrichtung wird vorher dort gesichert; eine ungültige Datei ändert nichts.",
       "fields": {
         "file": {
           "name": "Datei",

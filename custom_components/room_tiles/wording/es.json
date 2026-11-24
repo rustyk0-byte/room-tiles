@@ -109,9 +109,9 @@
     "setup_note.this_model": "este modelo",
     "setup_note.rooms_yes": "Se puede limpiar por habitaciones.",
     "setup_note.rooms_no": "Este robot aún no permite limpiar por habitaciones.",
-    "setup_note.alerts": "Avisa cuando te necesita (rellenar, vaciar, volver a colocar) y cuando hay fallos.",
+    "setup_note.alerts": "Avisa cuando le necesita (rellenar, vaciar, volver a colocar) y cuando hay fallos.",
     "setup_note.hayward_heat": "La calefacción no está disponible con Hayward: las fichas muestran la temperatura y encienden las bombas.",
-    "setup_note.no_heater_pool": "No se encontró calentador para la piscina. Elige uno abajo si lo tiene.",
-    "setup_note.no_heater_spa": "No se encontró calentador para el spa. Elige uno abajo si lo tiene."
+    "setup_note.no_heater_pool": "No se encontró calentador para la piscina. Elija uno abajo si lo tiene.",
+    "setup_note.no_heater_spa": "No se encontró calentador para el spa. Elija uno abajo si lo tiene."
   }
 }

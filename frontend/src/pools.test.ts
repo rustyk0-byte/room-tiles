@@ -69,7 +69,7 @@ describe("rt-pool-editor", () => {
   it("says what's missing before it can be saved", async () => {
     const { el, ed } = await editor(SHARED);
     ed._change((p) => (p.spa_mode = null));
-    expect(ed._missing).toBe("Choose the switch that puts it in spa mode.");
+    expect(ed._missing).toBe("Choose the switch that puts the pool system in spa mode.");
     ed._change((p) => (p.spa_mode = "switch.spa_pump"));
     ed._change((p) => (p.spa!.temp = null));
     expect(ed._missing).toBe(""); // its heater reads it

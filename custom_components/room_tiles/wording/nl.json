@@ -18,7 +18,7 @@
     "step.spinning": "Cen\u00adtri\u00adfu\u00adge\u00adren",
     "step.sensing": "De\u00adtec\u00adte\u00adren",
     "step.soaking": "Weken",
-    "step.needs_you": "Heeft je nodig",
+    "step.needs_you": "Heeft u nodig",
     "step.rinse_hold": "Spoel\u00adstop",
     "step.interrupted": "On\u00adder\u00adbro\u00adken",
     "step.wrinkle_care": "Kreukvrij",
@@ -109,7 +109,7 @@
     "setup_note.this_model": "dit model",
     "setup_note.rooms_yes": "Schoonmaken per kamer wordt ondersteund.",
     "setup_note.rooms_no": "Schoonmaken per kamer wordt nog niet ondersteund door deze stofzuiger.",
-    "setup_note.alerts": "Hij meldt zich als hij je nodig heeft (bijvullen, legen, terugzetten) en bij storingen.",
+    "setup_note.alerts": "Hij meldt zich als hij u nodig heeft (bijvullen, legen, terugzetten) en bij storingen.",
     "setup_note.hayward_heat": "Verwarmen is niet beschikbaar voor Hayward: de tegels tonen de temperatuur en schakelen de pompen.",
     "setup_note.no_heater_pool": "Geen verwarming gevonden voor het zwembad. Kies er hieronder een als het er een heeft.",
     "setup_note.no_heater_spa": "Geen verwarming gevonden voor de spa. Kies er hieronder een als die er een heeft."

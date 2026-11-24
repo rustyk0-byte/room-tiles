@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Room Tiles",
-        "description": "Scegli le aree da mostrare in Room Tiles. Puoi cambiarle in seguito.",
+        "description": "Scegliere le aree da mostrare in Room Tiles. Si possono cambiare in seguito.",
         "data": {
           "areas": "Aree",
           "auto_add_areas": "Includi automaticamente le nuove aree"
@@ -17,13 +17,13 @@
       "single_instance_allowed": "Room Tiles è già configurato."
     },
     "create_entry": {
-      "default": "Room Tiles è configurato per {areas} aree, con una pagina di riquadri per ciascuna e una mappa iniziale per ogni piano.\n\n**[Apri Room Tiles]({url})** quando vuoi dalla barra laterale.",
-      "found": "Room Tiles è configurato per {areas} aree, con una pagina di riquadri per ciascuna e una mappa iniziale per ogni piano.\n\nRoom Tiles ha trovato elettrodomestici compatibili; compaiono quando **[completi la loro configurazione]({url}?open=appliances)**.\n\nApri Room Tiles quando vuoi dalla barra laterale."
+      "default": "Room Tiles è configurato per {areas} aree, con una pagina di riquadri per ciascuna e una mappa iniziale per ogni piano.\n\n**[Aprire Room Tiles]({url})** quando si vuole dalla barra laterale.",
+      "found": "Room Tiles è configurato per {areas} aree, con una pagina di riquadri per ciascuna e una mappa iniziale per ogni piano.\n\nRoom Tiles ha trovato elettrodomestici compatibili; compaiono quando **[si completa la loro configurazione]({url}?open=appliances)**.\n\nAprire Room Tiles quando si vuole dalla barra laterale."
     }
   },
   "issues": {
     "restart_required": {
-      "title": "Riavvia Home Assistant per completare l'aggiornamento di Room Tiles",
+      "title": "Riavviare Home Assistant per completare l'aggiornamento di Room Tiles",
       "fix_flow": {
         "step": {
           "confirm": {
@@ -46,12 +46,12 @@
       "description": "In Room Tiles, apri Elettrodomestici e indica cosa significa.\n\n{states}"
     },
     "panel_needs_firmware": {
-      "title": "Aggiorna il firmware di {name}",
+      "title": "Aggiornare il firmware di {name}",
       "description": "Il firmware di {name} è più vecchio di questa versione di Room Tiles, quindi mostra solo un avviso di aggiornamento. Si aggiorna da solo entro pochi minuti; altrimenti reinstalla il firmware con un cavo USB."
     },
     "panel_needs_integration": {
-      "title": "Aggiorna Room Tiles per {name}",
-      "description": "{name} ha un firmware Room Tiles più recente di questa versione di Room Tiles, quindi mostra solo un avviso di aggiornamento. Aggiorna Room Tiles in Home Assistant."
+      "title": "Aggiornare Room Tiles per {name}",
+      "description": "{name} ha un firmware Room Tiles più recente di questa versione di Room Tiles, quindi mostra solo un avviso di aggiornamento. Aggiornare Room Tiles in Home Assistant."
     },
     "panel_needs_reinstall": {
       "title": "Reinstalla il firmware di {name}",
@@ -72,7 +72,7 @@
   "services": {
     "export_data": {
       "name": "Esporta dati",
-      "description": "Scrive l'intera configurazione di Room Tiles (aree, riquadri, catalogo, mappe, indicatori) in un file JSON in room_tiles_backups/ nella tua cartella di configurazione.",
+      "description": "Scrive l'intera configurazione di Room Tiles (aree, riquadri, catalogo, mappe, indicatori) in un file JSON in room_tiles_backups/ nella cartella di configurazione.",
       "fields": {
         "file": {
           "name": "File",
@@ -82,7 +82,7 @@
     },
     "import_data": {
       "name": "Importa dati",
-      "description": "Sostituisce l'intera configurazione di Room Tiles con un file JSON da room_tiles_backups/ nella tua cartella di configurazione. Prima la configurazione attuale viene salvata lì; un file non valido non cambia nulla.",
+      "description": "Sostituisce l'intera configurazione di Room Tiles con un file JSON da room_tiles_backups/ nella cartella di configurazione. Prima la configurazione attuale viene salvata lì; un file non valido non cambia nulla.",
       "fields": {
         "file": {
           "name": "File",

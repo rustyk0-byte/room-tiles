@@ -18,7 +18,7 @@
     "step.spinning": "Schleu\u00addern",
     "step.sensing": "Er\u00adken\u00adnung",
     "step.soaking": "Ein\u00adwei\u00adchen",
-    "step.needs_you": "Braucht dich",
+    "step.needs_you": "Braucht Sie",
     "step.rinse_hold": "Spül\u00adstopp",
     "step.interrupted": "Un\u00adter\u00adbro\u00adchen",
     "step.wrinkle_care": "Knit\u00adter\u00adschutz",
@@ -109,9 +109,9 @@
     "setup_note.this_model": "dieses Modell",
     "setup_note.rooms_yes": "Raumreinigung wird unterstützt.",
     "setup_note.rooms_no": "Raumreinigung wird von diesem Sauger noch nicht unterstützt.",
-    "setup_note.alerts": "Er meldet sich, wenn er dich braucht (auffüllen, leeren, zurückstellen), und bei Fehlern.",
+    "setup_note.alerts": "Er meldet sich, wenn er Sie braucht (auffüllen, leeren, zurückstellen), und bei Fehlern.",
     "setup_note.hayward_heat": "Heizen ist bei Hayward nicht verfügbar: Die Kacheln zeigen die Temperatur und schalten die Pumpen.",
-    "setup_note.no_heater_pool": "Keine Heizung für den Pool gefunden. Wähle unten eine aus, falls er eine hat.",
-    "setup_note.no_heater_spa": "Keine Heizung für den Spa gefunden. Wähle unten eine aus, falls er eine hat."
+    "setup_note.no_heater_pool": "Keine Heizung für den Pool gefunden. Unten eine auswählen, falls er eine hat.",
+    "setup_note.no_heater_spa": "Keine Heizung für den Spa gefunden. Unten eine auswählen, falls er eine hat."
   }
 }
