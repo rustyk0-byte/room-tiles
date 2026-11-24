@@ -268,67 +268,52 @@ settings). Nothing left.
   settings: heat or chill, the "pump with heater" setting, spa mode on a
   shared system; a press elsewhere on the tile keeps opening the HA Card
   (the heater's thermostat dialog) like now.
-- **Webhooks and NFC tags** - run a Room Tiles action from outside the
-  dashboard. Off until an admin turns it on (Settings › Webhooks).
-  Actions: vacuum (add an area to a robot's queue, start unless told not
-  to), tile (toggle / on / off of a light, switch, fan, scene or script
-  Room Tiles knows; open / close / stop a cover; lock a lock) and area
-  lights (on / off / toggle).
-  Only entities Room Tiles knows (the panels' `check_action`).
-  - **Never from a webhook link:** unlock, opening or toggling a garage
-    door / gate / door (entry covers - closing is fine), anything an alarm
-    panel does. A link is only as
-    safe as everyone who can see it (it travels as plain http on the home
-    network). Through an HA tag (signed in) they're a separate, later
-    decision.
-  - **Webhook links - home network only, always** (no remote option), no
-    HA app needed:
-    - Registered with HA's own webhook helper (`webhook.async_register`,
-      `local_only=True`) - no endpoint of our own without sign-in. HA then
-      refuses remote and Nabu Casa calls, answers an unknown link the same
-      as a known one, and lists the links in its own webhook list.
-    - **One link = one action on one target**, its own random 256-bit id
-      (`webhook.async_generate_id`). A leaked link can do that one thing
-      and nothing else; revoke / delete it alone. Named; last used + count.
-    - **POST runs it** (iPhone Shortcuts "Get Contents of URL" with
-      Method POST, Android Tasker / HTTP Shortcuts...). GET only shows a
-      page with one button that sends the POST - link previews, browser
-      prefetch, history and QR scanners never run an action.
-    - The page and the reply: `Cache-Control: no-store`, `Referrer-Policy:
-      no-referrer`, a strict CSP, no CORS, nothing from the request echoed
-      back. Plain JSON for apps.
-    - Docs: "home network" is what HA sees - a reverse proxy that hides
-      the caller's address (no X-Forwarded-For) makes every call look
-      local, a VPN into the home network counts as home; global IPv6
-      addresses don't count as home (use the IPv4 link). A guest network
-      cut off from HA can't use them.
-  - **HA tags** - the signed-in / remote way: Room Tiles listens to
-    `tag_scanned` (HA app tags, ESPHome NFC readers, an iPhone Shortcut
-    firing the event through the HA app) and runs the action bound to that
-    tag, in the scanning user's context (HA's logbook shows who).
-    - A tag id is not a secret (anyone can read the tag) and any signed-in
-      HA user can fire `tag_scanned` with any id and device through the HA
-      app (mobile_app's fire_event, no admin needed) - so a tag counts as
-      "someone with an HA account", and the log trusts the event's user,
-      not its device_id. Optional per tag: only these HA users.
-  - **Dashboard page** (Settings › Webhooks, admin only - every websocket
-    command `require_admin`): links, tags (pick an HA tag or type its ID ->
-    an action), "new link" (action + target -> its local URL, copy + QR),
-    and a log: time, link / tag + user or reader, action + target, result
-    (done / not allowed / bad request / rate limited / failed + HA's
-    error), source IP, caller app (cut to 100 characters, shown as text);
-    filter by link / tag, action, result, date; search; clear. Results
-    stored as codes (each viewer's own language). Last 1,000 entries or 90
-    days, its own Store. Remote and unknown-link calls are refused by HA
-    before Room Tiles sees them (HA's own log has them).
-  - Limits: each link / tag at most ~10 runs a minute (then "rate
-    limited"), at most a few calls waiting at once; a call waits up to ~10
-    s for HA, so "done" means done. The link id is never logged; the log
-    shows its name.
-  - Order: integration (links, webhook handler, tag listener, actions,
-    log, websocket) + tests (incl. remote / cloud refused, GET never runs,
-    the never-list refused, admin-only commands) -> dashboard page + tests
-    -> DESIGN.md / UI.md / SECURITY notes in the README.
+- **Blueprints: the vacuum queue from an NFC tag or a link** (instead of
+  Room Tiles' own webhooks and tags - HA already runs any action from a
+  tag or a webhook; what Room Tiles adds is ready-made automations for its
+  own action, the vacuum queue). No new endpoint, listener or storage in
+  the integration.
+  - **Tag: vacuum a room** - trigger: HA's tag trigger. Inputs: the tag
+    (text - HA has no tag picker: "copy its ID from Settings › Tags"), the
+    vacuum (entity picker, vacuums only), the room (area picker), start
+    now (on). Action: `room_tiles.vacuum_queue` add. Works with tags the
+    HA app wrote, ESPHome NFC readers, and an iPhone Shortcuts NFC
+    automation firing `tag_scanned` through the HA app (no notification
+    to tap - try on a real iPhone first).
+  - **Link: vacuum a room** - trigger: HA's webhook trigger with
+    `local_only: true` and `allowed_methods: [POST, PUT]` written into the
+    blueprint, not inputs: home network only, and opening the link in a
+    browser, a message preview or a QR scanner never runs it. Inputs: the
+    link ID (text - long and random; the dashboard makes one), the vacuum,
+    the rooms it may add (area picker, several), start now. The room comes
+    in the request (`room=kitchen`, query or JSON body); anything not in
+    the list is ignored. For iPhone Shortcuts ("Get Contents of URL",
+    Method POST), Android Tasker / HTTP Shortcuts, guests' phones on the
+    home Wi-Fi.
+  - Both `mode: single`, `max_exceeded: silent` (a double scan is one
+    run); the queue already skips a room being cleaned and moves a queued
+    one to the end.
+  - **Integration:** `vacuum_queue` also takes the vacuum (`vacuum:
+    vacuum.x`) instead of Room Tiles' robot id, so the blueprints can use
+    HA's vacuum picker. Nothing else - the integration never writes
+    blueprint files (users import them).
+  - **Where they live:** `blueprints/automation/room_tiles/` in this repo,
+    published with the landing page (which deploys only with a release), so
+    a blueprint never asks for something the released integration can't
+    do. Import buttons use my.home-assistant.io's blueprint import with
+    that page's link; HA keeps it, so "Re-import" brings a new version.
+  - **Dashboard:** in a vacuum's settings, "Use from an NFC tag or a link":
+    the two Import buttons, a new random link ID (copy), and the link to
+    paste in Shortcuts (copy + QR). README: a short how-to, the iPhone
+    Shortcuts steps, and what "home network" means (a reverse proxy that
+    hides the caller's address makes every call look local; global IPv6
+    addresses count as away - use the IPv4 address).
+  - **Tests:** every blueprint passes HA's blueprint schema and builds a
+    valid automation from sample inputs; the link one keeps `local_only:
+    true` and no GET; `vacuum_queue` with a vacuum entity.
+  - Not planned: blueprints for lights, scenes or switches (HA's own
+    automation editor does those in a few clicks), and anything that
+    unlocks a door or opens a garage door.
 - **Device profiles** - only if there's demand (they make setup harder to
   follow): an on / off entity or a standard-phases sensor as hand-added
   fallbacks; a preset `door_states` for a brand that reports its door
