@@ -269,37 +269,66 @@ settings). Nothing left.
   shared system; a press elsewhere on the tile keeps opening the HA Card
   (the heater's thermostat dialog) like now.
 - **Webhooks and NFC tags** - run a Room Tiles action from outside the
-  dashboard. Actions: vacuum (add an area to a robot's queue, start unless
-  told not to), tile (toggle / on / off / open / close / stop an entity
-  Room Tiles knows - scenes and scripts too) and area lights (on / off /
-  toggle). Only entities Room Tiles knows (the panels' `check_action`).
-  Two ways in:
-  - **Webhook links - home network only, always** (no remote option): for
-    anyone on the Wi-Fi, no HA app needed. URL
-    `http://<HA>:8123/api/room_tiles/hook/<key>?do=...` - the key in the
-    path, never the query. Keys: made by Room Tiles (random, 256-bit),
-    named, revoke (kept, so the log says "revoked") / delete, last used +
-    count. Remote calls (Nabu Casa included) are refused and logged. The
-    reply is a short "Done" page for browsers (no Safari download prompt),
-    JSON otherwise.
-  - **HA tags** - the secure / remote way: Room Tiles listens to
+  dashboard. Off until an admin turns it on (Settings › Webhooks).
+  Actions: vacuum (add an area to a robot's queue, start unless told not
+  to), tile (toggle / on / off of a light, switch, fan, scene or script
+  Room Tiles knows; open / close / stop a cover; lock a lock) and area
+  lights (on / off / toggle).
+  Only entities Room Tiles knows (the panels' `check_action`).
+  - **Never from a webhook link:** unlock, opening or toggling a garage
+    door / gate / door (entry covers - closing is fine), anything an alarm
+    panel does. A link is only as
+    safe as everyone who can see it (it travels as plain http on the home
+    network). Through an HA tag (signed in) they're a separate, later
+    decision.
+  - **Webhook links - home network only, always** (no remote option), no
+    HA app needed:
+    - Registered with HA's own webhook helper (`webhook.async_register`,
+      `local_only=True`) - no endpoint of our own without sign-in. HA then
+      refuses remote and Nabu Casa calls, answers an unknown link the same
+      as a known one, and lists the links in its own webhook list.
+    - **One link = one action on one target**, its own random 256-bit id
+      (`webhook.async_generate_id`). A leaked link can do that one thing
+      and nothing else; revoke / delete it alone. Named; last used + count.
+    - **POST runs it** (iPhone Shortcuts "Get Contents of URL" with
+      Method POST, Android Tasker / HTTP Shortcuts...). GET only shows a
+      page with one button that sends the POST - link previews, browser
+      prefetch, history and QR scanners never run an action.
+    - The page and the reply: `Cache-Control: no-store`, `Referrer-Policy:
+      no-referrer`, a strict CSP, no CORS, nothing from the request echoed
+      back. Plain JSON for apps.
+    - Docs: "home network" is what HA sees - a reverse proxy that hides
+      the caller's address (no X-Forwarded-For) makes every call look
+      local, a VPN into the home network counts as home; global IPv6
+      addresses don't count as home (use the IPv4 link). A guest network
+      cut off from HA can't use them.
+  - **HA tags** - the signed-in / remote way: Room Tiles listens to
     `tag_scanned` (HA app tags, ESPHome NFC readers, an iPhone Shortcut
-    firing the event through the HA app) and runs the action bound to
-    that tag. The caller is signed in to HA; nothing secret on the tag.
-    Build both either way (if the iPhone route needs a tap, iPhones use
-    the webhook links at home).
-  - **Dashboard page** (Settings › Webhooks): keys, tags (pick an HA tag
-    or type its ID -> an action), a link builder (key + action + target ->
-    the local URL, copy + QR), and a log: time, key / tag + which phone or
-    reader, action + target, result (done / unknown key / revoked / remote
-    refused / not allowed / bad link / failed + HA's error), source IP,
-    caller app; filter by key / tag, action, result, date; search; clear.
-    Results stored as codes (each viewer's own language). Last 1,000
-    entries or 90 days, its own store.
-  - Rate limit per key / tag; a bad key counts toward HA's IP ban. Calls
-    wait up to ~10 s for HA, so "done" means done.
-  - Order: integration (keys, endpoint, tag listener, actions, log,
-    websocket) + tests -> dashboard page + tests -> DESIGN.md / UI.md.
+    firing the event through the HA app) and runs the action bound to that
+    tag, in the scanning user's context (HA's logbook shows who).
+    - A tag id is not a secret (anyone can read the tag) and any signed-in
+      HA user can fire `tag_scanned` with any id and device through the HA
+      app (mobile_app's fire_event, no admin needed) - so a tag counts as
+      "someone with an HA account", and the log trusts the event's user,
+      not its device_id. Optional per tag: only these HA users.
+  - **Dashboard page** (Settings › Webhooks, admin only - every websocket
+    command `require_admin`): links, tags (pick an HA tag or type its ID ->
+    an action), "new link" (action + target -> its local URL, copy + QR),
+    and a log: time, link / tag + user or reader, action + target, result
+    (done / not allowed / bad request / rate limited / failed + HA's
+    error), source IP, caller app (cut to 100 characters, shown as text);
+    filter by link / tag, action, result, date; search; clear. Results
+    stored as codes (each viewer's own language). Last 1,000 entries or 90
+    days, its own Store. Remote and unknown-link calls are refused by HA
+    before Room Tiles sees them (HA's own log has them).
+  - Limits: each link / tag at most ~10 runs a minute (then "rate
+    limited"), at most a few calls waiting at once; a call waits up to ~10
+    s for HA, so "done" means done. The link id is never logged; the log
+    shows its name.
+  - Order: integration (links, webhook handler, tag listener, actions,
+    log, websocket) + tests (incl. remote / cloud refused, GET never runs,
+    the never-list refused, admin-only commands) -> dashboard page + tests
+    -> DESIGN.md / UI.md / SECURITY notes in the README.
 - **Device profiles** - only if there's demand (they make setup harder to
   follow): an on / off entity or a standard-phases sensor as hand-added
   fallbacks; a preset `door_states` for a brand that reports its door
