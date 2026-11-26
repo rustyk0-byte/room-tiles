@@ -105,13 +105,10 @@ const STORE_AREA = "room-tiles:area";
 const POPUP_MAX = 6; // a marker's pop-up row shows at most this many groups, and as many scenes
 const UPDATED = "updated"; // _error: the integration sends newer data than this page reads
 const RUN_FLASH_MS = 1500; // a scene / script button lights this long after a tap
-// a newer dashboard: how often to look, and the quiet before reloading by itself
+// a newer dashboard: how often to look
 const VERSION_CHECK_MS = 60_000;
 const VERSION_RETRY_MS = 5_000; // (after a reconnect, until HA serves version.json)
 const VERSION_RETRY_TRIES = 24; // (two minutes)
-const RELOAD_QUIET_MS = 30_000;
-const RELOAD_RETRY_MS = 5_000;
-const STORE_RELOADED_FOR = "room-tiles:reloaded-for"; // (session) the build an auto reload went for
 /** an undo / redo step of marker editing: the markers and the layers */
 interface EditSnap {
   draft: MapMarker[];
@@ -409,18 +406,10 @@ export class RoomTilesPanel extends LitElement {
   private _outdated = false; // a newer build is installed than this page runs
   private _restartAsk = false; // the Restart bar's confirm is open
   private _restarting = false; // Restart pressed: reload as soon as HA is back
-  private _newBuild?: string; // ...that build
   private _versionTries?: number; // (after a reconnect: version.json asked again till HA serves it)
-  private _lastInput = Date.now(); // the last touch / click / key (auto reload waits for quiet)
-  // when the page / a linked dialog was shown: no input since = nothing to lose
-  private _shownAt = Date.now();
   private _versionTimer?: number;
-  private _reloadTimer?: number;
   private _onVisible = () => {
     if (document.visibilityState === "visible") void this._checkVersion();
-  };
-  private _onInput = () => {
-    this._lastInput = Date.now();
   };
   // a long press (touch) / right-click is Room Tiles' own gesture: the
   // browser's menu never opens over it - except in text fields and links,
@@ -513,17 +502,14 @@ export class RoomTilesPanel extends LitElement {
         this.requestUpdate();
       }
     }, 1000);
-    this._shownAt = Date.now(); // (HA shows the panel again: same element)
     this._resize = new ResizeObserver(() => this._measure());
     this._resize.observe(this);
     window.addEventListener("resize", this._onWindowResize);
     document.addEventListener("visibilitychange", this._onVisible);
-    window.addEventListener("pointerdown", this._onInput, true);
     this.addEventListener("pointerdown", this._onTapDown, true);
     this.addEventListener("click", this._onTapClick, true);
     this.addEventListener("contextmenu", this._onContextMenu);
     this.addEventListener("wheel", this._onWheel, { passive: false });
-    window.addEventListener("keydown", this._onInput, true);
     // a newer dashboard installed (an update, a rebuild): checked every minute while on screen
     this._versionTimer = window.setInterval(() => {
       if (document.visibilityState === "visible") void this._checkVersion();
@@ -553,7 +539,6 @@ export class RoomTilesPanel extends LitElement {
     if (open !== "appliances" && open !== "short-names") return;
     this._menu = false;
     this._dialog = open;
-    this._shownAt = Date.now();
     params.delete("open");
     const q = params.toString();
     history.replaceState(history.state, "", location.pathname + (q ? `?${q}` : "") + location.hash);
@@ -581,14 +566,11 @@ export class RoomTilesPanel extends LitElement {
     this._resize?.disconnect();
     window.removeEventListener("resize", this._onWindowResize);
     document.removeEventListener("visibilitychange", this._onVisible);
-    window.removeEventListener("pointerdown", this._onInput, true);
     this.removeEventListener("pointerdown", this._onTapDown, true);
     this.removeEventListener("click", this._onTapClick, true);
     this.removeEventListener("contextmenu", this._onContextMenu);
     this.removeEventListener("wheel", this._onWheel);
-    window.removeEventListener("keydown", this._onInput, true);
     window.clearInterval(this._versionTimer);
-    window.clearTimeout(this._reloadTimer);
     window.clearTimeout(this._subscribeTimer);
     window.clearTimeout(this._versionRetryTimer);
     window.removeEventListener("keydown", this._onKey);
@@ -710,9 +692,6 @@ export class RoomTilesPanel extends LitElement {
       this._versionTries = 0;
       const { build } = await r.json();
       this._outdated = typeof BUILD_ID !== "undefined" && !!build && build !== BUILD_ID;
-      this._newBuild = this._outdated ? build : undefined;
-      // (HA still runs the old backend: stay on this page until it restarts)
-      if (this._outdated && !this._doc?.restart_needed) this._autoReload();
     } catch {
       again(); // (offline etc.: the minute's check tries again too)
     }
@@ -743,7 +722,7 @@ export class RoomTilesPanel extends LitElement {
     return this._outdated
       ? html`<div class="outdated" role="status">
           ${t("screen.updated_bar")}
-          <button @click=${() => location.reload()}>${t("screen.reload")}</button>
+          <button @click=${() => this._reload()}>${t("screen.reload")}</button>
         </div>`
       : nothing;
   }
@@ -756,65 +735,15 @@ export class RoomTilesPanel extends LitElement {
     });
   }
 
-  /** Nothing the user could lose: no editor, dialog, menu or Help open. */
-  private get _atRest(): boolean {
-    return !(
-      this._editing ||
-      this._editSlot !== undefined ||
-      this._menu ||
-      this._picker ||
-      this._dialog ||
-      this._autoAsk ||
-      this._tilesAsk ||
-      this._colorFor ||
-      this._help ||
-      this._mapHelp ||
-      this._mapEdit ||
-      this._mapPick ||
-      this._planDialog ||
-      this._planEdit ||
-      this._popup ||
-      this._areaLightsFor ||
-      this._askUnsaved ||
-      this._adding ||
-      this._restartAsk
-    );
-  }
-
-  /** A newer build is installed: reload by itself - right away while
-   *  nothing was touched since the page / a linked dialog showed, else once
-   *  it's at rest and quiet a while (the Reload bar shows meanwhile). Once per
-   *  build - if the reload didn't pick it up (a cache), the bar stays. */
-  private _autoReload(): void {
-    window.clearTimeout(this._reloadTimer);
-    const build = this._newBuild;
-    if (!this._outdated || !build) return;
-    let tried: string | null = null;
-    try {
-      tried = sessionStorage.getItem(STORE_RELOADED_FOR);
-    } catch {
-      /* no storage: just reload */
+  /** The bar's Reload: onto the new build - a dialog opened from a link
+   *  (appliances, short names) opens again after the reload. */
+  private _reload(): void {
+    if (this._dialog === "appliances" || this._dialog === "short-names") {
+      const url = new URL(location.href);
+      url.searchParams.set("open", this._dialog);
+      history.replaceState(history.state, "", url.pathname + url.search + url.hash);
     }
-    if (tried === build) return;
-    // untouched since it was shown (e.g. opened from a link after an
-    // install): reload now, onto the same dialog
-    const untouched = this._lastInput <= this._shownAt;
-    const quiet = this._atRest && Date.now() - this._lastInput >= RELOAD_QUIET_MS;
-    if ((untouched || quiet || this._restarting) && document.visibilityState === "visible") {
-      try {
-        sessionStorage.setItem(STORE_RELOADED_FOR, build);
-      } catch {
-        /* reloads anyway */
-      }
-      if (this._dialog === "appliances" || this._dialog === "short-names") {
-        const url = new URL(location.href);
-        url.searchParams.set("open", this._dialog);
-        history.replaceState(history.state, "", url.pathname + url.search + url.hash);
-      }
-      location.reload();
-      return;
-    }
-    this._reloadTimer = window.setTimeout(() => this._autoReload(), RELOAD_RETRY_MS);
+    location.reload();
   }
 
   // ---- layout: portrait panning / landscape fit / full screen -----------------

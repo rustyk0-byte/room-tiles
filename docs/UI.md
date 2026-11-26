@@ -275,19 +275,17 @@ system; Option on a Mac means "duplicate" elsewhere).
 
 - **A newer dashboard installed** (an update, a rebuild - an open page keeps
   its old code): checked on reconnect, when the page comes back on screen
-  and every minute. The page reloads by itself: right away when nothing
-  was touched since it (or a dialog opened from a link - it reopens on
-  it) was shown, e.g. right after an install; else once nothing is open (no
-  editor, dialog, menu, Help) and it's been untouched for 30 s - so a wall
-  tablet picks it up unattended and nobody loses work; until then the bar
-  "Room Tiles was updated. [Reload]" shows. Once per build (a reload that
-  didn't pick it up leaves the bar).
+  and every minute. The bar "Room Tiles was updated. [Reload]" shows; the
+  page never reloads by itself (whoever has it open - a wall tablet,
+  someone reading - decides; frontend/src/no-auto-reload.test.ts). A
+  dialog opened from a link (appliances, short names) opens again after
+  the Reload.
 - **An update HA hasn't restarted for** (new integration files on disk, HA
   still running the old ones - update_watch.py): the bar says "Restart
   Home Assistant to finish updating Room Tiles." with a Restart button for
   admins (one confirm), and the page does NOT reload onto the new dashboard
-  meanwhile. After the restart it reloads by itself. HA also gets a repair
-  that restarts on Fix - unless HACS raised its own restart repair for
+  meanwhile. After that Restart (the user's own) the page reloads. HA
+  also gets a repair that restarts on Fix - unless HACS raised its own restart repair for
   Room Tiles (one message, not two).
 
 ## Look
